@@ -1,0 +1,9 @@
+Understood. I’ll prepare a comprehensive implementation document covering how to:
+
+* Develop and package the six cybersecurity-focused environments using the Verifiers library
+* Register and publish them to the Environments Hub
+* Train reference models (starting with Qwen) using both local and full-stack Prime Intellect infrastructure
+
+The guide will include instructions for local development, Verifiers tooling, Environments Hub integration, and scalable RL training with `prime-rl`. I’ll also address rollout, evaluation, and community contribution workflows.
+
+I’ll get started and let you know when it’s ready.
