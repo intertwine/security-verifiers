@@ -11,6 +11,7 @@ from .verifier import ConfigVerificationVerifier
 __version__ = "0.1.0"
 __all__ = ["ConfigVerificationEnvironment", "ConfigVerificationVerifier"]
 
+
 def load_environment():
     """Load the Config Verification environment for use with Verifiers framework.
 

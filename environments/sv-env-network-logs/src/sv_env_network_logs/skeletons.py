@@ -38,9 +38,7 @@ class NetworkLogsVerifier(NetworkLogsVerifierProtocol):
         ]
 
         # Compile patterns for efficiency
-        self.malicious_regex = re.compile(
-            "|".join(self.malicious_patterns), re.IGNORECASE
-        )
+        self.malicious_regex = re.compile("|".join(self.malicious_patterns), re.IGNORECASE)
 
     def score(self, log_entry: str, ground_truth: str) -> float:
         """Score classification accuracy for a network log entry."""
@@ -164,6 +162,7 @@ class NetworkLogsEnvironment(NetworkLogsEnvironmentProtocol):
 
     def _transform_dataset(self, raw_dataset: Dataset) -> Dataset:
         """Transform raw dataset to SingleTurnEnv format."""
+
         # This would need to be customized based on the actual dataset structure
         # For IoT-23, we'd map the appropriate columns
         def transform_example(example):
@@ -171,7 +170,7 @@ class NetworkLogsEnvironment(NetworkLogsEnvironmentProtocol):
             # Adapt this based on actual dataset structure
             return {
                 "prompt": example.get("log", str(example)),  # Log entry text
-                "answer": example.get("label", "Benign"),    # Ground truth label
+                "answer": example.get("label", "Benign"),  # Ground truth label
             }
 
         transformed = raw_dataset.map(transform_example)
@@ -190,56 +189,54 @@ class NetworkLogsEnvironment(NetworkLogsEnvironmentProtocol):
                     "TCP connection from 10.0.0.5:445 to 192.168.1.10:80, flags [S], "
                     "unusual port scanning pattern detected"
                 ),
-                "answer": "Malicious"
+                "answer": "Malicious",
             },
             {
                 "prompt": (
                     "HTTP GET request from 192.168.1.100 to www.example.com, "
                     "normal web browsing activity"
                 ),
-                "answer": "Benign"
+                "answer": "Benign",
             },
             {
                 "prompt": (
                     "Failed SSH login attempt from 203.0.113.0, "
                     "brute force attack pattern identified"
                 ),
-                "answer": "Malicious"
+                "answer": "Malicious",
             },
             {
                 "prompt": (
-                    "DNS query from 192.168.1.50 for mail.company.com, "
-                    "standard email resolution"
+                    "DNS query from 192.168.1.50 for mail.company.com, standard email resolution"
                 ),
-                "answer": "Benign"
+                "answer": "Benign",
             },
             {
                 "prompt": (
-                    "Outbound connection blocked to known malware C&C server "
-                    "198.51.100.1:443"
+                    "Outbound connection blocked to known malware C&C server 198.51.100.1:443"
                 ),
-                "answer": "Malicious"
+                "answer": "Malicious",
             },
             {
                 "prompt": (
                     "HTTPS connection to banking.example.com from 192.168.1.25, "
                     "encrypted traffic normal"
                 ),
-                "answer": "Benign"
+                "answer": "Benign",
             },
             {
                 "prompt": (
                     "Multiple failed authentication attempts detected from IP "
                     "203.0.113.5, suspicious activity"
                 ),
-                "answer": "Malicious"
+                "answer": "Malicious",
             },
             {
                 "prompt": (
                     "Regular file transfer via SFTP to backup server 10.0.1.100, "
                     "scheduled maintenance"
                 ),
-                "answer": "Benign"
+                "answer": "Benign",
             },
         ]
 

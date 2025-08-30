@@ -11,6 +11,7 @@ from .verifier import NetworkLogsVerifier
 __version__ = "0.1.0"
 __all__ = ["NetworkLogsEnvironment", "NetworkLogsVerifier"]
 
+
 def load_environment():
     """Load the Network Logs Anomaly Detection environment for use with Verifiers framework.
 

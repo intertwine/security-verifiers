@@ -29,9 +29,7 @@ class ConfigVerificationEnvironment(ConfigVerificationEnvironmentProtocol):
         self.verifier = verifier or ConfigVerificationVerifier()
         self.max_turns = max_turns
 
-    def evaluate(
-        self, config_text: str, model_output: str
-    ) -> tuple[float, Mapping[str, Any]]:
+    def evaluate(self, config_text: str, model_output: str) -> tuple[float, Mapping[str, Any]]:
         """Evaluate a model's analysis of a configuration file.
 
         Args:

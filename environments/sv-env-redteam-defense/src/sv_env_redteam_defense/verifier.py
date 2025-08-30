@@ -75,7 +75,7 @@ class RedTeamDefenseVerifier(VerifierProtocol):
                 r"subprocess\..*shell=True",
                 r"\$\(.*\)",
                 r"`.*`",
-            ]
+            ],
         }
 
         # Define patterns for safe/defensive actions
@@ -110,7 +110,7 @@ class RedTeamDefenseVerifier(VerifierProtocol):
                 r"dnf.*upgrade.*--security",
                 r"windows.*update",
                 r"patch.*management",
-            ]
+            ],
         }
 
     def score(self, action: str, observation: str) -> float:
@@ -137,7 +137,7 @@ class RedTeamDefenseVerifier(VerifierProtocol):
 
         # Reduce risk if defensive patterns are present
         if defensive_score > 0:
-            base_risk *= (1 - defensive_score * 0.5)
+            base_risk *= 1 - defensive_score * 0.5
 
         # Clamp to [0, 1]
         risk_score = max(0.0, min(1.0, base_risk))
@@ -353,5 +353,5 @@ class RedTeamDefenseVerifier(VerifierProtocol):
         """
         return {
             "harmful": list(self.harmful_patterns.keys()),
-            "defensive": list(self.defensive_patterns.keys())
+            "defensive": list(self.defensive_patterns.keys()),
         }

@@ -12,6 +12,7 @@ from .verifier import RedTeamDefenseVerifier
 __version__ = "0.1.0"
 __all__ = ["RedTeamDefenseEnvironment", "RedTeamDefenseVerifier"]
 
+
 def load_environment():
     """Load the Red-Team Defense environment for use with Verifiers framework.
 

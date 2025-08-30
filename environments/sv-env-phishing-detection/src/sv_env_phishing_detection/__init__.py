@@ -11,6 +11,7 @@ from .verifier import PhishingDetectionVerifier
 __version__ = "0.1.0"
 __all__ = ["PhishingDetectionEnvironment", "PhishingDetectionVerifier"]
 
+
 def load_environment():
     """Load the Phishing Detection environment for use with Verifiers framework.
 

@@ -1,18 +1,19 @@
 #!/usr/bin/env python
 """Verify that all security-verifiers environment imports are working correctly."""
 
-import sys
 import importlib
+import sys
 import traceback
 from pathlib import Path
 
 # ANSI color codes for pretty output
-GREEN = '\033[92m'
-RED = '\033[91m'
-YELLOW = '\033[93m'
-BLUE = '\033[94m'
-RESET = '\033[0m'
-BOLD = '\033[1m'
+GREEN = "\033[92m"
+RED = "\033[91m"
+YELLOW = "\033[93m"
+BLUE = "\033[94m"
+RESET = "\033[0m"
+BOLD = "\033[1m"
+
 
 def print_header(text):
     """Print a formatted header."""
@@ -20,49 +21,55 @@ def print_header(text):
     print(f"{BOLD}{BLUE}{text:^60}{RESET}")
     print(f"{BOLD}{BLUE}{'=' * 60}{RESET}\n")
 
+
 def print_success(text):
     """Print success message in green."""
     print(f"{GREEN}✓ {text}{RESET}")
+
 
 def print_error(text):
     """Print error message in red."""
     print(f"{RED}✗ {text}{RESET}")
 
+
 def print_warning(text):
     """Print warning message in yellow."""
     print(f"{YELLOW}⚠ {text}{RESET}")
+
 
 def print_info(text):
     """Print info message."""
     print(f"  {text}")
 
+
 # Define all environments and their expected exports
 ENVIRONMENTS = {
-    'sv_env_network_logs': {
-        'classes': ['NetworkLogsEnvironment', 'NetworkLogsVerifier'],
-        'description': 'Network logs anomaly detection'
+    "sv_env_network_logs": {
+        "classes": ["NetworkLogsEnvironment", "NetworkLogsVerifier"],
+        "description": "Network logs anomaly detection",
     },
-    'sv_env_phishing_detection': {
-        'classes': ['PhishingDetectionEnvironment', 'PhishingDetectionVerifier'],
-        'description': 'Phishing email detection'
+    "sv_env_phishing_detection": {
+        "classes": ["PhishingDetectionEnvironment", "PhishingDetectionVerifier"],
+        "description": "Phishing email detection",
     },
-    'sv_env_redteam_defense': {
-        'classes': ['RedTeamDefenseEnvironment', 'RedTeamDefenseVerifier'],
-        'description': 'Defensive AI assistant security'
+    "sv_env_redteam_defense": {
+        "classes": ["RedTeamDefenseEnvironment", "RedTeamDefenseVerifier"],
+        "description": "Defensive AI assistant security",
     },
-    'sv_env_redteam_attack': {
-        'classes': ['RedTeamAttackEnvironment', 'RedTeamAttackVerifier'],
-        'description': 'Red team attack generation'
+    "sv_env_redteam_attack": {
+        "classes": ["RedTeamAttackEnvironment", "RedTeamAttackVerifier"],
+        "description": "Red team attack generation",
     },
-    'sv_env_code_vulnerability': {
-        'classes': ['CodeVulnerabilityEnvironment', 'CodeVulnerabilityVerifier'],
-        'description': 'Code vulnerability assessment'
+    "sv_env_code_vulnerability": {
+        "classes": ["CodeVulnerabilityEnvironment", "CodeVulnerabilityVerifier"],
+        "description": "Code vulnerability assessment",
     },
-    'sv_env_config_verification': {
-        'classes': ['ConfigVerificationEnvironment', 'ConfigVerificationVerifier'],
-        'description': 'Configuration security verification'
-    }
+    "sv_env_config_verification": {
+        "classes": ["ConfigVerificationEnvironment", "ConfigVerificationVerifier"],
+        "description": "Configuration security verification",
+    },
 }
+
 
 def verify_python_path():
     """Check Python path configuration."""
@@ -74,7 +81,7 @@ def verify_python_path():
     print("\nRelevant paths in sys.path:")
     found_env_paths = False
     for path in sys.path:
-        if 'security-verifiers' in path:
+        if "security-verifiers" in path:
             print_info(path)
             found_env_paths = True
 
@@ -82,6 +89,7 @@ def verify_python_path():
         print_warning("No security-verifiers paths found in sys.path")
 
     return found_env_paths
+
 
 def verify_environment(env_name, env_info):
     """Verify a single environment package."""
@@ -93,10 +101,10 @@ def verify_environment(env_name, env_info):
     # Test package import
     try:
         module = importlib.import_module(env_name)
-        print_success(f"Package import successful")
+        print_success("Package import successful")
 
         # Check for expected classes
-        for class_name in env_info['classes']:
+        for class_name in env_info["classes"]:
             if hasattr(module, class_name):
                 print_success(f"Found {class_name}")
             else:
@@ -104,13 +112,13 @@ def verify_environment(env_name, env_info):
                 success = False
 
         # Check for __all__ attribute
-        if hasattr(module, '__all__'):
+        if hasattr(module, "__all__"):
             print_info(f"__all__ = {module.__all__}")
         else:
             print_warning("No __all__ attribute defined")
 
         # Check for version
-        if hasattr(module, '__version__'):
+        if hasattr(module, "__version__"):
             print_info(f"Version: {module.__version__}")
 
         # Test environment.py and verifier.py imports
@@ -136,6 +144,7 @@ def verify_environment(env_name, env_info):
 
     return success
 
+
 def verify_cross_imports():
     """Test importing multiple environments together."""
     print_header("Cross-Import Test")
@@ -154,7 +163,7 @@ def verify_cross_imports():
         for env_name, env_info in ENVIRONMENTS.items():
             try:
                 module = importlib.import_module(env_name)
-                for class_name in env_info['classes']:
+                for class_name in env_info["classes"]:
                     if hasattr(module, class_name):
                         cls = getattr(module, class_name)
                         # Try to instantiate (may fail if requires args)
@@ -178,6 +187,7 @@ def verify_cross_imports():
             traceback.print_exc()
         return False
 
+
 def check_file_structure():
     """Verify the file structure of environments."""
     print_header("File Structure Check")
@@ -189,13 +199,13 @@ def check_file_structure():
 
     all_good = True
     for env_name in ENVIRONMENTS:
-        env_path = env_dir / env_name.replace('_', '-')
+        env_path = env_dir / env_name.replace("_", "-")
         if env_path.exists():
             print_success(f"{env_name.replace('_', '-')} directory exists")
 
             # Check for required files
             src_path = env_path / "src" / env_name
-            required_files = ['__init__.py', 'environment.py', 'verifier.py', 'interfaces.py']
+            required_files = ["__init__.py", "environment.py", "verifier.py", "interfaces.py"]
 
             for file_name in required_files:
                 file_path = src_path / file_name
@@ -203,13 +213,14 @@ def check_file_structure():
                     print_info(f"  ✓ {file_name}")
                 else:
                     print_info(f"  ✗ {file_name} missing")
-                    if file_name in ['environment.py', 'verifier.py']:
+                    if file_name in ["environment.py", "verifier.py"]:
                         all_good = False
         else:
             print_error(f"{env_name.replace('_', '-')} directory not found")
             all_good = False
 
     return all_good
+
 
 def main():
     """Main verification routine."""
@@ -264,6 +275,7 @@ def main():
         print_info("4. Restart your IDE/language server")
         print_info("5. Run with --verbose flag for detailed error messages")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

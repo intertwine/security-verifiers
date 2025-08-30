@@ -71,12 +71,8 @@ class NetworkLogsVerifier(NetworkLogsVerifierProtocol):
         ]
 
         # Compile patterns for efficiency
-        self.malicious_regex = re.compile(
-            "|".join(self.malicious_patterns), re.IGNORECASE
-        )
-        self.benign_regex = re.compile(
-            "|".join(self.benign_patterns), re.IGNORECASE
-        )
+        self.malicious_regex = re.compile("|".join(self.malicious_patterns), re.IGNORECASE)
+        self.benign_regex = re.compile("|".join(self.benign_patterns), re.IGNORECASE)
 
     def score(self, log_entry: str, ground_truth: str) -> float:
         """Score classification accuracy for a network log entry.
@@ -231,9 +227,7 @@ class NetworkLogsVerifier(NetworkLogsVerifierProtocol):
         if pattern not in self.malicious_patterns:
             self.malicious_patterns.append(pattern)
             # Recompile regex
-            self.malicious_regex = re.compile(
-                "|".join(self.malicious_patterns), re.IGNORECASE
-            )
+            self.malicious_regex = re.compile("|".join(self.malicious_patterns), re.IGNORECASE)
 
     def add_benign_pattern(self, pattern: str) -> None:
         """Add a new benign pattern to the verifier.
@@ -244,9 +238,7 @@ class NetworkLogsVerifier(NetworkLogsVerifierProtocol):
         if pattern not in self.benign_patterns:
             self.benign_patterns.append(pattern)
             # Recompile regex
-            self.benign_regex = re.compile(
-                "|".join(self.benign_patterns), re.IGNORECASE
-            )
+            self.benign_regex = re.compile("|".join(self.benign_patterns), re.IGNORECASE)
 
     def get_pattern_stats(self) -> dict[str, int]:
         """Get statistics about loaded patterns.

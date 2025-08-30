@@ -140,7 +140,7 @@ Act NOW to avoid losing access to your funds!
 Best regards,
 Account Security Team
 no-reply@secure-bank-verify.tk""",
-                "answer": "Phishing"
+                "answer": "Phishing",
             },
             {
                 "prompt": """Subject: Congratulations! You've Won $1,000,000!!!
@@ -160,7 +160,7 @@ Send details to: lottery.winner.2024@gmail.com
 Don't delay - you have only 48 hours to claim your prize!
 
 International Lottery Commission""",
-                "answer": "Phishing"
+                "answer": "Phishing",
             },
             {
                 "prompt": """Subject: Amazon Security Alert - Unauthorized Access
@@ -179,7 +179,7 @@ Enter your login credentials to secure your account.
 
 Amazon Security
 do-not-reply@amaz0n-alerts.com""",
-                "answer": "Phishing"
+                "answer": "Phishing",
             },
             {
                 "prompt": """Subject: IRS Tax Refund - Action Required
@@ -202,7 +202,7 @@ Failure to respond within 72 hours will result in forfeiture of your refund.
 
 Internal Revenue Service
 refunds@irs-gov.ml""",
-                "answer": "Phishing"
+                "answer": "Phishing",
             },
             {
                 "prompt": """Subject: PayPal: Your Account Has Been Limited
@@ -223,7 +223,7 @@ Act quickly to avoid permanent suspension.
 
 PayPal Security Team
 security@paypaI.com (notice the capital I)""",
-                "answer": "Phishing"
+                "answer": "Phishing",
             },
             # Legitimate examples
             {
@@ -249,7 +249,7 @@ Amazon.com
 customer-service@amazon.com
 
 To unsubscribe from shipping notifications, update your preferences in Your Account.""",
-                "answer": "Legitimate"
+                "answer": "Legitimate",
             },
             {
                 "prompt": """Subject: Your GitHub Security Code
@@ -267,7 +267,7 @@ If you'd like to automatically verify devices in the future, consider enabling t
 
 Thanks,
 The GitHub Team""",
-                "answer": "Legitimate"
+                "answer": "Legitimate",
             },
             {
                 "prompt": """Subject: Your Monthly LinkedIn Network Update
@@ -289,7 +289,7 @@ The LinkedIn Team
 
 You are receiving notification emails. Unsubscribe:
 https://www.linkedin.com/e/v2/unsubscribe""",
-                "answer": "Legitimate"
+                "answer": "Legitimate",
             },
             {
                 "prompt": """Subject: Receipt for Your Spotify Premium Payment
@@ -315,7 +315,7 @@ The Spotify Team
 
 Spotify USA Inc.
 support@spotify.com""",
-                "answer": "Legitimate"
+                "answer": "Legitimate",
             },
             {
                 "prompt": """Subject: Your Dropbox Storage Is Almost Full
@@ -340,7 +340,7 @@ The Dropbox Team
 
 You're receiving this because you're signed up for Dropbox notifications. Change your preferences:
 https://www.dropbox.com/account/notifications""",
-                "answer": "Legitimate"
+                "answer": "Legitimate",
             },
             {
                 "prompt": """Subject: Microsoft 365: Your Subscription Will Renew Soon
@@ -369,7 +369,7 @@ Microsoft Corporation
 microsoft@email.microsoft.com
 
 Privacy Statement: https://privacy.microsoft.com""",
-                "answer": "Legitimate"
+                "answer": "Legitimate",
             },
             # More nuanced examples
             {
@@ -387,7 +387,7 @@ This link will expire in 24 hours.
 Best regards,
 Customer Support Team
 support@customer-help.site""",
-                "answer": "Phishing"
+                "answer": "Phishing",
             },
             {
                 "prompt": """Subject: University IT: Password Expiration Notice
@@ -404,7 +404,7 @@ Requirements:
 
 IT Help Desk
 it-support@university-mail.net""",
-                "answer": "Phishing"
+                "answer": "Phishing",
             },
             {
                 "prompt": """Subject: Wells Fargo: Scheduled System Maintenance
@@ -429,7 +429,7 @@ Wells Fargo Bank
 onlinebanking@wellsfargo.com
 
 View in browser: https://www.wellsfargo.com/email/maintenance-notice""",
-                "answer": "Legitimate"
+                "answer": "Legitimate",
             },
             {
                 "prompt": """Subject: Zoom: Your Cloud Recording Is Ready
@@ -455,8 +455,8 @@ Thanks for using Zoom!
 notification@zoom.us
 Don't want these emails? Update your notification settings:
 https://zoom.us/profile/setting""",
-                "answer": "Legitimate"
-            }
+                "answer": "Legitimate",
+            },
         ]
 
         logger.info(f"Created synthetic dataset with {len(examples)} examples")
@@ -498,7 +498,7 @@ https://zoom.us/profile/setting""",
         # Fallback: return the first word if it matches expected labels
         words = output_lower.split()
         if words:
-            first_word = words[0].rstrip('.,!?')
+            first_word = words[0].rstrip(".,!?")
             if first_word in ["phishing", "phish"]:
                 return "Phishing"
             elif first_word in ["legitimate", "legit"]:

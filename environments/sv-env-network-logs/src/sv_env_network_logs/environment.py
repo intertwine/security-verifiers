@@ -138,6 +138,7 @@ class NetworkLogsEnvironment:
         Returns:
             Dataset in format expected by SingleTurnEnv (prompt/answer columns)
         """
+
         def transform_example(example):
             # Try to extract log and label from various possible column names
             log_text = self._extract_log_text(example)
@@ -200,84 +201,81 @@ class NetworkLogsEnvironment:
                     "TCP connection from 10.0.0.5:445 to 192.168.1.10:80, flags [S], "
                     "unusual port scanning pattern detected"
                 ),
-                "answer": "Malicious"
+                "answer": "Malicious",
             },
             {
                 "prompt": (
                     "HTTP GET request from 192.168.1.100 to www.example.com, "
                     "normal web browsing activity"
                 ),
-                "answer": "Benign"
+                "answer": "Benign",
             },
             {
                 "prompt": (
                     "Failed SSH login attempt from 203.0.113.0, "
                     "brute force attack pattern identified"
                 ),
-                "answer": "Malicious"
+                "answer": "Malicious",
             },
             {
                 "prompt": (
-                    "DNS query from 192.168.1.50 for mail.company.com, "
-                    "standard email resolution"
+                    "DNS query from 192.168.1.50 for mail.company.com, standard email resolution"
                 ),
-                "answer": "Benign"
+                "answer": "Benign",
             },
             {
                 "prompt": (
-                    "Outbound connection blocked to known malware C&C server "
-                    "198.51.100.1:443"
+                    "Outbound connection blocked to known malware C&C server 198.51.100.1:443"
                 ),
-                "answer": "Malicious"
+                "answer": "Malicious",
             },
             {
                 "prompt": (
                     "HTTPS connection to banking.example.com from 192.168.1.25, "
                     "encrypted traffic normal"
                 ),
-                "answer": "Benign"
+                "answer": "Benign",
             },
             {
                 "prompt": (
                     "Multiple failed authentication attempts detected from IP "
                     "203.0.113.5, suspicious activity"
                 ),
-                "answer": "Malicious"
+                "answer": "Malicious",
             },
             {
                 "prompt": (
                     "Regular file transfer via SFTP to backup server 10.0.1.100, "
                     "scheduled maintenance"
                 ),
-                "answer": "Benign"
+                "answer": "Benign",
             },
             {
                 "prompt": (
                     "DDoS attack detected from botnet IPs, "
                     "traffic volume exceeding normal thresholds"
                 ),
-                "answer": "Malicious"
+                "answer": "Malicious",
             },
             {
                 "prompt": (
                     "Email SMTP connection to mail.corporate.com from "
                     "authenticated user, routine communication"
                 ),
-                "answer": "Benign"
+                "answer": "Benign",
             },
             {
                 "prompt": (
                     "SQL injection attempt blocked in web application logs, "
                     "malicious payload detected"
                 ),
-                "answer": "Malicious"
+                "answer": "Malicious",
             },
             {
                 "prompt": (
-                    "VPN connection established from remote worker 192.168.100.5, "
-                    "valid credentials"
+                    "VPN connection established from remote worker 192.168.100.5, valid credentials"
                 ),
-                "answer": "Benign"
+                "answer": "Benign",
             },
         ]
 

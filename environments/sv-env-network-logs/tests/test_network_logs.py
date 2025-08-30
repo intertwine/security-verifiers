@@ -32,8 +32,7 @@ def test_network_logs_verifier_benign_classification():
     verifier = NetworkLogsVerifier()
 
     benign_log = (
-        "HTTP GET request from 192.168.1.100 to www.example.com, "
-        "normal web browsing activity"
+        "HTTP GET request from 192.168.1.100 to www.example.com, normal web browsing activity"
     )
     classification = verifier.classify(benign_log)
 
@@ -53,9 +52,7 @@ def test_network_logs_verifier_incorrect_classification():
     """Test scoring when classification is incorrect."""
     verifier = NetworkLogsVerifier()
 
-    malicious_log = (
-        "Failed SSH login attempt from 203.0.113.0, brute force attack detected"
-    )
+    malicious_log = "Failed SSH login attempt from 203.0.113.0, brute force attack detected"
 
     # Score against wrong ground truth
     score = verifier.score(malicious_log, "Benign")
@@ -92,9 +89,7 @@ def test_network_logs_environment_evaluation():
     """Test environment evaluation functionality."""
     env = NetworkLogsEnvironment()
 
-    log_entry = (
-        "DDoS attack detected from botnet IPs, traffic volume exceeding thresholds"
-    )
+    log_entry = "DDoS attack detected from botnet IPs, traffic volume exceeding thresholds"
     model_output = "Malicious"
 
     reward, info = env.evaluate(log_entry, model_output)
@@ -152,8 +147,7 @@ def test_verifier_confidence_calculation():
 
     # High confidence malicious (multiple indicators)
     malicious_log = (
-        "Malware detected, suspicious botnet activity, "
-        "unauthorized access, exploit detected"
+        "Malware detected, suspicious botnet activity, unauthorized access, exploit detected"
     )
     verifier.classify(malicious_log)  # Trigger classification to set details
     details = verifier.details()
@@ -161,8 +155,7 @@ def test_verifier_confidence_calculation():
 
     # High confidence benign (clear indicators)
     benign_log = (
-        "Normal HTTPS connection, authenticated user, "
-        "routine maintenance, scheduled backup"
+        "Normal HTTPS connection, authenticated user, routine maintenance, scheduled backup"
     )
     verifier.classify(benign_log)
     details = verifier.details()
@@ -184,9 +177,7 @@ def test_verifier_pattern_stats():
     assert "malicious_patterns_count" in stats
     assert "benign_patterns_count" in stats
     assert "total_patterns" in stats
-    expected_total = (
-        stats["malicious_patterns_count"] + stats["benign_patterns_count"]
-    )
+    expected_total = stats["malicious_patterns_count"] + stats["benign_patterns_count"]
     assert stats["total_patterns"] == expected_total
     assert stats["malicious_patterns_count"] > 0
     assert stats["benign_patterns_count"] > 0
@@ -229,8 +220,8 @@ def test_environment_verifiers_integration(sample_environment):
     verifiers_env = env.get_verifiers_env()
 
     assert verifiers_env is not None
-    assert hasattr(verifiers_env, 'dataset')
-    assert hasattr(verifiers_env, 'rubric')
+    assert hasattr(verifiers_env, "dataset")
+    assert hasattr(verifiers_env, "rubric")
 
 
 def test_load_environment_function():

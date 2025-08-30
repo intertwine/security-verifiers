@@ -103,7 +103,7 @@ class PhishingDetectionVerifier(VerifierProtocol):
                 r"short\.link",
                 r"click\.here",
                 r"[0-9]{1,3}-[0-9]{1,3}-[0-9]{1,3}-[0-9]{1,3}",  # IP addresses in URLs
-            ]
+            ],
         }
 
         # Legitimate email indicators
@@ -129,7 +129,7 @@ class PhishingDetectionVerifier(VerifierProtocol):
                 r"@.*\.(gov|edu|org)$",
                 r"noreply@.*\.(com|net|org)$",
                 r"@(gmail|yahoo|outlook|hotmail)\.com$",
-            ]
+            ],
         }
 
     def score(self, email_content: str, classification: str) -> float:
@@ -161,7 +161,9 @@ class PhishingDetectionVerifier(VerifierProtocol):
 
         # Store details
         self._last_details = {
-            "email_content": email_content[:500] + "..." if len(email_content) > 500 else email_content,
+            "email_content": email_content[:500] + "..."
+            if len(email_content) > 500
+            else email_content,
             "predicted": predicted,
             "actual": actual_classification,
             "phishing_score": phishing_score,
@@ -233,7 +235,9 @@ class PhishingDetectionVerifier(VerifierProtocol):
         # Score calculation with bias toward phishing detection (better safe than sorry)
         total_weight = phishing_weight + legitimate_weight
         if total_weight > 0:
-            score = (phishing_weight * 1.2) / (total_weight + 1)  # Slight bias toward detecting phishing
+            score = (phishing_weight * 1.2) / (
+                total_weight + 1
+            )  # Slight bias toward detecting phishing
         else:
             score = 0.3
 
@@ -323,12 +327,14 @@ class PhishingDetectionVerifier(VerifierProtocol):
 
         for url in urls:
             # Check for URL shorteners
-            if any(shortener in url.lower() for shortener in ['bit.ly', 'tinyurl', 'goo.gl', 'ow.ly']):
+            if any(
+                shortener in url.lower() for shortener in ["bit.ly", "tinyurl", "goo.gl", "ow.ly"]
+            ):
                 suspicious.append(url)
                 continue
 
             # Check for IP addresses
-            if re.search(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', url):
+            if re.search(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", url):
                 suspicious.append(url)
                 continue
 
@@ -338,12 +344,12 @@ class PhishingDetectionVerifier(VerifierProtocol):
                 domain = parsed.netloc.lower()
 
                 # Suspicious TLDs
-                if any(domain.endswith(tld) for tld in ['.tk', '.ml', '.ga', '.cf']):
+                if any(domain.endswith(tld) for tld in [".tk", ".ml", ".ga", ".cf"]):
                     suspicious.append(url)
 
                 # Look-alike domains (simple check)
-                for brand in ['paypal', 'amazon', 'microsoft', 'google', 'apple', 'facebook']:
-                    if brand in domain and not domain.endswith(f'{brand}.com'):
+                for brand in ["paypal", "amazon", "microsoft", "google", "apple", "facebook"]:
+                    if brand in domain and not domain.endswith(f"{brand}.com"):
                         suspicious.append(url)
                         break
             except:
@@ -369,11 +375,11 @@ class PhishingDetectionVerifier(VerifierProtocol):
             display_text = match.group(2)
 
             # Check if display text looks like a URL but doesn't match href
-            if re.match(r'https?://', display_text) and url != display_text:
+            if re.match(r"https?://", display_text) and url != display_text:
                 return True
 
             # Check if display text contains a brand name but URL doesn't
-            for brand in ['paypal', 'amazon', 'microsoft', 'google']:
+            for brand in ["paypal", "amazon", "microsoft", "google"]:
                 if brand in display_text.lower() and brand not in url.lower():
                     return True
 
