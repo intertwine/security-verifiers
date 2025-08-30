@@ -24,11 +24,13 @@ Getting started (uv)
 - Install all local packages in editable mode:
   - uv pip install -e environments/sv-env-prompt-injection -e environments/sv-env-secrets-leakage -e environments/sv-env-tool-use-safety -e environments/sv-env-code-exec-safety -e environments/sv-env-network-safety -e environments/sv-env-policy-compliance
 - Install dev tools:
-  - uv pip install pytest ruff build
+  - uv pip install pytest ruff build pre-commit
 
 3) Lint and test
 - Lint entire repo:
   - uv run ruff check .
+- Format code:
+  - uv run ruff format .
 - Run all tests:
   - uv run pytest -q
 - Run a single test file:
@@ -40,6 +42,12 @@ Building a wheel for a subproject
 - Build a wheel for sv-env-prompt-injection:
   - uv run python -m build --wheel environments/sv-env-prompt-injection
   (Artifacts are emitted to the subproject’s dist/ directory.)
+
+Pre-commit hooks (optional)
+- Install pre-commit and enable hooks:
+  - uv run pre-commit install
+- Run on all files:
+  - uv run pre-commit run --all-files
 
 Notes
 - The environment packages are placeholders; implementation will be added iteratively.
