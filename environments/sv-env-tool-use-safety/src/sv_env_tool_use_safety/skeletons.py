@@ -24,4 +24,3 @@ class ToolUseSafetyEnvironment(EnvironmentProtocol):
     def evaluate(self, action: str, observation: str) -> Tuple[float, Mapping[str, Any]]:  # noqa: D401
         """Compute a (reward, info) tuple for the (action, observation)."""
         raise NotImplementedError
-

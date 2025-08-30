@@ -24,4 +24,3 @@ class SecretsLeakageEnvironment(EnvironmentProtocol):
     def evaluate(self, input_text: str, output_text: str) -> Tuple[float, Mapping[str, Any]]:  # noqa: D401
         """Compute a (reward, info) tuple for the (input, output)."""
         raise NotImplementedError
-

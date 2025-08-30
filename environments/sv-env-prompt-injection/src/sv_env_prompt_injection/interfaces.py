@@ -33,4 +33,3 @@ class Environment(Protocol):
 
 
 __all__ = ["Verifier", "Environment"]
-

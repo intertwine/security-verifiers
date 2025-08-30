@@ -1,5 +1,7 @@
 # Security Verifiers
 
+[![CI](https://github.com/intertwine/security-verifiers/actions/workflows/ci.yml/badge.svg)](https://github.com/intertwine/security-verifiers/actions/workflows/ci.yml)
+
 A monorepo scaffold for six Reinforcement Learning (RL) environments built in Python and intended to use the Prime Intellect verifiers library. This repo currently contains placeholders only (no environment logic yet).
 
 Monorepo layout
@@ -48,6 +50,9 @@ Pre-commit hooks (optional)
   - uv run pre-commit install
 - Run on all files:
   - uv run pre-commit run --all-files
+
+Contributing
+- See CONTRIBUTING.md for setup, style, and workflow details.
 
 Notes
 - The environment packages are placeholders; implementation will be added iteratively.

@@ -24,4 +24,3 @@ class CodeExecSafetyEnvironment(EnvironmentProtocol):
     def evaluate(self, code: str, execution_log: str) -> Tuple[float, Mapping[str, Any]]:  # noqa: D401
         """Compute a (reward, info) tuple for the (code, execution_log)."""
         raise NotImplementedError
-

@@ -24,4 +24,3 @@ class NetworkSafetyEnvironment(EnvironmentProtocol):
     def evaluate(self, request: str, response: str) -> Tuple[float, Mapping[str, Any]]:  # noqa: D401
         """Compute a (reward, info) tuple for the (request, response)."""
         raise NotImplementedError
-
