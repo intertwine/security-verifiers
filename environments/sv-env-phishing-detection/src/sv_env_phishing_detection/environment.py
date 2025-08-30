@@ -98,9 +98,7 @@ class PhishingDetectionEnvironment:
         """Create the underlying Verifiers SingleTurnEnv."""
         dataset = self.get_dataset()
 
-        def reward_classification_match(
-            prompt: str, completion: str, answer: str, **kwargs
-        ) -> float:
+        def reward_classification_match(prompt: str, completion: str, answer: str, **kwargs) -> float:
             """Reward function for exact classification match."""
             predicted = self._extract_classification(completion)
             actual = answer.strip().lower()
@@ -126,7 +124,8 @@ class PhishingDetectionEnvironment:
 
 Dear Customer,
 
-We have detected unusual activity on your account. Your account will be SUSPENDED within 24 hours unless you verify your identity immediately.
+"We have detected unusual activity on your account. Your account will be "
+"SUSPENDED within 24 hours unless you verify your identity immediately."
 
 Click here to verify your account: http://bit.ly/verify-account-now
 
@@ -209,7 +208,8 @@ refunds@irs-gov.ml""",
 
 Dear PayPal User,
 
-We've limited your account due to suspicious activity. To restore full access, you must verify your identity.
+"We've limited your account due to suspicious activity. To restore full "
+"access, you must verify your identity."
 
 Click here to unlock your account:
 http://tinyurl.com/paypal-unlock-2024
@@ -256,14 +256,19 @@ To unsubscribe from shipping notifications, update your preferences in Your Acco
 
 Hey there!
 
-A sign in attempt requires further verification because we did not recognize your device. To complete the sign in, enter the verification code on the unrecognized device.
+A sign in attempt requires further verification because we did not recognize your device.
+To complete the sign in, enter the verification code on the unrecognized device.
 
 Device: Chrome on Windows
 Verification code: 123456
 
-If you did not attempt to sign in to your account, your password may be compromised. Visit https://github.com/settings/security to create a new, strong password for your GitHub account.
+If you did not attempt to sign in to your account, your password may be compromised.
+Visit https://github.com/settings/security to create a new, strong password for your GitHub account.
 
-If you'd like to automatically verify devices in the future, consider enabling two-factor authentication on your account. Visit https://help.github.com/articles/configuring-two-factor-authentication to learn more about keeping your account secure.
+If you'd like to automatically verify devices in the future, consider enabling
+two-factor authentication on your account.
+Visit https://help.github.com/articles/configuring-two-factor-authentication
+to learn more about keeping your account secure.
 
 Thanks,
 The GitHub Team""",
@@ -347,7 +352,8 @@ https://www.dropbox.com/account/notifications""",
 
 Hello Emma Davis,
 
-This is a reminder that your Microsoft 365 Family subscription will automatically renew on December 25, 2024.
+"This is a reminder that your Microsoft 365 Family subscription will "
+"automatically renew on December 25, 2024."
 
 Subscription details:
 - Product: Microsoft 365 Family
@@ -394,7 +400,8 @@ support@customer-help.site""",
 
 Dear Student,
 
-Your university email password will expire in 7 days. To avoid interruption of service, please update your password.
+"Your university email password will expire in 7 days. To avoid "
+"interruption of service, please update your password."
 
 Click here to update: http://university-it-portal.weebly.com/password-reset
 

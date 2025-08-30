@@ -123,14 +123,14 @@ def verify_environment(env_name, env_info):
 
         # Test environment.py and verifier.py imports
         try:
-            env_module = importlib.import_module(f"{env_name}.environment")
+            importlib.import_module(f"{env_name}.environment")
             print_success("environment.py import successful")
         except ImportError as e:
             print_error(f"environment.py import failed: {e}")
             success = False
 
         try:
-            ver_module = importlib.import_module(f"{env_name}.verifier")
+            importlib.import_module(f"{env_name}.verifier")
             print_success("verifier.py import successful")
         except ImportError as e:
             print_error(f"verifier.py import failed: {e}")
@@ -168,7 +168,7 @@ def verify_cross_imports():
                         cls = getattr(module, class_name)
                         # Try to instantiate (may fail if requires args)
                         try:
-                            instance = cls()
+                            cls()
                             instantiated += 1
                         except Exception:
                             # Some classes may require arguments

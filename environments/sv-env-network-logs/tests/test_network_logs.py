@@ -9,8 +9,7 @@ def test_network_logs_verifier_malicious_classification():
     verifier = NetworkLogsVerifier()
 
     malicious_log = (
-        "TCP connection from 10.0.0.5:445 to 192.168.1.10:80, "
-        "unusual port scanning pattern detected"
+        "TCP connection from 10.0.0.5:445 to 192.168.1.10:80, unusual port scanning pattern detected"
     )
     classification = verifier.classify(malicious_log)
 
@@ -31,9 +30,7 @@ def test_network_logs_verifier_benign_classification():
     """Test that verifier correctly identifies benign log entries."""
     verifier = NetworkLogsVerifier()
 
-    benign_log = (
-        "HTTP GET request from 192.168.1.100 to www.example.com, normal web browsing activity"
-    )
+    benign_log = "HTTP GET request from 192.168.1.100 to www.example.com, normal web browsing activity"
     classification = verifier.classify(benign_log)
 
     assert classification == "Benign"
@@ -146,17 +143,13 @@ def test_verifier_confidence_calculation():
     verifier = NetworkLogsVerifier()
 
     # High confidence malicious (multiple indicators)
-    malicious_log = (
-        "Malware detected, suspicious botnet activity, unauthorized access, exploit detected"
-    )
+    malicious_log = "Malware detected, suspicious botnet activity, unauthorized access, exploit detected"
     verifier.classify(malicious_log)  # Trigger classification to set details
     details = verifier.details()
     assert details["confidence"] > 0.6
 
     # High confidence benign (clear indicators)
-    benign_log = (
-        "Normal HTTPS connection, authenticated user, routine maintenance, scheduled backup"
-    )
+    benign_log = "Normal HTTPS connection, authenticated user, routine maintenance, scheduled backup"
     verifier.classify(benign_log)
     details = verifier.details()
     assert details["confidence"] > 0.6

@@ -138,9 +138,7 @@ class NetworkLogsEnvironment(NetworkLogsEnvironmentProtocol):
         """Create the underlying Verifiers SingleTurnEnv."""
         dataset = self.get_dataset()
 
-        def reward_classification_match(
-            prompt: str, completion: str, answer: str, **kwargs
-        ) -> float:
+        def reward_classification_match(prompt: str, completion: str, answer: str, **kwargs) -> float:
             """Reward function for exact classification match."""
             predicted = self._extract_classification(completion)
             return 1.0 if predicted.lower() == answer.lower() else 0.0
@@ -193,34 +191,27 @@ class NetworkLogsEnvironment(NetworkLogsEnvironmentProtocol):
             },
             {
                 "prompt": (
-                    "HTTP GET request from 192.168.1.100 to www.example.com, "
-                    "normal web browsing activity"
+                    "HTTP GET request from 192.168.1.100 to www.example.com, normal web browsing activity"
                 ),
                 "answer": "Benign",
             },
             {
                 "prompt": (
-                    "Failed SSH login attempt from 203.0.113.0, "
-                    "brute force attack pattern identified"
+                    "Failed SSH login attempt from 203.0.113.0, brute force attack pattern identified"
                 ),
                 "answer": "Malicious",
             },
             {
-                "prompt": (
-                    "DNS query from 192.168.1.50 for mail.company.com, standard email resolution"
-                ),
+                "prompt": ("DNS query from 192.168.1.50 for mail.company.com, standard email resolution"),
                 "answer": "Benign",
             },
             {
-                "prompt": (
-                    "Outbound connection blocked to known malware C&C server 198.51.100.1:443"
-                ),
+                "prompt": ("Outbound connection blocked to known malware C&C server 198.51.100.1:443"),
                 "answer": "Malicious",
             },
             {
                 "prompt": (
-                    "HTTPS connection to banking.example.com from 192.168.1.25, "
-                    "encrypted traffic normal"
+                    "HTTPS connection to banking.example.com from 192.168.1.25, encrypted traffic normal"
                 ),
                 "answer": "Benign",
             },
@@ -233,8 +224,7 @@ class NetworkLogsEnvironment(NetworkLogsEnvironmentProtocol):
             },
             {
                 "prompt": (
-                    "Regular file transfer via SFTP to backup server 10.0.1.100, "
-                    "scheduled maintenance"
+                    "Regular file transfer via SFTP to backup server 10.0.1.100, scheduled maintenance"
                 ),
                 "answer": "Benign",
             },

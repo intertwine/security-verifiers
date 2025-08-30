@@ -161,9 +161,7 @@ class PhishingDetectionVerifier(VerifierProtocol):
 
         # Store details
         self._last_details = {
-            "email_content": email_content[:500] + "..."
-            if len(email_content) > 500
-            else email_content,
+            "email_content": email_content[:500] + "..." if len(email_content) > 500 else email_content,
             "predicted": predicted,
             "actual": actual_classification,
             "phishing_score": phishing_score,
@@ -235,9 +233,7 @@ class PhishingDetectionVerifier(VerifierProtocol):
         # Score calculation with bias toward phishing detection (better safe than sorry)
         total_weight = phishing_weight + legitimate_weight
         if total_weight > 0:
-            score = (phishing_weight * 1.2) / (
-                total_weight + 1
-            )  # Slight bias toward detecting phishing
+            score = (phishing_weight * 1.2) / (total_weight + 1)  # Slight bias toward detecting phishing
         else:
             score = 0.3
 
@@ -327,9 +323,7 @@ class PhishingDetectionVerifier(VerifierProtocol):
 
         for url in urls:
             # Check for URL shorteners
-            if any(
-                shortener in url.lower() for shortener in ["bit.ly", "tinyurl", "goo.gl", "ow.ly"]
-            ):
+            if any(shortener in url.lower() for shortener in ["bit.ly", "tinyurl", "goo.gl", "ow.ly"]):
                 suspicious.append(url)
                 continue
 
@@ -352,7 +346,7 @@ class PhishingDetectionVerifier(VerifierProtocol):
                     if brand in domain and not domain.endswith(f"{brand}.com"):
                         suspicious.append(url)
                         break
-            except:
+            except Exception:
                 pass
 
         return suspicious
