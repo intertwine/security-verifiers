@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "security-verifiers-config-verification"
+version = "0.1.0"
+description = "Security Verifiers environment: Security Policy Verification for Configurations (ToolEnv)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "verifiers>=0.1.0",
+    "datasets>=2.0.0",
+    "pandas>=2.0.0",
+    "pyyaml>=6.0.0",
+    "configparser>=5.3.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0"
+]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+]
