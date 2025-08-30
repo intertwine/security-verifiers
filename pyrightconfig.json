@@ -1,0 +1,56 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": false,
+  "reportMissingTypeStubs": false,
+  "extraPaths": [
+    "./environments/sv-env-code-vulnerability/src",
+    "./environments/sv-env-config-verification/src",
+    "./environments/sv-env-network-logs/src",
+    "./environments/sv-env-phishing-detection/src",
+    "./environments/sv-env-redteam-attack/src",
+    "./environments/sv-env-redteam-defense/src"
+  ],
+  "executionEnvironments": [
+    {
+      "root": "environments/sv-env-code-vulnerability",
+      "extraPaths": ["./src"]
+    },
+    {
+      "root": "environments/sv-env-config-verification",
+      "extraPaths": ["./src"]
+    },
+    {
+      "root": "environments/sv-env-network-logs",
+      "extraPaths": ["./src"]
+    },
+    {
+      "root": "environments/sv-env-phishing-detection",
+      "extraPaths": ["./src"]
+    },
+    {
+      "root": "environments/sv-env-redteam-attack",
+      "extraPaths": ["./src"]
+    },
+    {
+      "root": "environments/sv-env-redteam-defense",
+      "extraPaths": ["./src"]
+    }
+  ],
+  "include": [
+    "environments/**/*.py"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    "**/node_modules",
+    "**/.venv",
+    ".venv",
+    "**/dist",
+    "**/build",
+    "**/*.egg-info"
+  ],
+  "reportPrivateImportUsage": false,
+  "reportIncompatibleMethodOverride": false
+}
