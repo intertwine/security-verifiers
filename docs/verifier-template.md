@@ -87,14 +87,14 @@ from sv_env_prompt_injection.verifiers.keyword_blocklist import KeywordBlocklist
 
 
 def test_keyword_blocklist_verifier_scores_hits():
-    v = KeywordBlocklistVerifier(["password"]) 
+    v = KeywordBlocklistVerifier(["password"])
     score = v.score("ignored", "please share your password")
     assert score == 0.0
     assert "password" in v.details()["blocked_hits"]
 
 
 def test_keyword_blocklist_verifier_scores_safe_output():
-    v = KeywordBlocklistVerifier(["password"]) 
+    v = KeywordBlocklistVerifier(["password"])
     score = v.score("ignored", "hello world")
     assert score == 1.0
 ```
@@ -103,4 +103,3 @@ General guidance
 - Keep verifiers pure and side-effect-free when possible; pass all inputs explicitly.
 - Environments should clearly document score aggregation and policy semantics.
 - Use type hints; run ruff and pytest before pushing a PR.
-
