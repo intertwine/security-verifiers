@@ -83,8 +83,12 @@ class NetworkLogsEnvironment:
             try:
                 logger.info(f"Loading dataset: {self.dataset_name}")
                 raw_dataset = load_dataset(self.dataset_name, split="train")
-                self._dataset = self._transform_dataset(raw_dataset)
-                logger.info(f"Loaded {len(self._dataset)} examples")
+                # When split is specified, load_dataset returns a Dataset
+                if isinstance(raw_dataset, Dataset):
+                    self._dataset = self._transform_dataset(raw_dataset)
+                    logger.info(f"Loaded {len(self._dataset)} examples")
+                else:
+                    raise ValueError(f"Expected Dataset but got {type(raw_dataset)}")
             except Exception as e:
                 logger.warning(f"Failed to load dataset {self.dataset_name}: {e}")
                 logger.info("Falling back to synthetic dataset")
