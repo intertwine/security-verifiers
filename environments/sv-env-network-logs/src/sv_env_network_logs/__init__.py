@@ -5,17 +5,7 @@ network log entries as malicious or benign. It provides a controlled setup to ev
 an LLM's ability to interpret semi-structured log text and detect threats.
 """
 
-from .environment import NetworkLogsEnvironment
-from .verifier import NetworkLogsVerifier
+from .main import load_environment
 
 __version__ = "0.1.0"
-__all__ = ["NetworkLogsEnvironment", "NetworkLogsVerifier"]
-
-
-def load_environment():
-    """Load the Network Logs Anomaly Detection environment for use with Verifiers framework.
-
-    Returns:
-        NetworkLogsEnvironment: Configured environment ready for RL training
-    """
-    return NetworkLogsEnvironment()
+__all__ = ["load_environment"]
