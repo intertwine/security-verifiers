@@ -70,3 +70,5 @@ coverage.xml
 # Python version managers
 .python-version
 
+# Environment variables
+.env

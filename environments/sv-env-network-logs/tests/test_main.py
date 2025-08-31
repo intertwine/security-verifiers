@@ -58,11 +58,11 @@ def test_transform_dataset():
     transformed = transform_dataset(raw_dataset, max_examples=None)
 
     assert len(transformed) == 2
-    assert "prompt" in transformed.column_names
+    assert "question" in transformed.column_names
     assert "answer" in transformed.column_names
     assert transformed[0]["answer"] == "Benign"
     assert transformed[1]["answer"] == "Malicious"
-    assert "id.orig_h=192.168.1.1" in transformed[0]["prompt"]
+    assert "id.orig_h=192.168.1.1" in transformed[0]["question"]
 
 
 @patch("sv_env_network_logs.main.load_dataset")
@@ -97,5 +97,6 @@ def test_load_environment_download_fails(mock_load_dataset):
     assert isinstance(env, vf.SingleTurnEnv)
     assert env.dataset is not None
     # Check that it falls back to the synthetic dataset
-    assert len(env.dataset) == 3
-    assert env.dataset[2]["answer"] == "Malicious"
+    assert len(env.dataset) == 10
+    # The synthetic dataset has 3 benign, then 3 malicious examples
+    assert env.dataset[3]["answer"] == "Malicious"

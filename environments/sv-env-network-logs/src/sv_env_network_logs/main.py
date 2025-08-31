@@ -6,7 +6,20 @@ from datasets import Dataset, load_dataset
 
 def reward_label_match(prompt: str, completion: str, answer: str, **kwargs) -> float:
     """Reward function for exact classification match."""
-    predicted = completion.strip().lower()
+    # Handle case where completion is a list of messages
+    completion_text = completion
+    if isinstance(completion, list):
+        # Extract the content from the assistant's message
+        if completion:
+            last_item = completion[-1]
+            if isinstance(last_item, dict):
+                completion_text = last_item.get("content", "")
+            else:
+                completion_text = str(last_item)
+        else:
+            completion_text = ""
+
+    predicted = completion_text.strip().lower()
     actual = answer.strip().lower()
     return 1.0 if predicted == actual else 0.0
 
@@ -30,7 +43,7 @@ def transform_dataset(raw_dataset: Dataset, max_examples: int | None) -> Dataset
 
         # The 'label' column is 'Malicious' or 'Benign'
         return {
-            "prompt": prompt_text,
+            "question": prompt_text,
             "answer": example.get("label", "Benign"),
         }
 
@@ -66,34 +79,91 @@ def load_environment(
         dataset = transform_dataset(dataset, max_examples)
     except Exception as e:
         print(f"Failed to load dataset '{dataset_name}': {e}")
-        print("Falling back to a small synthetic dataset.")
-        examples = [
-            {
-                "prompt": (
-                    "Log Entry: id.orig_h=192.168.1.103, id.orig_p=52089, "
-                    "id.resp_h=192.168.1.1, id.resp_p=53, proto=udp, service=dns, "
-                    "detailed-label=Benign"
-                ),
-                "answer": "Benign",
-            },
-            {
-                "prompt": (
-                    "Log Entry: id.orig_h=192.168.1.103, id.orig_p=44331, "
-                    "id.resp_h=192.168.1.1, id.resp_p=443, proto=tcp, service=https, "
-                    "detailed-label=Benign"
-                ),
-                "answer": "Benign",
-            },
-            {
-                "prompt": (
-                    "Log Entry: id.orig_h=192.168.1.104, id.orig_p=37356, "
-                    "id.resp_h=192.168.1.1, id.resp_p=80, proto=tcp, service=http, "
-                    "detailed-label=Attack"
-                ),
-                "answer": "Malicious",
-            },
-        ]
-        dataset = Dataset.from_list(examples)
+        print("Falling back to a synthetic dataset.")
+
+        def _create_synthetic_dataset():
+            """Create a synthetic dataset for testing purposes."""
+            examples = []
+
+            # Generate 10 synthetic network log entries with various patterns
+            log_patterns = [
+                # Benign examples
+                {
+                    "question": (
+                        "2024-01-15 10:23:45 SRC=192.168.1.105 DST=192.168.1.1 PROTO=HTTPS PORT=443 STATUS=OK"
+                    ),
+                    "answer": "Benign",
+                },
+                {
+                    "question": (
+                        "2024-01-15 10:24:12 SRC=10.0.0.15 DST=10.0.0.1 "
+                        "PROTO=DNS PORT=53 QUERY=google.com STATUS=OK"
+                    ),
+                    "answer": "Benign",
+                },
+                {
+                    "question": (
+                        "2024-01-15 10:25:33 SRC=172.16.0.100 DST=172.16.0.10 "
+                        "PROTO=SSH PORT=22 STATUS=AUTH_SUCCESS"
+                    ),
+                    "answer": "Benign",
+                },
+                # Malicious examples
+                {
+                    "question": (
+                        "2024-01-15 10:26:01 SRC=192.168.1.105 DST=192.168.1.1 "
+                        "PROTO=SSH PORT=22 STATUS=AUTH_FAILED ATTEMPTS=50"
+                    ),
+                    "answer": "Malicious",
+                },
+                {
+                    "question": (
+                        "2024-01-15 10:27:15 SRC=10.0.0.99 DST=185.220.101.45 PROTO=TOR PORT=9001 BYTES=50000"
+                    ),
+                    "answer": "Malicious",
+                },
+                {
+                    "question": (
+                        "2024-01-15 10:28:42 SRC=172.16.0.200 DST=MULTIPLE "
+                        "PROTO=SCAN PORTS=1-65535 STATUS=SYN_SCAN"
+                    ),
+                    "answer": "Malicious",
+                },
+                # More examples
+                {
+                    "question": (
+                        "2024-01-15 10:29:03 SRC=192.168.1.50 DST=8.8.8.8 "
+                        "PROTO=ICMP TYPE=ECHO_REQUEST STATUS=OK"
+                    ),
+                    "answer": "Benign",
+                },
+                {
+                    "question": (
+                        "2024-01-15 10:30:21 SRC=10.0.0.77 DST=198.51.100.23 "
+                        "PROTO=HTTPS PORT=443 CERT=SELF_SIGNED"
+                    ),
+                    "answer": "Malicious",
+                },
+                {
+                    "question": (
+                        "2024-01-15 10:31:55 SRC=172.16.0.150 DST=172.16.0.1 "
+                        "PROTO=HTTP PORT=80 STATUS=OK METHOD=GET"
+                    ),
+                    "answer": "Benign",
+                },
+                {
+                    "question": (
+                        "2024-01-15 10:32:18 SRC=192.168.1.200 DST=91.92.109.43 "
+                        "PROTO=UDP PORT=4444 PATTERN=C2_BEACON"
+                    ),
+                    "answer": "Malicious",
+                },
+            ]
+
+            examples.extend(log_patterns)
+            return Dataset.from_list(examples)
+
+        dataset = _create_synthetic_dataset()
 
     rubric = vf.Rubric(
         funcs=[reward_label_match],
@@ -101,6 +171,8 @@ def load_environment(
     )
 
     return vf.SingleTurnEnv(
+        name="sv-env-network-logs",
+        description="Classify network logs as 'Malicious' or 'Benign'.",
         dataset=dataset,
         rubric=rubric,
         system_prompt=(

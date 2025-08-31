@@ -37,18 +37,89 @@ It uses the Verifiers framework with:
 - `tests/`: Test suite for the environment.
 - `pyproject.toml`: Project configuration, including dependencies and the entry point for the `verifiers` framework.
 
-## Local install (editable)
+## Local Development Setup
 
-From the repository root after creating and activating a virtual environment:
+To set up the environment for local development and testing, install it in editable mode with the `dev` dependencies. From the repository root, after creating and activating a virtual environment:
 
 ```bash
-uv pip install -e environments/sv-env-network-logs
+# Install the package and development dependencies
+uv pip install -e 'environments/sv-env-network-logs[dev]'
 ```
 
-## Usage
+This will install all necessary dependencies for running the environment and its tests, including `verifiers[dev]`.
 
-You can load and use this environment with the `verifiers` CLI:
+## Local Development and Testing
+
+To test the environment locally, you can use the `vf-eval` command from the `verifiers` library. This will load the environment and run a few examples using a specified model.
 
 ```bash
-verifiers envs run sv_env_network_logs --model <your-model>
+# Evaluate the environment with a small model
+vf-eval sv-env-network-logs --model gpt-4o-mini --num-examples 3
+```
+
+**Note on Configuration**:
+
+- **API Keys**: The evaluation requires API keys to be set as environment variables. Create a `.env` file in the project root with:
+
+  ```bash
+  OPENAI_API_KEY=your-openai-api-key-here
+  HF_TOKEN=your-huggingface-token-here  # Optional, for dataset access
+  ```
+
+  Then load the environment variables before running `vf-eval`:
+
+  ```bash
+  # Load .env file and run evaluation
+  set -a && source .env && set +a && vf-eval sv-env-network-logs --model gpt-5-mini --num-examples 3
+  ```
+
+- **Hugging Face Authentication**: The `19kmunz/iot-23-preprocessed-minimumcolumns` dataset is private. If you see a `401 Unauthorized` error, you need to log in to Hugging Face or set the `HF_TOKEN` environment variable:
+
+  ```bash
+  huggingface-cli login
+  ```
+
+- **Model Endpoint**: If you see a `No local endpoint registry found` message, this is expected. The tool will use the default OpenAI endpoint with your API key. For custom endpoints, refer to the Prime Intellect documentation.
+
+## Publishing to the Environments Hub
+
+Once the environment is tested, you can publish it to the Prime Intellect Environments Hub to make it accessible for cloud training and community use.
+
+1. **Login to the Prime CLI**:
+
+   ```bash
+   prime login
+   ```
+
+2. **Build the environment wheel**:
+
+   ```bash
+   # From the environments/sv-env-network-logs directory
+   uv pip wheel . -w dist/
+   ```
+
+3. **Upload the wheel to the Hub**:
+
+   ```bash
+   prime env upload dist/*.whl
+   ```
+
+## Cloud Training with Prime RL
+
+After publishing, you can use the environment in a Prime RL training workflow on the Prime Intellect cloud.
+
+In your `prime-rl` orchestrator configuration file (e.g., `orchestrator.toml`), specify the environment ID:
+
+```toml
+[environment]
+id = "<your-username>/sv-env-network-logs"
+```
+
+Then, you can launch the training job using the `rl` command:
+
+```bash
+uv run rl \
+ --trainer.model.name "Qwen/Qwen-7B" \
+ --orchestrator.environment.id "<your-username>/sv-env-network-logs" \
+ --trainer.steps 1000
 ```
