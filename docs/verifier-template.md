@@ -1,105 +1,164 @@
 # Verifier and Environment Implementation Template
 
-This guide shows how to add a real verifier and wire it into an environment package.
+This guide shows how to add a new environment package that uses the `verifiers` library for reinforcement learning.
 
-Scope
-- Verifier: computes a scalar score from inputs/outputs and can expose details.
-- Environment: uses one or more verifiers to produce a reward and info tuple.
+## Scope
 
-Where to add code
-- Pick an environment under environments/ (e.g., sv-env-prompt-injection)
-- Add your verifier to src/<package>/verifiers/<name>.py
-- Optionally, extend the environment in src/<package>/skeletons.py or create a new module under src/<package>/envs/
+- **Environment**: A Python class that wraps a `verifiers` environment (e.g., `vf.SingleTurnEnv`) and prepares a dataset for it.
+- **Verifier**: A custom class that implements a specific scoring logic. It can be used within the `verifiers` framework or as a standalone component.
 
-Add dependency (if needed)
-- Edit environments/<env>/pyproject.toml, adding to [project].dependencies, e.g.:
-  dependencies = [
-    "some-lib>=1.2.3",
-  ]
-- Reinstall the package in editable mode from repo root:
-  uv pip install -e environments/<env>
+## Where to Add Code
 
-Example: implementing a verifier
-- File: src/sv_env_prompt_injection/verifiers/keyword_blocklist.py
+1. **Create a new environment package**: Copy an existing environment directory (e.g., `environments/sv-env-network-logs`) to `environments/sv-env-<your-name>`.
+2. **Define interfaces**: In `src/sv_env_<your-name>/interfaces.py`, define the `Protocol` for your verifier and environment.
+3. **Implement the verifier**: In `src/sv_env_<your-name>/verifier.py`, create a verifier class that implements the scoring logic.
+4. **Implement the environment**: In `src/sv_env_<your-name>/environment.py`, create the main environment class that loads data and configures the `verifiers` environment.
 
-```python path=null start=null
+## Add Dependencies
+
+- Edit `environments/sv-env-<your-name>/pyproject.toml` and add any necessary dependencies, including the `verifiers` library.
+
+```toml
+dependencies = [
+  "verifiers>=0.1.0",
+  "datasets",
+  # other dependencies
+]
+```
+
+- Install the new package from the repository root:
+
+```bash
+uv pip install -e environments/sv-env-<your-name>
+```
+
+## Example: `SingleTurnEnv` for Classification
+
+This example shows how to build an environment for a single-turn classification task, based on `sv-env-network-logs`.
+
+### 1. Define the Verifier Interface (`interfaces.py`)
+
+Create a protocol for your verifier to ensure a consistent API.
+
+```python
 from __future__ import annotations
+from typing import Any, Mapping, Protocol
 
-from typing import Any, Mapping
+class MyVerifier(Protocol):
+    """Interface for custom verifier."""
+    def score(self, input_text: str, ground_truth: str) -> float:
+        ...
 
-from ..interfaces import Verifier
+    def details(self) -> Mapping[str, Any]:
+        ...
+```
 
+### 2. Implement the Verifier Logic (`verifier.py`)
 
-class KeywordBlocklistVerifier(Verifier):
-    """Scores outputs based on presence of blocked keywords.
+This class contains the actual scoring logic.
 
-    Score convention (example): higher is better (safer). Adjust as needed.
-    """
+```python
+from .interfaces import MyVerifier as MyVerifierProtocol
 
-    def __init__(self, blocked: list[str] | None = None) -> None:
-        self._blocked = set(blocked or [])
-        self._last_details: dict[str, Any] = {}
+class MyVerifierImpl(MyVerifierProtocol):
+    """Implements scoring logic for the classification task."""
+    def __init__(self):
+        self._last_details = {}
 
-    def score(self, input_text: str, output_text: str) -> float:
-        blocked_hits = [w for w in self._blocked if w.lower() in output_text.lower()]
-        score = 1.0 if not blocked_hits else 0.0
-        self._last_details = {"blocked_hits": blocked_hits, "score": score}
-        return score
+    def score(self, input_text: str, ground_truth: str) -> float:
+        # In a real scenario, you would classify the input_text
+        # and compare it to the ground_truth.
+        predicted_label = self.classify(input_text)
+        is_correct = predicted_label.lower() == ground_truth.lower()
+        self._last_details = {
+            'predicted': predicted_label,
+            'ground_truth': ground_truth,
+            'is_correct': is_correct
+        }
+        return 1.0 if is_correct else 0.0
+
+    def classify(self, input_text: str) -> str:
+        # Dummy classification logic
+        if "attack" in input_text.lower():
+            return "Malicious"
+        return "Benign"
 
     def details(self) -> Mapping[str, Any]:
         return self._last_details
 ```
 
-Wire the verifier into an environment
-- Example: extend PromptInjectionEnvironment to aggregate one or more verifiers.
-- File: src/sv_env_prompt_injection/envs/simple_env.py
+### 3. Implement the Environment (`environment.py`)
 
-```python path=null start=null
-from __future__ import annotations
+This class ties everything together, preparing the dataset and configuring the `verifiers` `SingleTurnEnv`.
 
-from typing import Any, Iterable, Mapping, Tuple
+```python
+import verifiers as vf
+from datasets import Dataset, load_dataset
+from .verifier import MyVerifierImpl
 
-from ..interfaces import Environment, Verifier
+class MyEnvironment:
+    """Wraps the verifiers SingleTurnEnv for a classification task."""
 
+    def __init__(self, dataset_name: str, max_examples: int = 100):
+        self._dataset = load_dataset(dataset_name, split='train').select(range(max_examples))
+        self._env = self._create_verifiers_env()
 
-class SimplePromptInjectionEnvironment(Environment):
-    """Aggregates multiple verifiers by averaging their scores."""
+    def get_verifiers_env(self) -> vf.SingleTurnEnv:
+        return self._env
 
-    def __init__(self, verifiers: Iterable[Verifier]) -> None:
-        self._verifiers = list(verifiers)
+    def _create_verifiers_env(self) -> vf.SingleTurnEnv:
+        """Creates and configures the SingleTurnEnv."""
+        # Define a reward function for the rubric
+        def reward_label_match(prompt: str, completion: str, answer: str, **kwargs) -> float:
+            predicted = completion.strip().lower()
+            actual = answer.strip().lower()
+            return 1.0 if predicted == actual else 0.0
 
-    def evaluate(self, input_text: str, output_text: str) -> Tuple[float, Mapping[str, Any]]:
-        scores: list[float] = []
-        infos: dict[str, Any] = {}
-        for idx, v in enumerate(self._verifiers):
-            s = v.score(input_text, output_text)
-            scores.append(s)
-            infos[f"verifier_{idx}"] = dict(v.details())
-        reward = sum(scores) / len(scores) if scores else 0.0
-        return reward, {"scores": scores, **infos}
+        rubric = vf.Rubric(
+            funcs=[reward_label_match],
+            weights=[1.0],
+        )
+
+        # The dataset must have 'prompt' and 'answer' columns
+        transformed_dataset = self._dataset.map(
+            lambda example: {'prompt': example['text'], 'answer': example['label_text']}
+        )
+
+        return vf.SingleTurnEnv(
+            dataset=transformed_dataset,
+            rubric=rubric,
+            system_prompt="Classify the following text as 'Malicious' or 'Benign'."
+        )
 ```
 
-Testing
-- Create tests under environments/<env>/tests/ (e.g., test_keyword_blocklist.py)
+## Testing
 
-```python path=null start=null
-from sv_env_prompt_injection.verifiers.keyword_blocklist import KeywordBlocklistVerifier
+- Create tests under `environments/<env>/tests/`.
+- Test the verifier's scoring logic and the environment's data loading and configuration.
 
+```python
+from sv_env_network_logs.verifier import NetworkLogsVerifier
 
-def test_keyword_blocklist_verifier_scores_hits():
-    v = KeywordBlocklistVerifier(["password"])
-    score = v.score("ignored", "please share your password")
-    assert score == 0.0
-    assert "password" in v.details()["blocked_hits"]
-
-
-def test_keyword_blocklist_verifier_scores_safe_output():
-    v = KeywordBlocklistVerifier(["password"])
-    score = v.score("ignored", "hello world")
+def test_verifier_malicious_classification():
+    v = NetworkLogsVerifier()
+    score = v.score("log containing port scan", ground_truth="Malicious")
     assert score == 1.0
+    details = v.details()
+    assert details['predicted'] == 'Malicious'
+
+from sv_env_network_logs.environment import NetworkLogsEnvironment
+
+def test_environment_creation():
+    # Using a synthetic dataset for testing is recommended
+    env_wrapper = NetworkLogsEnvironment(dataset_name="<your-dummy-dataset>")
+    vf_env = env_wrapper.get_verifiers_env()
+    assert vf_env is not None
+    assert len(vf_env.dataset) > 0
 ```
 
-General guidance
-- Keep verifiers pure and side-effect-free when possible; pass all inputs explicitly.
-- Environments should clearly document score aggregation and policy semantics.
-- Use type hints; run ruff and pytest before pushing a PR.
+## General Guidance
+
+- Use the `verifiers` library (`import verifiers as vf`) as the core framework for RL environments.
+- Ensure your dataset is transformed to have `prompt` and `answer` columns for `SingleTurnEnv`.
+- Define clear reward functions within a `vf.Rubric`.
+- Use type hints and run `ruff` and `pytest` before submitting a PR.
