@@ -284,15 +284,9 @@ def load_environment(
             },
             {
                 "question": (
-                    "Review this SSH config:\n"
-                    "Protocol 1\n"
-                    "PermitRootLogin yes\n"
-                    "PermitEmptyPasswords yes\n"
-                    "StrictModes no"
+                    "Review this SSH config:\nProtocol 1\nPermitRootLogin yes\nPermitEmptyPasswords yes\nStrictModes no"
                 ),
-                "answer": (
-                    "Protocol 1 insecure, Root login enabled, Empty passwords allowed, StrictModes disabled"
-                ),
+                "answer": ("Protocol 1 insecure, Root login enabled, Empty passwords allowed, StrictModes disabled"),
                 "config_type": "ssh",
             },
             # Firewall rules

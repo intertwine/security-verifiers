@@ -63,6 +63,7 @@ coverage.xml
 # IDEs and editors
 .vscode/
 .idea/
+.ropeproject/
 
 # macOS
 .DS_Store

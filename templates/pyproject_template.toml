@@ -1,0 +1,40 @@
+# Template pyproject.toml for new environments
+# Copy to environments/<env-name>/pyproject.toml and update accordingly
+
+[project]
+name = "my-env-name"  # Use dashes, e.g., "sv-env-my-task"
+description = "Brief description of what this environment does"
+version = "0.1.0"
+tags = ["tag1", "tag2", "single-turn"]  # or "multi-turn", "tool-env"
+requires-python = ">=3.12"
+dependencies = [
+    "verifiers>=0.1.0",
+    # Add other dependencies as needed
+    # "datasets>=2.0.0",
+    # "pandas>=2.0.0",
+]
+
+[project.entry-points."verifiers.environments"]
+# Entry point name should match the project name
+my-env-name = "my_env_module:load_environment"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "ruff>=0.12.11",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+# Include the main module and test file
+include = ["my_env_module.py", "my_env_module_test.py"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+python_files = ["*_test.py"]
