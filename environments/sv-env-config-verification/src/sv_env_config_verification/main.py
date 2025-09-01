@@ -31,11 +31,7 @@ class ConfigVerificationParser(vf.Parser):
 
         # Look for compliance verdicts
         # Check non-compliant before compliant
-        if (
-            "non-compliant" in cleaned
-            or "non compliant" in cleaned
-            or "violation" in cleaned
-        ):
+        if "non-compliant" in cleaned or "non compliant" in cleaned or "violation" in cleaned:
             return "Non-compliant"
         if "compliant" in cleaned:
             return "Compliant"
@@ -74,12 +70,7 @@ class ConfigVerificationParser(vf.Parser):
                     "non-compliant",
                     "vulnerable",
                 ]
-            ) and (
-                "because" in cleaned
-                or "issue" in cleaned
-                or "found" in cleaned
-                or "detected" in cleaned
-            ):
+            ) and ("because" in cleaned or "issue" in cleaned or "found" in cleaned or "detected" in cleaned):
                 return 1.0
 
             # Good format: has verdict but minimal reasoning
@@ -120,15 +111,11 @@ def analyze_ssh_config(config: str) -> Dict[str, Any]:
     # Check for insecure settings
     if "permitrootlogin yes" in config_normalized:
         issues.append("Root login is enabled - high security risk")
-        recommendations.append(
-            "Set 'PermitRootLogin no' or 'PermitRootLogin prohibit-password'"
-        )
+        recommendations.append("Set 'PermitRootLogin no' or 'PermitRootLogin prohibit-password'")
 
     if "passwordauthentication yes" in config_normalized:
         issues.append("Password authentication enabled - vulnerable to brute force")
-        recommendations.append(
-            "Use key-based authentication: 'PasswordAuthentication no'"
-        )
+        recommendations.append("Use key-based authentication: 'PasswordAuthentication no'")
 
     if "permitemptypasswords yes" in config_normalized:
         issues.append("Empty passwords allowed - critical security vulnerability")
@@ -303,7 +290,9 @@ def load_environment(
                     "PermitEmptyPasswords yes\n"
                     "StrictModes no"
                 ),
-                "answer": "Protocol 1 insecure, Root login enabled, Empty passwords allowed, StrictModes disabled",
+                "answer": (
+                    "Protocol 1 insecure, Root login enabled, Empty passwords allowed, StrictModes disabled"
+                ),
                 "config_type": "ssh",
             },
             # Firewall rules
@@ -341,7 +330,8 @@ def load_environment(
             {
                 "question": (
                     "Review this IAM policy:\n"
-                    '{"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]}'
+                    '{"Version": "2012-10-17", "Statement": '
+                    '[{"Effect": "Allow", "Action": "*", "Resource": "*"}]}'
                 ),
                 "answer": "Wildcard permissions, Full admin access, No resource restrictions",
                 "config_type": "iam",
@@ -385,9 +375,7 @@ def load_environment(
         ]
         # pylint: enable=line-too-long
 
-        examples.extend(
-            config_examples[:max_examples] if max_examples else config_examples
-        )
+        examples.extend(config_examples[:max_examples] if max_examples else config_examples)
         return Dataset.from_list(examples)
 
     dataset = _create_synthetic_dataset()

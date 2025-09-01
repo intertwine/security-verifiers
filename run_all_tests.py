@@ -21,7 +21,7 @@ def run_tests():
         if not test_file.exists():
             continue
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Testing {env_name}...")
         print("=" * 60)
 
@@ -43,7 +43,7 @@ def run_tests():
             all_passed = False
             results.append((env_name, "FAILED"))
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("SUMMARY")
     print("=" * 60)
     for env_name, status in results:

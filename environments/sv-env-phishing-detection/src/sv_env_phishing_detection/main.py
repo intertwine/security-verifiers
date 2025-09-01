@@ -198,8 +198,8 @@ def load_environment(
                         "From: security@amaz0n-account.com\n"
                         "Subject: Urgent: Your Account Will Be Suspended!\n\n"
                         "Dear Customer,\n\n"
-                        "We detected suspicious activity on your account. Click here immediately to verify your identity: "
-                        "http://bit.ly/verify-acc0unt\n\n"
+                        "We detected suspicious activity on your account. Click here immediately to "
+                        "verify your identity: http://bit.ly/verify-acc0unt\n\n"
                         "If you don't act within 24 hours, your account will be permanently suspended.\n\n"
                         "Amazon Security Team"
                     ),
@@ -237,8 +237,8 @@ def load_environment(
                 {
                     "question": (
                         "Subject: IRS Tax Refund - Action Required\n\n"
-                        "You have a pending tax refund of $3,458.00. To receive your refund, verify your information at:\n"
-                        "irs-refunds.website/claim\n\n"
+                        "You have a pending tax refund of $3,458.00. To receive your refund, verify "
+                        "your information at: irs-refunds.website/claim\n\n"
                         "This offer expires in 48 hours."
                     ),
                     "answer": "Phishing",
