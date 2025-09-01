@@ -5,17 +5,7 @@ emails as phishing attempts or legitimate emails. The environment provides email
 as prompts and expects classification labels as outputs.
 """
 
-from .environment import PhishingDetectionEnvironment
-from .verifier import PhishingDetectionVerifier
+from .main import load_environment
 
 __version__ = "0.1.0"
-__all__ = ["PhishingDetectionEnvironment", "PhishingDetectionVerifier"]
-
-
-def load_environment():
-    """Load the Phishing Detection environment for use with Verifiers framework.
-
-    Returns:
-        PhishingDetectionEnvironment: Configured environment ready for RL training
-    """
-    return PhishingDetectionEnvironment()
+__all__ = ["load_environment"]

@@ -1,21 +1,10 @@
-"""sv_env_config_verification: Security Verifiers environment for Security Policy Verification.
+"""sv_env_config_verification: Security Verifiers environment for Security Configuration Verification.
 
 This package implements PRD Environment #2: A ToolEnv where models audit security
-configuration files (system configs, cloud policies, etc.) to identify misconfigurations
-or policy violations. The model can invoke analysis tools to parse or test configs.
+configuration files to identify misconfigurations or policy violations.
 """
 
-from .environment import ConfigVerificationEnvironment
-from .verifier import ConfigVerificationVerifier
+from .main import load_environment
 
 __version__ = "0.1.0"
-__all__ = ["ConfigVerificationEnvironment", "ConfigVerificationVerifier"]
-
-
-def load_environment():
-    """Load the Config Verification environment for use with Verifiers framework.
-
-    Returns:
-        ConfigVerificationEnvironment: Configured environment ready for RL training
-    """
-    return ConfigVerificationEnvironment()
+__all__ = ["load_environment"]
