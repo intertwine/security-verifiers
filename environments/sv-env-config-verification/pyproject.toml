@@ -1,14 +1,28 @@
 [project]
 name = "sv-env-config-verification"
 description = "Security Verifiers environment: Security Policy Verification for Configurations (MultiTurnEnv)"
+tags = [
+  "intertwine",
+  "security-verifiers",
+  "security",
+  "cybersecurity",
+  "multi-turn",
+  "configuration",
+  "compliance",
+  "policy-verification",
+  "infrastructure",
+  "hardening",
+  "train",
+  "eval",
+]
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-    "verifiers>=0.1.0",
-    "datasets>=2.0.0",
-    "pandas>=2.0.0",
-    "pyyaml>=6.0.0",
-    "configparser>=5.3.0"
+  "verifiers>=0.1.0",
+  "datasets>=2.0.0",
+  "pandas>=2.0.0",
+  "pyyaml>=6.0.0",
+  "configparser>=5.3.0",
 ]
 
 [project.entry-points."verifiers.environments"]
@@ -16,8 +30,8 @@ sv-env-config-verification = "sv_env_config_verification:load_environment"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
-    "ruff>=0.12.11",
+  "pytest>=7.0.0",
+  "ruff>=0.12.11",
 ]
 
 [build-system]
@@ -25,11 +39,15 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-include = ["sv_env_config_verification.py", "sv_env_config_verification_test.py"]
+include = [
+  "sv_env_config_verification.py",
+  "sv_env_config_verification_test.py",
+]
+
+[tool.pytest.ini_options]
+python_files = ["*_test.py"]
+testpaths = ["."]
 
 [tool.ruff]
 line-length = 120
 
-[tool.pytest.ini_options]
-testpaths = ["."]
-python_files = ["*_test.py"]

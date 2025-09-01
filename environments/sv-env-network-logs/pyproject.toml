@@ -1,21 +1,30 @@
 [project]
 name = "sv-env-network-logs"
 description = "Security Verifiers environment: Anomaly Detection in Network Logs (SingleTurnEnv)"
+tags = [
+  "intertwine",
+  "security-verifiers",
+  "security",
+  "cybersecurity",
+  "single-turn",
+  "network-security",
+  "anomaly-detection",
+  "logs",
+  "classification",
+  "train",
+  "eval",
+]
 version = "0.1.0"
 requires-python = ">=3.12"
-dependencies = [
-    "verifiers>=0.1.0",
-    "datasets>=2.0.0",
-    "pandas>=2.0.0"
-]
+dependencies = ["verifiers>=0.1.0", "datasets>=2.0.0", "pandas>=2.0.0"]
 
 [project.entry-points."verifiers.environments"]
 sv-env-network-logs = "sv_env_network_logs:load_environment"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
-    "ruff>=0.12.11",
+  "pytest>=7.0.0",
+  "ruff>=0.12.11",
 ]
 
 [build-system]
@@ -25,9 +34,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 include = ["sv_env_network_logs.py", "sv_env_network_logs_test.py"]
 
+[tool.pytest.ini_options]
+python_files = ["*_test.py"]
+testpaths = ["."]
+
 [tool.ruff]
 line-length = 120
-
-[tool.pytest.ini_options]
-testpaths = ["."]
-python_files = ["*_test.py"]

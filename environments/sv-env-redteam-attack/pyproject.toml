@@ -1,13 +1,27 @@
 [project]
 name = "sv-env-redteam-attack"
 description = "Security Verifiers environment: Red-Teaming Simulator for LLM Vulnerabilities (MultiTurnEnv)"
+tags = [
+  "intertwine",
+  "security-verifiers",
+  "security",
+  "cybersecurity",
+  "multi-turn",
+  "red-teaming",
+  "llm-security",
+  "adversarial",
+  "jailbreak",
+  "prompt-injection",
+  "train",
+  "eval",
+]
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-    "verifiers>=0.1.0",
-    "datasets>=2.0.0",
-    "pandas>=2.0.0",
-    "transformers>=4.30.0"
+  "verifiers>=0.1.0",
+  "datasets>=2.0.0",
+  "pandas>=2.0.0",
+  "transformers>=4.30.0",
 ]
 
 [project.entry-points."verifiers.environments"]
@@ -15,8 +29,8 @@ sv-env-redteam-attack = "sv_env_redteam_attack:load_environment"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
-    "ruff>=0.12.11",
+  "pytest>=7.0.0",
+  "ruff>=0.12.11",
 ]
 
 [build-system]
@@ -26,9 +40,10 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 include = ["sv_env_redteam_attack.py", "sv_env_redteam_attack_test.py"]
 
+[tool.pytest.ini_options]
+python_files = ["*_test.py"]
+testpaths = ["."]
+
 [tool.ruff]
 line-length = 120
 
-[tool.pytest.ini_options]
-testpaths = ["."]
-python_files = ["*_test.py"]

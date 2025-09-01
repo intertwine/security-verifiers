@@ -1,14 +1,28 @@
 [project]
 name = "sv-env-redteam-defense"
 description = "Security Verifiers environment: Interactive Red-Teaming for Model Safety Alignment (MultiTurnEnv)"
+tags = [
+  "intertwine",
+  "security-verifiers",
+  "security",
+  "cybersecurity",
+  "multi-turn",
+  "red-teaming",
+  "ai-safety",
+  "adversarial",
+  "defense",
+  "alignment",
+  "train",
+  "eval",
+]
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-    "verifiers>=0.1.0",
-    "datasets>=2.0.0",
-    "pandas>=2.0.0",
-    "transformers>=4.30.0",
-    "openai>=1.0.0"
+  "verifiers>=0.1.0",
+  "datasets>=2.0.0",
+  "pandas>=2.0.0",
+  "transformers>=4.30.0",
+  "openai>=1.0.0",
 ]
 
 [project.entry-points."verifiers.environments"]
@@ -16,8 +30,8 @@ sv-env-redteam-defense = "sv_env_redteam_defense:load_environment"
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
-    "ruff>=0.12.11",
+  "pytest>=7.0.0",
+  "ruff>=0.12.11",
 ]
 
 [build-system]
@@ -27,9 +41,10 @@ build-backend = "hatchling.build"
 [tool.hatch.build]
 include = ["sv_env_redteam_defense.py", "sv_env_redteam_defense_test.py"]
 
+[tool.pytest.ini_options]
+python_files = ["*_test.py"]
+testpaths = ["."]
+
 [tool.ruff]
 line-length = 120
 
-[tool.pytest.ini_options]
-testpaths = ["."]
-python_files = ["*_test.py"]
