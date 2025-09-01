@@ -1,27 +1,106 @@
+"""sv_env_network_logs: Security Verifiers environment for Anomaly Detection in Network Logs.
+
+This package implements PRD Environment #1: A SingleTurnEnv where models classify
+network log entries as malicious or benign. It provides a controlled setup to evaluate
+an LLM's ability to interpret semi-structured log text and detect threats.
+"""
+
 from __future__ import annotations
 
 import verifiers as vf
 from datasets import Dataset, load_dataset
 
 
-def reward_label_match(prompt: str, completion: str, answer: str, **kwargs) -> float:
-    """Reward function for exact classification match."""
-    # Handle case where completion is a list of messages
-    completion_text = completion
-    if isinstance(completion, list):
-        # Extract the content from the assistant's message
-        if completion:
-            last_item = completion[-1]
-            if isinstance(last_item, dict):
-                completion_text = last_item.get("content", "")
-            else:
-                completion_text = str(last_item)
-        else:
-            completion_text = ""
+class NetworkLogParser(vf.Parser):
+    """Parser to extract classification label from model responses."""
 
-    predicted = completion_text.strip().lower()
-    actual = answer.strip().lower()
-    return 1.0 if predicted == actual else 0.0
+    def parse_answer(self, completion: str) -> str:
+        """Extract 'Malicious' or 'Benign' from the response.
+
+        Args:
+            completion: The raw model completion/response.
+
+        Returns:
+            The extracted classification label in standard format.
+        """
+        # Clean and normalize the response
+        cleaned = completion.strip().lower()
+
+        # Look for the classification labels
+        if "malicious" in cleaned:
+            return "Malicious"
+
+        if "benign" in cleaned:
+            return "Benign"
+
+        # Return original if no clear label found
+        return completion.strip()
+
+    def get_format_reward_func(self):
+        """Return a format reward function that checks for proper classification format."""
+
+        def format_reward(
+            completion,
+            answer="",  # pylint: disable=unused-argument
+            **kwargs,  # pylint: disable=unused-argument
+        ):
+            """Reward proper classification format (single word: Malicious or Benign)."""
+            # Extract response text from completion
+            if isinstance(completion, list):
+                response = completion[-1]["content"] if completion else ""
+            else:
+                response = str(completion)
+
+            # Check if response is a single classification word
+            cleaned = response.strip().lower()
+
+            # Perfect format: exactly "malicious" or "benign" (case insensitive)
+            if cleaned in ["malicious", "benign"]:
+                return 1.0
+
+            # Good format: contains the word but has extra text
+            if "malicious" in cleaned or "benign" in cleaned:
+                return 0.5
+
+            # Poor format: doesn't contain expected classification
+            return 0.0
+
+        return format_reward
+
+
+def reward_correct_classification(
+    completion,
+    answer: str = "",
+    parser: vf.Parser | None = None,
+    **kwargs,  # pylint: disable=unused-argument
+) -> float:
+    """Reward function that checks if the parsed classification matches the expected label.
+
+    Args:
+        completion: The model's response (predicted classification).
+        answer: The ground truth answer from the dataset.
+        parser: The parser instance to extract the classification.
+        **kwargs: Additional arguments (prompt, state, etc).
+
+    Returns:
+        1.0 if the prediction matches the ground truth, 0.0 otherwise.
+    """
+    # Extract the response text from completion
+    if isinstance(completion, list):
+        response = completion[-1]["content"] if completion else ""
+    else:
+        response = str(completion)
+
+    # Use parser to extract classification if available
+    if parser:
+        predicted = parser.parse_answer(response)
+    else:
+        predicted = response.strip()
+
+    # Case-insensitive comparison
+    if not predicted or not answer:
+        return 0.0
+    return 1.0 if predicted.lower() == answer.strip().lower() else 0.0
 
 
 def transform_dataset(raw_dataset: Dataset, max_examples: int | None) -> Dataset:
@@ -77,7 +156,13 @@ def load_environment(
         dataset = load_dataset(dataset_name, split="train")
         assert isinstance(dataset, Dataset), "Loaded dataset is not of type Dataset"
         dataset = transform_dataset(dataset, max_examples)
-    except Exception as e:
+    except (
+        FileNotFoundError,
+        ConnectionError,
+        ValueError,
+        ImportError,
+        AssertionError,
+    ) as e:
         print(f"Failed to load dataset '{dataset_name}': {e}")
         print("Falling back to a synthetic dataset.")
 
@@ -86,6 +171,7 @@ def load_environment(
             examples = []
 
             # Generate 10 synthetic network log entries with various patterns
+            # pylint: disable=line-too-long
             log_patterns = [
                 # Benign examples
                 {
@@ -96,15 +182,13 @@ def load_environment(
                 },
                 {
                     "question": (
-                        "2024-01-15 10:24:12 SRC=10.0.0.15 DST=10.0.0.1 "
-                        "PROTO=DNS PORT=53 QUERY=google.com STATUS=OK"
+                        "2024-01-15 10:24:12 SRC=10.0.0.15 DST=10.0.0.1 PROTO=DNS PORT=53 QUERY=google.com STATUS=OK"
                     ),
                     "answer": "Benign",
                 },
                 {
                     "question": (
-                        "2024-01-15 10:25:33 SRC=172.16.0.100 DST=172.16.0.10 "
-                        "PROTO=SSH PORT=22 STATUS=AUTH_SUCCESS"
+                        "2024-01-15 10:25:33 SRC=172.16.0.100 DST=172.16.0.10 PROTO=SSH PORT=22 STATUS=AUTH_SUCCESS"
                     ),
                     "answer": "Benign",
                 },
@@ -124,56 +208,58 @@ def load_environment(
                 },
                 {
                     "question": (
-                        "2024-01-15 10:28:42 SRC=172.16.0.200 DST=MULTIPLE "
-                        "PROTO=SCAN PORTS=1-65535 STATUS=SYN_SCAN"
+                        "2024-01-15 10:28:42 SRC=172.16.0.200 DST=MULTIPLE PROTO=SCAN PORTS=1-65535 STATUS=SYN_SCAN"
                     ),
                     "answer": "Malicious",
                 },
                 # More examples
                 {
                     "question": (
-                        "2024-01-15 10:29:03 SRC=192.168.1.50 DST=8.8.8.8 "
-                        "PROTO=ICMP TYPE=ECHO_REQUEST STATUS=OK"
+                        "2024-01-15 10:29:03 SRC=192.168.1.50 DST=8.8.8.8 PROTO=ICMP TYPE=ECHO_REQUEST STATUS=OK"
                     ),
                     "answer": "Benign",
                 },
                 {
                     "question": (
-                        "2024-01-15 10:30:21 SRC=10.0.0.77 DST=198.51.100.23 "
-                        "PROTO=HTTPS PORT=443 CERT=SELF_SIGNED"
+                        "2024-01-15 10:30:21 SRC=10.0.0.77 DST=198.51.100.23 PROTO=HTTPS PORT=443 CERT=SELF_SIGNED"
                     ),
                     "answer": "Malicious",
                 },
                 {
                     "question": (
-                        "2024-01-15 10:31:55 SRC=172.16.0.150 DST=172.16.0.1 "
-                        "PROTO=HTTP PORT=80 STATUS=OK METHOD=GET"
+                        "2024-01-15 10:31:55 SRC=172.16.0.150 DST=172.16.0.1 PROTO=HTTP PORT=80 STATUS=OK METHOD=GET"
                     ),
                     "answer": "Benign",
                 },
                 {
                     "question": (
-                        "2024-01-15 10:32:18 SRC=192.168.1.200 DST=91.92.109.43 "
-                        "PROTO=UDP PORT=4444 PATTERN=C2_BEACON"
+                        "2024-01-15 10:32:18 SRC=192.168.1.200 DST=91.92.109.43 PROTO=UDP PORT=4444 PATTERN=C2_BEACON"
                     ),
                     "answer": "Malicious",
                 },
             ]
+            # pylint: enable=line-too-long
 
             examples.extend(log_patterns)
             return Dataset.from_list(examples)
 
         dataset = _create_synthetic_dataset()
 
+    parser = NetworkLogParser()
+
     rubric = vf.Rubric(
-        funcs=[reward_label_match],
-        weights=[1.0],
+        funcs=[
+            reward_correct_classification,
+            parser.get_format_reward_func(),
+        ],
+        weights=[1.0, 0.2],  # Classification accuracy is primary, format is secondary
     )
 
     return vf.SingleTurnEnv(
         name="sv-env-network-logs",
         description="Classify network logs as 'Malicious' or 'Benign'.",
         dataset=dataset,
+        parser=parser,
         rubric=rubric,
         system_prompt=(
             "You are a network security analyst. Analyze the provided network log entry "

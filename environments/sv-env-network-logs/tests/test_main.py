@@ -6,8 +6,9 @@ import pytest
 import verifiers as vf
 from datasets import Dataset
 from sv_env_network_logs.main import (
+    NetworkLogParser,
     load_environment,
-    reward_label_match,
+    reward_correct_classification,
     transform_dataset,
 )
 
@@ -23,9 +24,10 @@ from sv_env_network_logs.main import (
         ("benign\n", "Benign", 1.0),
     ],
 )
-def test_reward_label_match(completion, answer, expected_reward):
+def test_correct_classification(completion, answer, expected_reward):
     """Test the reward function for exact label matching."""
-    reward = reward_label_match("", completion, answer)
+    parser = NetworkLogParser()
+    reward = reward_correct_classification(completion, answer, parser=parser)
     assert reward == expected_reward
 
 
@@ -90,7 +92,7 @@ def test_load_environment_successful_download(mock_load_dataset):
 def test_load_environment_download_fails(mock_load_dataset):
     """Test loading the environment when the dataset download fails."""
     # Configure the mock to raise an exception
-    mock_load_dataset.side_effect = Exception("Download failed")
+    mock_load_dataset.side_effect = ConnectionError("Download failed")
 
     env = load_environment()
 
