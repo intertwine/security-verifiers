@@ -18,7 +18,7 @@ tags = [
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-  "verifiers>=0.1.0",
+  "verifiers>=0.1.2",
   "datasets>=2.0.0",
   "pandas>=2.0.0",
   "transformers>=4.30.0",

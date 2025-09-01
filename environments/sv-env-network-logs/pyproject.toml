@@ -1,6 +1,6 @@
 [project]
 name = "sv-env-network-logs"
-description = "Security Verifiers environment: Anomaly Detection in Network Logs (SingleTurnEnv)"
+description = "RL Security Verifiers: Anomaly Detection in Network Logs"
 tags = [
   "intertwine",
   "security-verifiers",
@@ -14,9 +14,9 @@ tags = [
   "train",
   "eval",
 ]
-version = "0.1.0"
+version = "0.1.1"
 requires-python = ">=3.12"
-dependencies = ["verifiers>=0.1.0", "datasets>=2.0.0", "pandas>=2.0.0"]
+dependencies = ["verifiers>=0.1.2", "datasets>=2.0.0", "pandas>=2.0.0"]
 
 [project.entry-points."verifiers.environments"]
 sv-env-network-logs = "sv_env_network_logs:load_environment"

@@ -19,6 +19,7 @@ A monorepo scaffold for six Reinforcement Learning (RL) environments built in Py
 ## Getting Started (uv)
 
 ### Prerequisites
+
 - Python 3.12+
 - [uv](https://github.com/astral-sh/uv) installed
 
@@ -108,14 +109,14 @@ uv run pre-commit run --all-files
 
 ## Environment Details
 
-| Environment | Type | Description |
-|------------|------|-------------|
-| `sv-env-network-logs` | SingleTurnEnv | Classifies network log entries as malicious or benign |
-| `sv-env-phishing-detection` | SingleTurnEnv | Detects phishing attempts in emails |
-| `sv-env-redteam-defense` | MultiTurnEnv | Defensive AI assistant maintaining security boundaries |
-| `sv-env-redteam-attack` | MultiTurnEnv | Red team attack scenario generation |
-| `sv-env-code-vulnerability` | ToolEnv/MultiTurnEnv | Code vulnerability assessment with static analysis tools |
-| `sv-env-config-verification` | MultiTurnEnv | Security configuration verification |
+| Environment                  | Type                 | Description                                              |
+| ---------------------------- | -------------------- | -------------------------------------------------------- |
+| `sv-env-network-logs`        | SingleTurnEnv        | Classifies network log entries as malicious or benign    |
+| `sv-env-phishing-detection`  | SingleTurnEnv        | Detects phishing attempts in emails                      |
+| `sv-env-redteam-defense`     | MultiTurnEnv         | Defensive AI assistant maintaining security boundaries   |
+| `sv-env-redteam-attack`      | MultiTurnEnv         | Red team attack scenario generation                      |
+| `sv-env-code-vulnerability`  | ToolEnv/MultiTurnEnv | Code vulnerability assessment with static analysis tools |
+| `sv-env-config-verification` | MultiTurnEnv         | Security configuration verification                      |
 
 ## Contributing
 
