@@ -18,7 +18,7 @@ pip install "verifiers[dev]"  # install verifiers with dev/test support
 
 (The uv tool is suggested for managing environments: e.g. uv init to create a venv, then uv add verifiers.)
 
-- Initialize a new Environment module: The Verifiers library provides a CLI to scaffold a new environment. Run vf-init {env-name} to create a boilerplate environment package. This creates a folder (e.g. vf-myenv) with a Python module, a pyproject.toml (for dependencies/metadata), and a template load_environment function. Environments are structured as installable Python packages (distributed as wheels) and must expose a load_environment() function for the hub/trainer to instantiate them.
+- Initialize a new Environment module: The Prime CLI provides a command to scaffold a new environment. Run `prime env init <env-name>` to create a boilerplate environment package. This creates a folder (e.g. vf-myenv) with a Python module, a pyproject.toml (for dependencies/metadata), and a template load_environment function. Environments are structured as installable Python packages (distributed as wheels) and must expose a load_environment() function for the hub/trainer to instantiate them. You can specify the path with `-p ./environments` to organize multiple environments.
 - Define the environment logic: With the scaffold in place, implement the core components of your verifier:
 - Dataset: Prepare a dataset of tasks/prompts. This can be a HuggingFace Dataset or a simple list of prompts. For example, a dataset might have a column "prompt" (containing the input or question) and an "answer" or "info" column with the ground-truth or any info needed for evaluation. You can load or construct this dataset in your environment's code (e.g. using datasets.load_dataset() or a custom loader).
 - Rollout / Interaction logic: Decide if the task is single-turn (model produces one answer per prompt) or multi-turn. For a simple Q&A or formatting task where the model gives one response, you can use SingleTurnEnv - you just provide the dataset and a reward function (Rubric). If the task requires multi-turn interactions or tool use (e.g. the model may call functions or require iterative reasoning), use MultiTurnEnv or the provided ToolEnv class for tool-enabled loops. The Verifiers framework supports both /v1/completions and /v1/chat/completions style models via an OpenAI-compatible interface, which means it can accommodate chat models or raw completion models seamlessly.
@@ -83,21 +83,40 @@ python -m build --wheel
 
 This should produce a file like vf_myenv-0.1.0-py3-none-any.whl in the dist/ folder. (Alternatively, if you have Hatch installed, you can use `hatch build -t wheel`, or the Prime CLI may handle building automatically.)
 
-1. Upload to Environments Hub: Use the Prime CLI to upload the wheel to the Hub's registry. For example:
+1. Upload to Environments Hub: Use the Prime CLI to push your environment to the Hub's registry. Navigate to your environment directory and run:
 
 ```bash
-prime env upload dist/vf_myenv-0.1.0-py3-none-any.whl
+prime env push
 ```
 
-(If prime env upload is not the exact command, refer to Prime's documentation "Create & Upload Environment" - the CLI provides a command to push your wheel to the hub registry.) This will register the environment under your account on the hub. After a successful upload, you should be able to see your environment listed on the Hub web interface (under Environments at app.primeintellect.ai). Each environment gets a unique identifier, typically in the form `<username>/<env-name>`.
+You can also specify options:
+
+```bash
+prime env push -v PUBLIC  # Make it publicly available
+prime env push -t team-name  # Push under a team account
+```
+
+This will build and register the environment under your account on the hub. After a successful upload, you should be able to see your environment listed on the Hub web interface (under Environments at app.primeintellect.ai). Each environment gets a unique identifier, typically in the form `<username>/<env-name>`. You can verify it's available with `prime env list`.
 
 1. Install/Use the environment via Hub: Now that it's published, anyone (or you on another machine) can install the environment by name. For example:
 
 ```bash
-prime env install vf-myenv
+prime env install <username>/vf-myenv
 ```
 
-will download and install the environment package. Internally this is equivalent to pip-installing the environment wheel from the hub. You can also specify your environment as a dependency in other projects. For instance, Prime's RL training library can fetch it by referring to the wheel URL on the hub. This makes integration very convenient.
+You can also install specific versions:
+
+```bash
+prime env install <username>/vf-myenv@0.1.0
+```
+
+Or use pip instead of uv:
+
+```bash
+prime env install <username>/vf-myenv --with pip
+```
+
+This will download and install the environment package. You can also pull it for local inspection with `prime env pull <username>/vf-myenv`. For instance, Prime's RL training library can fetch it by referring to the environment ID on the hub. This makes integration very convenient.
 
 At this point, your custom verifier is available on the Environments Hub for others to discover and for you to use in training jobs. Make sure to include documentation or README in your environment package if possible, so users know what the verifier does and how to use it.
 
@@ -109,7 +128,7 @@ With the environment (verifier) in place, the next step is to train a model to p
 
 For initial experimentation or development, you can train on a single machine (with one or a few GPUs):
 
-- Setup training environment: Make sure you have prime-rl installed (e.g. pip install prime-rl or include it in your uv environment) and that your newly uploaded environment is installed in the environment as well. You can use the CLI to install it as shown above (prime env install...), or add it to your pyproject.toml as an optional dependency. Verify that verifiers and prime-rl can see the environment: for example, vf.load_environment("vf-myenv") should work in Python, and prime env list (if available) should show it.
+- Setup training environment: Make sure you have prime-rl installed (e.g. pip install prime-rl or include it in your uv environment) and that your newly uploaded environment is installed in the environment as well. You can use the CLI to install it as shown above (`prime env install <username>/vf-myenv`), or add it to your pyproject.toml as an optional dependency. Verify that verifiers and prime-rl can see the environment: for example, vf.load_environment("{username}/vf-myenv") should work in Python, and `prime env list` should show installed environments.
 
 - Prime RL configuration: Prime RL uses a trainer-orchestrator-inference architecture for RL training. For a simple single-machine run, however, you can use the provided rl entry point which wraps these components together for convenience. You will need to prepare a few configuration files or command-line options:
 
@@ -150,9 +169,9 @@ uv run rl \
 
 One of the key advantages of using Prime Intellect's ecosystem is the ability to scale to distributed training with minimal friction. After validating on a single machine, you can run larger experiments on Prime's cloud or even harness volunteered GPUs from the community (as done in their INTELLECT-2 and -3 projects). Here's how you can approach full-stack training:
 
-- Launch cloud instances: Through Prime's platform, you can spin up GPU instances or clusters on demand. For example, using the CLI you can create a pod with a certain number of GPUs (the Quickstart - Deploy a Pod guide shows how to get a GPU in under a minute). You can also request multi-node clusters; Prime supports deploying 16, 32, or 64+ H100 GPUs across multiple nodes if needed. These instances come with the Prime software stack ready, or you can use Docker images to set up the environment.
+- Launch cloud instances: Through Prime's platform, you can spin up GPU instances or clusters on demand. First check availability with `prime availability list` to see available GPU types and pricing. Then create a pod using `prime pods create` - you can run it interactively or specify options like `--gpu-type A100 --gpu-count 8`. You can also request multi-node clusters; Prime supports deploying 16, 32, or 64+ H100 GPUs across multiple nodes if needed. These instances come with the Prime software stack ready, or you can use Docker images to set up the environment. Connect to your pod with `prime pods ssh <pod-id>` and manage it with `prime pods list` and `prime pods terminate <pod-id>` when done.
 
-- Use the Environments Hub and prime-rl on cloud: Once your cloud cluster is up, you can install your environment from the Hub (same prime env install vf-myenv command) and ensure prime-rl is installed. Because the Environments Hub is a centralized registry, your environment is immediately accessible to any machine once uploaded. Then you can run the same training commands as you did locally. If you requested multiple GPUs or multiple nodes, you can leverage them as follows:
+- Use the Environments Hub and prime-rl on cloud: Once your cloud cluster is up, you can install your environment from the Hub (same `prime env install <username>/vf-myenv` command) and ensure prime-rl is installed. Because the Environments Hub is a centralized registry, your environment is immediately accessible to any machine once uploaded. Then you can run the same training commands as you did locally. If you requested multiple GPUs or multiple nodes, you can leverage them as follows:
 
 - Prime RL allows you to allocate separate GPUs for the trainer and the inference engine. For example, in one of their examples, on an 8-GPU setup they used --trainer-gpus 2 --inference-gpus 6 to dedicate 2 GPUs to model training and 6 to serving the model for rollouts. Adjust these based on your environment's complexity and model size. If your model is large (e.g. 30B+ parameters), you might give more GPUs to inference (or use tensor parallelism).
 
