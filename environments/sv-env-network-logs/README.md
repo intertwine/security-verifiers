@@ -24,6 +24,28 @@ Or using pip/uv directly:
 pip install intertwine-sv-env-network-logs
 ```
 
+## Setup
+
+### API Keys Configuration
+
+Before using this environment, you need to configure API keys for model inference and dataset access:
+
+1. **OpenAI API Key** (optional, for OpenAI models):
+
+   ```bash
+   export OPENAI_API_KEY="your-openai-api-key"
+   ```
+
+2. **HuggingFace Token** (required for IoT-23 dataset access):
+
+   ```bash
+   export HF_TOKEN="your-huggingface-token"
+   ```
+
+   Get your HuggingFace token from [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
+
+**Note**: Without the HF_TOKEN, the environment will fall back to using a synthetic dataset with limited examples.
+
 ## Usage
 
 ### With Verifiers Library
@@ -37,7 +59,7 @@ env = vf.load_environment("intertwine/sv-env-network-logs")
 # Evaluate a model
 results = env.evaluate(
     client=vf.OpenAIClient(),
-    model="gpt-4-mini",
+    model="gpt-5-mini",
     num_examples=100
 )
 
@@ -49,8 +71,26 @@ print(f"Average reward: {results.stats['mean_reward']:.2%}")
 Use the verifiers CLI for quick testing:
 
 ```bash
-vf-eval intertwine/sv-env-network-logs --model gpt-4-mini --num-examples 10
+# For OpenAI models (requires OPENAI_API_KEY environment variable)
+vf-eval intertwine/sv-env-network-logs \
+  --model gpt-5-mini \
+  --num-examples 10
+
+# With custom API endpoint
+vf-eval intertwine/sv-env-network-logs \
+  --model your-model-name \
+  --api-host-base https://your-api-endpoint.com/v1 \
+  --api-key-var YOUR_API_KEY_ENV_VAR \
+  --num-examples 10
 ```
+
+#### Command Options
+
+- `-m, --model`: Model name to use for evaluation
+- `-b, --api-host-base`: Base URL for the API endpoint (e.g., `https://api.openai.com/v1`)
+- `-k, --api-key-var`: Name of the environment variable containing your API key
+- `--num-examples`: Number of examples to evaluate (default: 100)
+- `--verbose`: Enable verbose output for debugging
 
 ### Training with Prime RL
 
@@ -98,9 +138,9 @@ Total score = weighted combination of both criteria
 
 ## Performance Benchmarks
 
-| Model      | Accuracy | Format Score | Overall |
-| ---------- | -------- | ------------ | ------- |
-| GPT-4-mini | 60.3%    | 100%         | 80.3%   |
+| Model       | Accuracy | Format Score | Overall |
+| ----------- | -------- | ------------ | ------- |
+| GPT-4o-mini | 60.3%    | 100%         | 80.3%   |
 
 Benchmarks on 100 examples from the IoT-23 dataset
 
@@ -113,6 +153,7 @@ The environment uses the [IoT-23 dataset](https://huggingface.co/datasets/19kmun
 - Python 3.12+
 - `verifiers>=0.1.2`
 - API key for model inference (e.g., OpenAI API key)
+- HuggingFace token for dataset access (optional but recommended)
 
 ## About Security Verifiers
 
