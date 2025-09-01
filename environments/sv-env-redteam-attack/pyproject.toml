@@ -1,12 +1,7 @@
-[build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
-name = "security-verifiers-redteam-attack"
-version = "0.1.0"
+name = "sv-env-redteam-attack"
 description = "Security Verifiers environment: Red-Teaming Simulator for LLM Vulnerabilities (MultiTurnEnv)"
-readme = "README.md"
+version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
     "verifiers>=0.1.0",
@@ -15,37 +10,25 @@ dependencies = [
     "transformers>=4.30.0"
 ]
 
+[project.entry-points."verifiers.environments"]
+sv-env-redteam-attack = "sv_env_redteam_attack:load_environment"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
-    "black>=23.0.0",
-    "isort>=5.12.0",
-    "mypy>=1.0.0"
+    "ruff>=0.12.11",
 ]
 
-[project.entry-points."vf.env"]
-sv-env-redteam-attack = "sv_env_redteam_attack:load_environment"
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.setuptools]
-py-modules = ["sv_env_redteam_attack"]
+[tool.hatch.build]
+include = ["sv_env_redteam_attack.py", "sv_env_redteam_attack_test.py"]
 
-[tool.black]
-line-length = 88
-target-version = ['py312']
-
-[tool.isort]
-profile = "black"
-line_length = 88
-
-[tool.mypy]
-python_version = "3.12"
-strict = true
-warn_return_any = true
-warn_unused_configs = true
+[tool.ruff]
+line-length = 120
 
 [tool.pytest.ini_options]
 testpaths = ["."]
 python_files = ["*_test.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-addopts = "-q"
