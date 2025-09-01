@@ -45,7 +45,23 @@ Ensure that the environment returns reasonable rewards and that no errors occur 
 
 ## Publishing the Environment on Environments Hub
 
-Once your verifier environment is implemented and tested locally, you can publish it to the Environments Hub (so others can discover and use it, and so you can use it in cloud training). The Environments Hub acts as a package registry for environment modules. Here's how to upload your environment: 1. Install and login to Prime CLI: The Prime CLI is a command-line tool for interacting with Prime Intellect's platform, including the environment registry. Install it via pip (pip install prime) if you haven't already. Then authenticate with your Prime Intellect account:
+Once your verifier environment is implemented and tested locally, you can publish it to the Environments Hub (so others can discover and use it, and so you can use it in cloud training). The Environments Hub acts as a package registry for environment modules. Here's how to upload your environment: 1. Install and login to Prime CLI: The Prime CLI is a command-line tool for interacting with Prime Intellect's platform, including the environment registry. The recommended installation method is via uv:
+
+```bash
+# Install uv first (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install prime using uv
+uv tool install prime
+```
+
+Alternatively, you can install via pip:
+
+```bash
+pip install prime
+```
+
+Then authenticate with your Prime Intellect account:
 
 ```bash
 prime login
@@ -53,13 +69,19 @@ prime login
 
 This will prompt you to enter your API key or credentials (you can also set PRIME_API_KEY as an environment variable). Successful login is required to upload to the Hub.
 
-1. Build your environment wheel: Navigate to your environment project directory (the one with pyproject.toml). Build a Python wheel distribution, for example using pip:
+1. Build your environment wheel: Navigate to your environment project directory (the one with pyproject.toml). Build a Python wheel distribution using uv:
 
 ```bash
-pip wheel. -w dist/
+uv build --wheel
 ```
 
-This should produce a file like vf_myenv-0.1.0-py3-none-any.whl in the dist/ folder. (Alternatively, you can use uv to build the package or even have the Prime CLI do it automatically.)
+Or using the standard Python build module:
+
+```bash
+python -m build --wheel
+```
+
+This should produce a file like vf_myenv-0.1.0-py3-none-any.whl in the dist/ folder. (Alternatively, if you have Hatch installed, you can use `hatch build -t wheel`, or the Prime CLI may handle building automatically.)
 
 1. Upload to Environments Hub: Use the Prime CLI to upload the wheel to the Hub's registry. For example:
 
