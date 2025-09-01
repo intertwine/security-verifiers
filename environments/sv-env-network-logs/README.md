@@ -88,7 +88,7 @@ vf-eval sv-env-network-logs --model gpt-4.1-mini --num-examples 3
   set -a && source .env && set +a && vf-eval sv-env-network-logs --model gpt-4.1-mini --num-examples 3
   ```
 
-- **Hugging Face Authentication**: The `19kmunz/iot-23-preprocessed-minimumcolumns` dataset is private. If you see a `401 Unauthorized` error, you need to log in to Hugging Face or set the `HF_TOKEN` environment variable:
+- **Hugging Face Authentication**: Loading the `19kmunz/iot-23-preprocessed-minimumcolumns` dataset requires authentication. If you see a `401 Unauthorized` error, you need to log in to Hugging Face or set the `HF_TOKEN` environment variable:
 
   ```bash
   huggingface-cli login
