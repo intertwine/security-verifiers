@@ -23,7 +23,7 @@ ignore = []
 
 [tool.pytest.ini_options]
 testpaths = ["environments"]
-python_files = ["test_*.py"]
+python_files = ["*_test.py"]
 addopts = "-q"
 filterwarnings = [
     "ignore:ast.Str is deprecated:DeprecationWarning"

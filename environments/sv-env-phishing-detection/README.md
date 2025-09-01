@@ -15,7 +15,7 @@ This environment implements PRD Environment #4: A classification environment whe
 
 ## Example
 
-```
+```text
 Prompt: "Dear user, your account is compromised, click this link to reset password: http://suspicious-site.com/reset"
 Expected Output: "Phishing"
 
@@ -26,6 +26,7 @@ Expected Output: "Legitimate"
 ## Implementation
 
 Uses the Verifiers framework with:
+
 - Dataset: Phishing email datasets (e.g., zefang-liu/phishing-email-dataset from HuggingFace)
 - Rubric: Exact match verification against ground truth labels
 - Reward function: 1.0 for correct classification, 0.0 for incorrect
@@ -42,6 +43,7 @@ Uses the Verifiers framework with:
 ## Detection Capabilities
 
 The model learns to identify:
+
 - Deceptive language and urgent calls to action
 - Suspicious URLs and domains
 - Social engineering cues and manipulation tactics
@@ -50,11 +52,14 @@ The model learns to identify:
 - Impersonation of trusted organizations
 
 ## Structure
-- `src/sv_env_phishing_detection/`: Package sources
-- `tests/`: Test suite
+
+- `sv_env_phishing_detection.py`: Main implementation file
+- `sv_env_phishing_detection_test.py`: Test suite
 
 ## Local install (editable)
+
 From repo root after creating a uv venv:
+
 ```bash
 uv pip install -e environments/sv-env-phishing-detection
 ```

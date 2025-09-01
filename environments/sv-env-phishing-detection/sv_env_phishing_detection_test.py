@@ -5,7 +5,7 @@ from unittest.mock import patch
 import pytest
 import verifiers as vf
 from datasets import Dataset
-from sv_env_phishing_detection.main import (
+from sv_env_phishing_detection import (
     PhishingEmailParser,
     load_environment,
     reward_correct_classification,
@@ -185,7 +185,7 @@ def test_transform_dataset_with_max_examples():
     assert transformed[1]["answer"] == "Phishing"
 
 
-@patch("sv_env_phishing_detection.main.load_dataset")
+@patch("sv_env_phishing_detection.load_dataset")
 def test_load_environment_successful_download(mock_load_dataset):
     """Test loading the environment with a mocked successful dataset download."""
     # Mock the dataset returned by load_dataset
@@ -206,7 +206,7 @@ def test_load_environment_successful_download(mock_load_dataset):
     mock_load_dataset.assert_called_once_with("zefang-liu/phishing-email-dataset", split="train")
 
 
-@patch("sv_env_phishing_detection.main.load_dataset")
+@patch("sv_env_phishing_detection.load_dataset")
 def test_load_environment_download_fails(mock_load_dataset):
     """Test loading the environment when the dataset download fails."""
     # Configure the mock to raise an exception
@@ -223,7 +223,7 @@ def test_load_environment_download_fails(mock_load_dataset):
     assert env.dataset[5]["answer"] == "Legitimate"
 
 
-@patch("sv_env_phishing_detection.main.load_dataset")
+@patch("sv_env_phishing_detection.load_dataset")
 def test_load_environment_various_exceptions(mock_load_dataset):
     """Test loading environment with different exception types."""
     # Test with different exception types that should trigger fallback
@@ -243,7 +243,7 @@ def test_load_environment_various_exceptions(mock_load_dataset):
 
 def test_load_environment_custom_parameters():
     """Test load_environment with custom parameters."""
-    with patch("sv_env_phishing_detection.main.load_dataset") as mock_load_dataset:
+    with patch("sv_env_phishing_detection.load_dataset") as mock_load_dataset:
         mock_data = [{"text": "test email", "label": 1}] * 5
         mock_dataset = Dataset.from_list(mock_data)
         mock_load_dataset.return_value = mock_dataset

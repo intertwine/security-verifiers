@@ -80,7 +80,7 @@ uv run ruff format .
 uv run pytest -q
 
 # Run tests for a specific environment
-uv run pytest environments/sv-env-network-logs/tests -q
+uv run pytest environments/sv-env-network-logs/ -q
 
 # Run tests matching a pattern
 uv run pytest -k "network" -q

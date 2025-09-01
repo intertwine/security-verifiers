@@ -1,7 +1,7 @@
 """Tests for the configuration verification environment."""
 
 import verifiers as vf
-from sv_env_config_verification.main import (
+from sv_env_config_verification import (
     ConfigVerificationParser,
     analyze_firewall_rules,
     analyze_ssh_config,

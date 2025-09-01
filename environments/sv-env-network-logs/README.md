@@ -32,7 +32,7 @@ The environment successfully encourages both accurate classification and proper 
 
 ## Implementation
 
-The environment is implemented in `src/sv_env_network_logs/main.py` and is loaded via the `load_environment` function.
+The environment is implemented in `sv_env_network_logs.py` and is loaded via the `load_environment` function.
 
 It uses the Verifiers framework with:
 
@@ -45,11 +45,11 @@ It uses the Verifiers framework with:
 
 ## Structure
 
-- `src/sv_env_network_logs/main.py`: Contains the environment implementation with:
+- `sv_env_network_logs.py`: Contains the environment implementation with:
   - `NetworkLogParser`: Extracts and validates classification responses
   - `reward_correct_classification`: Evaluates classification accuracy
   - `load_environment`: Entry point that creates the SingleTurnEnv with multi-criteria rubric
-- `tests/`: Test suite for the environment and reward functions
+- `sv_env_network_logs_test.py`: Test suite for the environment and reward functions
 - `pyproject.toml`: Project configuration with 120-character line length and all dependencies
 
 ## Local Development Setup

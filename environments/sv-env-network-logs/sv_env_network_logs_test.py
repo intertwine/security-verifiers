@@ -5,7 +5,7 @@ from unittest.mock import patch
 import pytest
 import verifiers as vf
 from datasets import Dataset
-from sv_env_network_logs.main import (
+from sv_env_network_logs import (  # pylint: disable=line-too-long
     NetworkLogParser,
     load_environment,
     reward_correct_classification,
@@ -170,7 +170,7 @@ def test_transform_dataset_with_max_examples():
     assert transformed[1]["answer"] == "Malicious"
 
 
-@patch("sv_env_network_logs.main.load_dataset")
+@patch("sv_env_network_logs.load_dataset")
 def test_load_environment_successful_download(mock_load_dataset):
     """Test loading the environment with a mocked successful dataset download."""
     # Mock the dataset returned by load_dataset
@@ -188,10 +188,10 @@ def test_load_environment_successful_download(mock_load_dataset):
     assert isinstance(env, vf.SingleTurnEnv)
     assert env.dataset is not None
     assert len(env.dataset) == 1
-    mock_load_dataset.assert_called_once_with("19kmunz/iot-23-preprocessed-minimumcolumns", split="train")
+    mock_load_dataset.assert_called_once_with("19kmunz/iot-23-preprocessed-minimumcolumns", split="train")  # pylint: disable=line-too-long
 
 
-@patch("sv_env_network_logs.main.load_dataset")
+@patch("sv_env_network_logs.load_dataset")
 def test_load_environment_download_fails(mock_load_dataset):
     """Test loading the environment when the dataset download fails."""
     # Configure the mock to raise an exception
@@ -207,7 +207,7 @@ def test_load_environment_download_fails(mock_load_dataset):
     assert env.dataset[3]["answer"] == "Malicious"
 
 
-@patch("sv_env_network_logs.main.load_dataset")
+@patch("sv_env_network_logs.load_dataset")
 def test_load_environment_various_exceptions(mock_load_dataset):
     """Test loading environment with different exception types."""
     # Test with different exception types that should trigger fallback
@@ -227,7 +227,7 @@ def test_load_environment_various_exceptions(mock_load_dataset):
 
 def test_load_environment_custom_parameters():
     """Test load_environment with custom parameters."""
-    with patch("sv_env_network_logs.main.load_dataset") as mock_load_dataset:
+    with patch("sv_env_network_logs.load_dataset") as mock_load_dataset:
         mock_data = [{"id.orig_h": "test", "label": "Benign"}] * 5
         mock_dataset = Dataset.from_list(mock_data)
         mock_load_dataset.return_value = mock_dataset

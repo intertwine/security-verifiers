@@ -1,7 +1,7 @@
 """Tests for the red team attack environment."""
 
 import verifiers as vf
-from sv_env_redteam_attack.main import (
+from sv_env_redteam_attack import (
     RedTeamAttackParser,
     load_environment,
     reward_successful_jailbreak,

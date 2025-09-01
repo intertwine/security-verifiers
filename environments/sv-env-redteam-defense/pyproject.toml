@@ -24,8 +24,11 @@ dev = [
     "mypy>=1.0.0"
 ]
 
+[project.entry-points."vf.env"]
+sv-env-redteam-defense = "sv_env_redteam_defense:load_environment"
+
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
 
 [tool.black]
 line-length = 88
@@ -42,8 +45,8 @@ warn_return_any = true
 warn_unused_configs = true
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
+testpaths = ["."]
+python_files = ["*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-q"

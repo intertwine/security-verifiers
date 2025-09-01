@@ -15,7 +15,7 @@ dependencies = [
 ]
 
 [project.entry-points."verifiers.environments"]
-sv_env_network_logs = "sv_env_network_logs.main:load_environment"
+sv_env_network_logs = "sv_env_network_logs:load_environment"
 
 [project.optional-dependencies]
 dev = [
@@ -26,7 +26,7 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
 
 [tool.black]
 line-length = 120
@@ -46,8 +46,8 @@ warn_return_any = true
 warn_unused_configs = true
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
+testpaths = ["."]
+python_files = ["*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 

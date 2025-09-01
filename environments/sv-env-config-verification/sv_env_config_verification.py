@@ -70,7 +70,7 @@ class ConfigVerificationParser(vf.Parser):
                     "non-compliant",
                     "vulnerable",
                 ]
-            ) and ("because" in cleaned or "issue" in cleaned or "found" in cleaned or "detected" in cleaned):
+            ) and ("because" in cleaned or "issue" in cleaned or "found" in cleaned or "detected" in cleaned):  # pylint: disable=line-too-long
                 return 1.0
 
             # Good format: has verdict but minimal reasoning
