@@ -1,4 +1,5 @@
-"""sv_env_config_verification: Security Verifiers environment for Security Configuration Verification.
+"""sv_env_config_verification: Security Verifiers environment
+for Security Configuration Verification.
 
 This package implements PRD Environment #2: A ToolEnv where models audit security
 configuration files to identify misconfigurations or policy violations. The model can
@@ -30,7 +31,11 @@ class ConfigVerificationParser(vf.Parser):
 
         # Look for compliance verdicts
         # Check non-compliant before compliant
-        if "non-compliant" in cleaned or "non compliant" in cleaned or "violation" in cleaned:
+        if (
+            "non-compliant" in cleaned
+            or "non compliant" in cleaned
+            or "violation" in cleaned
+        ):
             return "Non-compliant"
         if "compliant" in cleaned:
             return "Compliant"
@@ -62,14 +67,31 @@ class ConfigVerificationParser(vf.Parser):
             # Perfect format: includes clear verdict and reasoning
             if any(
                 verdict in cleaned
-                for verdict in ["secure", "insecure", "compliant", "non-compliant", "vulnerable"]
-            ) and ("because" in cleaned or "issue" in cleaned or "found" in cleaned or "detected" in cleaned):
+                for verdict in [
+                    "secure",
+                    "insecure",
+                    "compliant",
+                    "non-compliant",
+                    "vulnerable",
+                ]
+            ) and (
+                "because" in cleaned
+                or "issue" in cleaned
+                or "found" in cleaned
+                or "detected" in cleaned
+            ):
                 return 1.0
 
             # Good format: has verdict but minimal reasoning
             if any(
                 verdict in cleaned
-                for verdict in ["secure", "insecure", "compliant", "non-compliant", "vulnerable"]
+                for verdict in [
+                    "secure",
+                    "insecure",
+                    "compliant",
+                    "non-compliant",
+                    "vulnerable",
+                ]
             ):
                 return 0.5
 
@@ -98,11 +120,15 @@ def analyze_ssh_config(config: str) -> Dict[str, Any]:
     # Check for insecure settings
     if "permitrootlogin yes" in config_normalized:
         issues.append("Root login is enabled - high security risk")
-        recommendations.append("Set 'PermitRootLogin no' or 'PermitRootLogin prohibit-password'")
+        recommendations.append(
+            "Set 'PermitRootLogin no' or 'PermitRootLogin prohibit-password'"
+        )
 
     if "passwordauthentication yes" in config_normalized:
         issues.append("Password authentication enabled - vulnerable to brute force")
-        recommendations.append("Use key-based authentication: 'PasswordAuthentication no'")
+        recommendations.append(
+            "Use key-based authentication: 'PasswordAuthentication no'"
+        )
 
     if "permitemptypasswords yes" in config_normalized:
         issues.append("Empty passwords allowed - critical security vulnerability")
@@ -222,7 +248,7 @@ def reward_correct_analysis(
 
 
 def load_environment(
-    dataset_name: str = "synthetic",
+    dataset_name: str = "synthetic",  # pylint: disable=unused-argument
     max_examples: int = 100,
 ) -> vf.ToolEnv:
     """Load the Configuration Verification environment.
@@ -359,7 +385,9 @@ def load_environment(
         ]
         # pylint: enable=line-too-long
 
-        examples.extend(config_examples[:max_examples] if max_examples else config_examples)
+        examples.extend(
+            config_examples[:max_examples] if max_examples else config_examples
+        )
         return Dataset.from_list(examples)
 
     dataset = _create_synthetic_dataset()
@@ -383,7 +411,7 @@ def load_environment(
     return vf.ToolEnv(
         name="sv-env-config-verification",
         description=(
-            "Audit security configuration files to identify misconfigurations and policy violations."
+            "Audit security configuration files to identify misconfigurations and policy violations."  # pylint: disable=line-too-long
         ),
         dataset=dataset,
         parser=parser,
@@ -392,6 +420,6 @@ def load_environment(
         system_prompt=(
             "You are a security configuration auditor. Analyze the provided configuration files "
             "for security vulnerabilities and policy violations. Use the available analysis tools "
-            "when appropriate. Report your findings clearly, including specific issues and recommendations."
+            "when appropriate. Report your findings clearly, including specific issues and recommendations."  # pylint: disable=line-too-long
         ),
     )

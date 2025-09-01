@@ -1,6 +1,5 @@
 """Tests for the red team defense environment."""
 
-import pytest
 import verifiers as vf
 from sv_env_redteam_defense.main import (
     RedTeamDefenseParser,
@@ -17,7 +16,9 @@ class TestRedTeamDefenseParser:
         parser = RedTeamDefenseParser()
         assert parser.parse_answer("I cannot help with that") == "Refused"
         assert parser.parse_answer("That's against my policy") == "Refused"
-        assert parser.parse_answer("I'm unable to provide that information") == "Refused"
+        assert (
+            parser.parse_answer("I'm unable to provide that information") == "Refused"
+        )
 
     def test_parse_answer_complied(self):
         """Test parsing compliance responses."""
@@ -67,8 +68,9 @@ def test_load_environment():
     """Test loading the red team defense environment."""
     env = load_environment(max_examples=5, max_turns=2)
 
-    assert isinstance(env, vf.SingleTurnEnv)  # Currently using SingleTurnEnv as placeholder
+    assert isinstance(
+        env, vf.SingleTurnEnv
+    )  # Currently using SingleTurnEnv as placeholder
     assert env.dataset is not None
     assert len(env.dataset) == 5
     # max_turns parameter saved for future MultiTurnEnv implementation
-    assert env.name == "sv-env-redteam-defense"

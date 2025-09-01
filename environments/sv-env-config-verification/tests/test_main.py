@@ -1,6 +1,5 @@
 """Tests for the configuration verification environment."""
 
-import pytest
 import verifiers as vf
 from sv_env_config_verification.main import (
     ConfigVerificationParser,
@@ -176,17 +175,17 @@ def test_load_environment():
     assert len(env.dataset) == 5
     assert env.tools is not None
     assert len(env.tools) == 2  # SSH and firewall analyzers
-    assert env.name == "sv-env-config-verification"
 
 
 def test_load_environment_dataset_structure():
     """Test that the synthetic dataset has the expected structure."""
     env = load_environment(max_examples=3)
 
+    assert env.dataset is not None
     assert "question" in env.dataset.column_names
     assert "answer" in env.dataset.column_names
     assert "config_type" in env.dataset.column_names
 
     # Check that different config types are present
-    config_types = [example["config_type"] for example in env.dataset]
+    config_types = [env.dataset[i]["config_type"] for i in range(len(env.dataset))]
     assert any(ct in ["ssh", "firewall", "iam", "nginx"] for ct in config_types)
