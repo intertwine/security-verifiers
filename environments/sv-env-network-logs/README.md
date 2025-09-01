@@ -11,14 +11,24 @@ This environment implements the task of single-turn classification where a model
 - **Input**: A string representation of a network log entry.
 - **Output**: A classification label: "Malicious" or "Benign".
 - **Environment Type**: `verifiers.SingleTurnEnv` (one prompt → one response).
-- **Reward**: Binary reward (1.0 for correct classification, 0.0 otherwise).
+- **Reward**: Multi-criteria scoring with classification accuracy (weight 1.0) and format quality (weight 0.2).
 
 ## Example
 
 ```text
-Prompt: "Log Entry: id.orig_h=192.168.1.104, id.orig_p=37356, id.resp_h=192.168.1.1, id.resp_p=80, proto=tcp, service=http, detailed-label=Attack"
+Prompt: "Log Entry: id.orig_h=None, id.orig_p=None, id.resp_h=None, id.resp_p=8081, proto=tcp, service=None, detailed-label=None"
 Expected Output: "Malicious"
 ```
+
+## Performance
+
+Recent evaluation results with gpt-4.1-mini on 100 examples:
+
+- **Overall Score**: 80.3% (weighted combination of accuracy and format)
+- **Classification Accuracy**: 60.3% (correct malicious/benign predictions)
+- **Format Quality**: 100% (models consistently respond with single classification words)
+
+The environment successfully encourages both accurate classification and proper response formatting.
 
 ## Implementation
 
@@ -26,16 +36,21 @@ The environment is implemented in `src/sv_env_network_logs/main.py` and is loade
 
 It uses the Verifiers framework with:
 
-- **Dataset**: `19kmunz/iot-23-preprocessed-minimumcolumns` from Hugging Face. A small synthetic dataset is used as a fallback if the download fails.
-- **Rubric**: An exact, case-insensitive match verification against the ground truth labels ("Malicious" or "Benign").
-- **Reward Function**: `reward_label_match` provides a reward of 1.0 for a correct classification and 0.0 for an incorrect one.
+- **Dataset**: `19kmunz/iot-23-preprocessed-minimumcolumns` from Hugging Face. A synthetic dataset with 10 examples is used as a fallback if the download fails.
+- **Parser**: `NetworkLogParser` extracts classification labels from model responses and provides format validation.
+- **Rubric**: Multi-criteria evaluation with two reward functions:
+  - `reward_correct_classification`: Binary reward (1.0 for correct classification, 0.0 otherwise)
+  - `format_reward`: Rewards proper response format (1.0 for exact "Malicious"/"Benign", 0.5 for containing the word, 0.0 otherwise)
 - **System Prompt**: Guides the model to act as a network security analyst and respond only with the classification label.
 
 ## Structure
 
-- `src/sv_env_network_logs/main.py`: Contains the environment implementation, including the `load_environment` entry point.
-- `tests/`: Test suite for the environment.
-- `pyproject.toml`: Project configuration, including dependencies and the entry point for the `verifiers` framework.
+- `src/sv_env_network_logs/main.py`: Contains the environment implementation with:
+  - `NetworkLogParser`: Extracts and validates classification responses
+  - `reward_correct_classification`: Evaluates classification accuracy
+  - `load_environment`: Entry point that creates the SingleTurnEnv with multi-criteria rubric
+- `tests/`: Test suite for the environment and reward functions
+- `pyproject.toml`: Project configuration with 120-character line length and all dependencies
 
 ## Local Development Setup
 
@@ -54,7 +69,7 @@ To test the environment locally, you can use the `vf-eval` command from the `ver
 
 ```bash
 # Evaluate the environment with a small model
-vf-eval sv-env-network-logs --model gpt-4o-mini --num-examples 3
+vf-eval sv-env-network-logs --model gpt-4.1-mini --num-examples 3
 ```
 
 **Note on Configuration**:
@@ -70,7 +85,7 @@ vf-eval sv-env-network-logs --model gpt-4o-mini --num-examples 3
 
   ```bash
   # Load .env file and run evaluation
-  set -a && source .env && set +a && vf-eval sv-env-network-logs --model gpt-5-mini --num-examples 3
+  set -a && source .env && set +a && vf-eval sv-env-network-logs --model gpt-4.1-mini --num-examples 3
   ```
 
 - **Hugging Face Authentication**: The `19kmunz/iot-23-preprocessed-minimumcolumns` dataset is private. If you see a `401 Unauthorized` error, you need to log in to Hugging Face or set the `HF_TOKEN` environment variable:
