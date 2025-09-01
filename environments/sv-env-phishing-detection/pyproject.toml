@@ -27,8 +27,8 @@ dev = [
 [project.entry-points."vf.env"]
 sv-env-phishing-detection = "sv_env_phishing_detection:load_environment"
 
-[tool.setuptools.packages.find]
-where = ["."]
+[tool.setuptools]
+py-modules = ["sv_env_phishing_detection"]
 
 [tool.black]
 line-length = 88

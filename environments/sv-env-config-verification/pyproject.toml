@@ -27,8 +27,8 @@ dev = [
 [project.entry-points."vf.env"]
 sv-env-config-verification = "sv_env_config_verification:load_environment"
 
-[tool.setuptools.packages.find]
-where = ["."]
+[tool.setuptools]
+py-modules = ["sv_env_config_verification"]
 
 [tool.black]
 line-length = 88

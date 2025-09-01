@@ -27,8 +27,8 @@ dev = [
 [project.entry-points."vf.env"]
 sv-env-redteam-defense = "sv_env_redteam_defense:load_environment"
 
-[tool.setuptools.packages.find]
-where = ["."]
+[tool.setuptools]
+py-modules = ["sv_env_redteam_defense"]
 
 [tool.black]
 line-length = 88
