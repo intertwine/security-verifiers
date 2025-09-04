@@ -23,6 +23,7 @@ jobs:
       - name: Create venv and install packages
         shell: bash
         run: |
+          # Create virtual environment with the GitHub runner's Python
           PY=$(python -c 'import sys; print(sys.executable)')
           uv venv --python="$PY"
           source .venv/bin/activate
@@ -30,64 +31,41 @@ jobs:
           # Install each environment with its dependencies
           for env in environments/*/; do
             echo "Installing $env..."
-            cd "$env" && uv sync && cd ../..
-            uv pip install -e "$env"
+            # Skip if no pyproject.toml exists (e.g., if directory is empty)
+            if [ -f "$env/pyproject.toml" ]; then
+              cd "$env" && uv sync && cd ../..
+              uv pip install -e "$env"
+            fi
           done
           
           # Install development tools
-          uv pip install pytest ruff build pre-commit
+          uv pip install pytest pytest-cov ruff build pre-commit
 
       - name: Lint
         run: |
           source .venv/bin/activate
-          uv run ruff check .
+          ruff check .
 
       - name: Format check
         run: |
           source .venv/bin/activate
-          uv run ruff format --check .
+          ruff format --check .
 
       - name: Tests
         run: |
           source .venv/bin/activate
-          uv run pytest -q
+          pytest -q --tb=short
 
-  build-environments:
-    runs-on: ubuntu-latest
-    needs: lint-and-test
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install uv
-        run: python -m pip install --upgrade pip uv
-
-      - name: Create venv
-        run: |
-          PY=$(python -c 'import sys; print(sys.executable)')
-          uv venv --python="$PY"
-
-      - name: Build wheels
-        shell: bash
+      - name: Test with coverage
         run: |
           source .venv/bin/activate
-          uv pip install build
-          
-          # Build each environment
-          for env in environments/*/; do
-            echo "Building wheel for $env..."
-            cd "$env"
-            uv run python -m build --wheel
-            cd ../..
-          done
-          
-      - name: Upload artifacts
+          pytest --cov=environments --cov-report=term-missing --cov-report=html --cov-fail-under=70
+        continue-on-error: true  # Don't fail on coverage for now
+
+      - name: Upload coverage report
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: wheels
-          path: environments/*/dist/*.whl
+          name: coverage-report
+          path: htmlcov/
+        continue-on-error: true

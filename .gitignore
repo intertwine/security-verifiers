@@ -76,3 +76,9 @@ coverage.xml
 
 # Private Docs
 docs-internal/
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
