@@ -26,23 +26,68 @@ jobs:
           PY=$(python -c 'import sys; print(sys.executable)')
           uv venv --python="$PY"
           source .venv/bin/activate
-          uv pip install -e environments/sv-env-prompt-injection \
-            -e environments/sv-env-secrets-leakage \
-            -e environments/sv-env-tool-use-safety \
-            -e environments/sv-env-code-exec-safety \
-            -e environments/sv-env-network-safety \
-            -e environments/sv-env-policy-compliance
-          uv pip install pytest ruff build
+          
+          # Install each environment with its dependencies
+          for env in environments/*/; do
+            echo "Installing $env..."
+            cd "$env" && uv sync && cd ../..
+            uv pip install -e "$env"
+          done
+          
+          # Install development tools
+          uv pip install pytest ruff build pre-commit
 
       - name: Lint
-        run: uv run ruff check .
-
-      - name: Format
-        run: uv run ruff format .
+        run: |
+          source .venv/bin/activate
+          uv run ruff check .
 
       - name: Format check
-        run: uv run ruff format --check .
+        run: |
+          source .venv/bin/activate
+          uv run ruff format --check .
 
       - name: Tests
-        run: uv run pytest -q
+        run: |
+          source .venv/bin/activate
+          uv run pytest -q
 
+  build-environments:
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: python -m pip install --upgrade pip uv
+
+      - name: Create venv
+        run: |
+          PY=$(python -c 'import sys; print(sys.executable)')
+          uv venv --python="$PY"
+
+      - name: Build wheels
+        shell: bash
+        run: |
+          source .venv/bin/activate
+          uv pip install build
+          
+          # Build each environment
+          for env in environments/*/; do
+            echo "Building wheel for $env..."
+            cd "$env"
+            uv run python -m build --wheel
+            cd ../..
+          done
+          
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels
+          path: environments/*/dist/*.whl

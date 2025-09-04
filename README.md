@@ -1,6 +1,7 @@
 # Open Security Verifiers
 
 [![CI](https://github.com/intertwine/security-verifiers/actions/workflows/ci.yml/badge.svg)](https://github.com/intertwine/security-verifiers/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 An integrated suite of composable security and alignment RL environments for Prime Intellect's Environments Hub. This project implements verifiable, executable rewards for training and evaluating AI systems on critical security tasks.
 
@@ -153,6 +154,10 @@ All environments leverage a common set of components for consistency and composa
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, style, and workflow details.
+
+## License
+
+This project is released under the [MIT License](LICENSE), compatible with Prime Intellect's Verifiers library.
 
 ## Notes
 
