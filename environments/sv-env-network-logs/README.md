@@ -1,10 +1,10 @@
-# Network Log Anomaly Detection
+# Network Log Anomaly Detection (Prototype)
 
-A security-focused reinforcement learning environment for training models to detect malicious activity in network logs. Part of the Security Verifiers suite by Intertwine.
+**Note:** This is a toy prototype environment used to validate the Prime Intellect Environments Hub deployment pipeline. For the full vision of calibrated, abstention-aware network anomaly detection with operational SOC metrics, see the [PRD.md](../../PRD.md) specification (Environment E1).
 
 ## Overview
 
-This environment challenges models to classify network log entries as either malicious or benign, helping train AI systems for cybersecurity applications. Models analyze IoT network traffic logs and must accurately identify potential security threats.
+This prototype environment demonstrates basic network log classification (malicious vs. benign) and serves as a proof-of-concept for the Environments Hub integration. The production version described in the PRD will add calibration rewards, abstention support, and asymmetric cost functions reflecting real operational priorities.
 
 **Environment Type**: `SingleTurnEnv` - One prompt, one response per example  
 **Task**: Binary classification of network logs  
@@ -155,17 +155,18 @@ The environment uses the [IoT-23 dataset](https://huggingface.co/datasets/19kmun
 - API key for model inference (e.g., OpenAI API key)
 - HuggingFace token for dataset access (optional but recommended)
 
-## About Security Verifiers
+## About Open Security Verifiers
 
-Security Verifiers is a suite of cybersecurity-focused RL environments designed to train and evaluate AI models on real-world security tasks. Created by the Intertwine team, these environments cover:
+This environment is part of the Open Security Verifiers project - a composable suite of six security and alignment RL environments using Prime Intellect's Verifiers framework. The full suite implements executable, programmatic rewards and shared tooling for:
 
-- Network security and anomaly detection
-- Phishing and social engineering defense
-- Code vulnerability assessment
-- Security configuration verification
-- Red team/blue team scenarios
+- Network anomaly detection with calibration and abstention
+- Tool-using security configuration auditing
+- Vulnerability repair with patch-and-test loops
+- Phishing detection with evidence-seeking
+- Red-team attack simulation
+- Adversarial alignment defense
 
-For more environments, search for the `security-verifiers` tag on the Prime Intellect Environments Hub.
+See [EXECUTIVE_SUMMARY.md](../../EXECUTIVE_SUMMARY.md) and [PRD.md](../../PRD.md) for the complete vision and specifications.
 
 ## Support
 

@@ -1,135 +1,201 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with the Open Security Verifiers repository.
 
 ## Repository Overview
 
-This is a Python monorepo for security-focused reinforcement learning environments built with Prime Intellect's verifiers library. The repository contains six security verifier environments designed for training and evaluating LLMs on security tasks.
+Open Security Verifiers is a composable suite of six security and alignment RL environments for Prime Intellect's Environments Hub. The project emphasizes verifiable, executable rewards for training and evaluating AI systems on critical security tasks.
 
-## Environment Structure
+**Vision**: Build environments where agents learn behaviors we can verify: policies satisfied, tests pass, safe refusals, calibrated abstention. See [EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md) and [PRD.md](PRD.md) for complete specifications.
 
-Each environment follows a consistent structure under `environments/`:
+## Project Structure
 
-- `<package_name>.py`: Main environment implementation module
-- `<package_name>_test.py`: Test file for the environment
-- `pyproject.toml`: Environment-specific dependencies
+```markdown
+security-verifiers/
+├── environments/ # Six RL environment packages
+│ ├── sv-env-network-logs/ # E1: Network anomaly (prototype)
+│ ├── sv-env-phishing-detection/ # E4: Phishing + evidence
+│ ├── sv-env-config-verification/# E2: Tool-using config audit
+│ ├── sv-env-code-vulnerability/ # E3: Patch-and-test repair
+│ ├── sv-env-redteam-attack/ # E5: Attack simulator
+│ └── sv-env-redteam-defense/ # E6: Alignment defender
+├── docs/ # Research notes and application materials
+├── EXECUTIVE_SUMMARY.md # High-level vision
+├── PRD.md # Detailed specifications
+└── CONTRIBUTING.md # Contribution guidelines
+```
 
-The six environments are:
+## Development Commands
 
-- `sv-env-network-logs`: Network log anomaly detection (SingleTurnEnv)
-- `sv-env-phishing-detection`: Phishing email detection (SingleTurnEnv)
-- `sv-env-redteam-defense`: Defensive AI security boundaries (MultiTurnEnv)
-- `sv-env-redteam-attack`: Red team attack generation (MultiTurnEnv)
-- `sv-env-code-vulnerability`: Code vulnerability assessment (ToolEnv/MultiTurnEnv)
-- `sv-env-config-verification`: Security configuration verification (MultiTurnEnv)
+### Quick Start with Makefile
 
-## Common Development Commands
-
-### Environment Setup
+The project includes a comprehensive Makefile for common tasks:
 
 ```bash
-# Create and activate virtual environment
-uv venv --python=python3.12
+# Complete setup (recommended)
+make setup
 source .venv/bin/activate
 
-# Install dependencies for an environment
-cd environments/<env-name> && uv sync && cd ../..
+# Daily workflow
+make check                     # Run all quality checks
+make test                      # Run all tests
+make test-env E=network-logs   # Test specific environment
+make format                    # Format code
+make lint-fix                  # Fix linting issues
 
-# Install environment in editable mode
-uv pip install -e environments/<env-name>
+# Building and deployment
+make build-env E=network-logs  # Build environment wheel
+make deploy E=network-logs     # Deploy to Hub
+make eval E=network-logs       # Evaluate locally
 
-# Add new dependencies to an environment
-cd environments/<env-name> && uv add <package-name> && cd ../..
+# Shortcuts for testing environments
+make e1  # Test network-logs
+make e2  # Test config-verification
+make e3  # Test code-vulnerability
+make e4  # Test phishing-detection
+make e5  # Test redteam-attack
+make e6  # Test redteam-defense
 ```
 
-### Linting and Formatting
+### Manual Commands (when needed)
 
 ```bash
-# Run linter on entire repo
-uv run ruff check .
+# Environment management
+uv venv --python=python3.12
+source .venv/bin/activate
+cd environments/sv-env-network-logs && uv sync && cd ../..
+uv pip install -e environments/sv-env-network-logs
 
-# Format code
-uv run ruff format .
+# Add new dependency
+cd environments/sv-env-network-logs && uv add package-name && cd ../..
 
-# Fix linting issues automatically
+# Code quality (without make)
 uv run ruff check . --fix
-```
-
-### Testing
-
-```bash
-# Run all tests from repo root
+uv run ruff format .
 uv run pytest
 
-# Run tests for specific environment
-uv run pytest environments/<env-name>/ -q
-
-# Run tests matching pattern
-uv run pytest -k "pattern" -q
-
-# Run tests with verbose output
-uv run pytest -v
+# Manual deployment
+cd environments/sv-env-network-logs
+uv run python -m build --wheel
+prime login
+prime env push -v PUBLIC
 ```
 
-### Building
+## Key Design Principles
 
-```bash
-# Build wheel for specific environment
-uv run python -m build --wheel environments/<env-name>
+### 1. Executable Verification First
+
+- Use actual tools (OPA, KubeLinter, Semgrep, tests) as ground truth
+- Minimize reliance on LLM judges
+- Zero reward for malformed outputs
+
+### 2. Composable Components
+
+- Shared schemas across environments
+- Common reward functions (calibration, abstention, costs)
+- Reusable tool wrappers
+- Standardized evaluation metrics
+
+### 3. Operational Focus
+
+- Calibration rewards for well-calibrated confidence
+- Abstention support ("I don't know" is valid)
+- Asymmetric costs (e.g., false negatives >> false positives)
+- Real-world datasets and benchmarks
+
+## Environment Implementation Guidelines
+
+### Required Components
+
+Each environment must implement:
+
+1. **`load_environment()` function**: Entry point returning a Verifiers environment
+2. **Strict output schemas**: JSON with exact fields per PRD
+3. **Rubric-based rewards**: Multiple weighted reward components
+4. **Test coverage**: Unit and integration tests
+
+### Example Structure
+
+```python
+# sv_env_network_logs.py
+import verifiers as vf
+
+def r_label(*, completion, info, **_):
+    """Exact label match reward."""
+    # Implementation
+
+def r_calibration(*, completion, info, **_):
+    """Calibration bonus for confidence scores."""
+    # Implementation
+
+RUBRIC = vf.Rubric(
+    funcs=[r_label, r_calibration],
+    weights=[1.0, 0.5]
+)
+
+def load_environment(split="train"):
+    dataset = load_dataset(split)
+    return vf.SingleTurnEnv(
+        dataset=dataset,
+        rubric=RUBRIC,
+        system_prompt="..."
+    )
 ```
 
-### Pre-commit Hooks
+## Current Status
 
-```bash
-# Install pre-commit hooks
-uv run pre-commit install
+- **E1 (Network Logs)**: Toy prototype deployed to Hub for validation
+- **E2-E6**: Work in progress, READMEs updated with PRD specifications
 
-# Run on all files
-uv run pre-commit run --all-files
-```
+## Important Notes for Claude
 
-## Architecture Patterns
+### When Working on Environments
 
-### Environment Implementation Pattern
+1. **Check PRD.md first**: Each environment (E1-E6) has detailed specifications
+2. **Maintain composability**: Use shared toolbox components
+3. **Test locally**: Run `vf-eval` before pushing to Hub
+4. **Document changes**: Update environment READMEs
 
-Each environment implements the verifiers library interface with:
+### Code Standards
 
-1. **Parser classes** (extending `vf.Parser`): Extract and validate model responses
-2. **Environment classes**: Handle task setup, multi-turn interactions, and reward calculation
-3. **Verifier classes**: Core evaluation logic for security tasks
-4. **Interface protocols**: Type-safe contracts defined in `interfaces.py`
-5. **Skeleton implementations**: Base stub classes in `skeletons.py`
+- Use type hints for all function signatures
+- Normalize rewards to [0.0, 1.0]
+- Handle missing dependencies gracefully
+- Include docstrings for public functions
+- Follow existing parser patterns
 
-### Reward System
+### Security Considerations
 
-Environments use a rubric-based reward system:
+- Never commit API keys or secrets
+- Hash/remove sensitive content from datasets
+- Sandbox code execution in E3
+- Use Llama Guard 3 for E5/E6 safety scoring
 
-- Format rewards: Check response formatting compliance
-- Correctness rewards: Evaluate accuracy of security classifications
-- Partial credit: Intermediate rewards for multi-turn tasks
+### Deployment Checklist
 
-### Dataset Loading
+Before deploying an environment:
 
-Environments support multiple dataset sources:
+- [ ] Tests pass (`make test-env E=name`)
+- [ ] Linting clean (`make lint`)
+- [ ] Code formatted (`make format`)
+- [ ] README updated with examples
+- [ ] Output schema matches PRD specification
+- [ ] Rewards properly normalized
+- [ ] Dependencies in pyproject.toml
+- [ ] Build successful (`make build-env E=name`)
+- [ ] Local evaluation works (`make eval E=name`)
 
-- Local synthetic datasets (fallback when external sources unavailable)
-- HuggingFace datasets via `load_dataset()`
-- Custom dataset generation for security scenarios
+## Resources
 
-## Integration with Prime Intellect Verifiers
+- [Verifiers Documentation](https://verifiers.readthedocs.io)
+- [Environments Hub](https://app.primeintellect.ai/dashboard/environments)
+- [Prime CLI](https://github.com/PrimeIntellect-ai/prime-cli)
+- [Project PRD](PRD.md) - Detailed specifications for each environment
 
-The environments are designed to work with Prime Intellect's infrastructure:
+## Workflow Reminders
 
-- Use `load_environment()` function as entry point
-- Compatible with `vf-eval` CLI for testing
-- Support both SingleTurnEnv and MultiTurnEnv patterns
-- Tool-enabled environments use ToolEnv for function calling
-
-## Important Implementation Notes
-
-- Always use absolute imports within environment packages
-- Each environment module is self-contained at the environment root level
-- Include proper error handling for missing dependencies or datasets
-- Follow the existing parser pattern for extracting model responses
-- Ensure rewards are normalized between 0.0 and 1.0
-- Test with small examples before full dataset evaluation
+- This is an open-source project - contributions welcome!
+- Focus on executable verification over subjective judgments
+- Test with multiple datasets for OOD evaluation
+- Document security considerations for each environment
+- Coordinate with other environments for shared components

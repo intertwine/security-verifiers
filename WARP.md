@@ -1,48 +1,170 @@
 # WARP.md
 
-This file provides guidance to WARP (warp.dev) when working with code in this repository.
+This file provides guidance to WARP (warp.dev) terminal when working with the Open Security Verifiers repository.
 
-Commands commonly used in this codebase
+## Project Overview
 
-- Environment setup (uv):
-  • Create venv (Python 3.12): uv venv --python=python3.12; then activate: source .venv/bin/activate
-  • Install all local packages (editable):
-  for env in environments/\*/; do uv pip install -e "$env"; done
-  • Developer tools (install once per venv): uv pip install pytest ruff build pre-commit
-- Lint:
-  • uv run ruff check .
-- Format:
-  • uv run ruff format .
-- Tests:
-  • Run all tests: uv run pytest -q
-  • Run a single test file: uv run pytest environments/sv-env-network-logs/sv_env_network_logs_test.py -q
-  • Run tests by pattern: uv run pytest -k "pattern" -q
-- Build a wheel for a subproject:
-  • uv run python -m build --wheel environments/sv-env-network-logs
-- Pre-commit hooks (optional):
-  • uv run pre-commit install
-  • uv run pre-commit run --all-files
+Open Security Verifiers: A composable suite of six security and alignment RL environments for Prime Intellect's Environments Hub, emphasizing verifiable, executable rewards.
 
-High-level architecture and structure (big-picture)
+- **Vision**: Build environments where agents learn behaviors we can verify
+- **Docs**: See EXECUTIVE_SUMMARY.md and PRD.md for specifications
+- **Status**: E1 (network-logs) deployed as prototype, E2-E6 in development
 
-- Monorepo of six independent Python packages under environments/:
-  • sv-env-network-logs: Network log anomaly detection
-  • sv-env-phishing-detection: Phishing email detection
-  • sv-env-redteam-defense: Defensive AI security boundaries
-  • sv-env-redteam-attack: Red team attack generation
-  • sv-env-code-vulnerability: Code vulnerability assessment
-  • sv-env-config-verification: Security configuration verification
-  Each uses a flat layout with <package_name>.py and <package_name>\_test.py files.
-- Each package is intended to become an RL environment built atop the Prime Intellect verifiers library.
-- docs/ contains product/implementation planning:
-  • prd-environments-md: outlines building and publishing environments and model training workflows.
-  • prd-verifiers.md: scoping decisions (local vs. cloud workflows, stack choices, model targets).
+## Quick Commands
 
-In-repo rules and guides
+### Using Makefile (Recommended)
 
-- No Claude, Cursor, or Copilot rules files are present in this repository.
-- README.md provides uv workflows and monorepo usage; keep WARP.md aligned with README.md when workflows change.
+```bash
+# Initial setup - one command!
+make setup
+source .venv/bin/activate
 
-Project-specific operational constraints for Warp
+# Daily development
+make check                    # Run all quality checks
+make test                     # Run all tests
+make format                   # Format code
+make lint-fix                 # Fix linting issues
+make quick-fix                # Format + fix linting
 
-- Never run git commit or git push from Warp in this repository. The user handles all commits and pushes manually.
+# Test specific environment
+make test-env E=network-logs  # Full name
+make e1                       # Shortcut for E1
+
+# Build and deploy
+make build-env E=network-logs
+make deploy E=network-logs
+
+# Evaluate locally
+make eval E=network-logs MODEL=gpt-4o-mini N=10
+
+# Get help
+make help                     # Show all commands
+make info                     # Show project status
+```
+
+### Manual Commands (fallback)
+
+```bash
+# If make is not available
+source .venv/bin/activate
+uv run ruff check . --fix
+uv run ruff format .
+uv run pytest -q
+uv run python -m build --wheel environments/sv-env-network-logs
+```
+
+## Repository Structure
+
+```shell
+security-verifiers/
+├── environments/              # Six RL environments
+│   ├── sv-env-network-logs/   # E1: Network anomaly detection
+│   ├── sv-env-phishing-detection/  # E4: Phishing + evidence
+│   ├── sv-env-config-verification/ # E2: Config audit (tools)
+│   ├── sv-env-code-vulnerability/  # E3: Vuln repair (tests)
+│   ├── sv-env-redteam-attack/      # E5: Attack simulator
+│   └── sv-env-redteam-defense/     # E6: Alignment defender
+├── EXECUTIVE_SUMMARY.md       # High-level vision
+├── PRD.md                     # Detailed specifications (E1-E6)
+└── CONTRIBUTING.md            # Dev guidelines
+```
+
+## Environment Specs (PRD.md)
+
+| Env | Type          | Focus        | Key Feature                 |
+| --- | ------------- | ------------ | --------------------------- |
+| E1  | SingleTurnEnv | Network logs | Calibration + abstention    |
+| E2  | ToolEnv       | Config audit | OPA/KubeLinter/Semgrep      |
+| E3  | MultiTurnEnv  | Code repair  | Tests pass + minimal diff   |
+| E4  | SingleTurnEnv | Phishing     | Evidence + asymmetric costs |
+| E5  | MultiTurnEnv  | Attack       | Llama Guard 3 scoring       |
+| E6  | MultiTurnEnv  | Defense      | Helpful/harmless balance    |
+
+## Development Workflow
+
+### Adding Dependencies
+
+```bash
+# Add to specific environment
+cd environments/sv-env-network-logs
+uv add package-name
+uv sync
+cd ../..
+```
+
+### Common Workflows
+
+```bash
+# Morning setup
+make info                     # Check project status
+make test                     # Ensure tests pass
+
+# Before committing
+make check                    # Lint + format + test
+make pre-commit               # Run pre-commit hooks
+
+# CI/CD simulation
+make ci                       # Run CI checks locally
+make cd                       # Full CD pipeline
+
+# Cleanup
+make clean                    # Remove build artifacts
+make clean-all                # Full reset (including venv)
+```
+
+## Key Design Principles
+
+1. **Executable verification**: Tests/tools over LLM judges
+2. **Strict schemas**: Zero reward for malformed JSON
+3. **Calibration**: Reward well-calibrated confidence
+4. **Abstention**: "I don't know" is valid
+5. **Asymmetric costs**: FN >> FP for security
+
+## Important Reminders
+
+- **Never run git commit/push from WARP** - User handles all Git operations
+- **Check PRD.md** - Each environment (E1-E6) has detailed specs
+- **Test locally first** - Run pytest before pushing
+- **Update READMEs** - Document changes in environment READMEs
+- **Composability** - Use shared toolbox components
+
+## Resources
+
+- [Verifiers Docs](https://verifiers.readthedocs.io)
+- [Environments Hub](https://app.primeintellect.ai/dashboard/environments)
+- [Prime CLI](https://github.com/PrimeIntellect-ai/prime-cli)
+- [Project GitHub](https://github.com/intertwine/security-verifiers)
+
+## Common Issues
+
+### Import Errors
+
+```bash
+# Reinstall environment in editable mode
+uv pip install -e environments/sv-env-network-logs
+```
+
+### Dataset Access
+
+```bash
+# Set HuggingFace token for datasets
+export HF_TOKEN="your-token-here"
+```
+
+### Build Failures
+
+```bash
+# Clean and rebuild
+rm -rf environments/*/dist/
+cd environments/sv-env-network-logs
+uv run python -m build --wheel
+```
+
+## Project Status
+
+- ✅ E1 Network Logs: Prototype deployed
+- 🚧 E2 Config Audit: Tool integration pending
+- 🚧 E3 Code Repair: Sandbox setup needed
+- 🚧 E4 Phishing: Evidence tools pending
+- 🚧 E5 Attack: Llama Guard 3 integration
+- 🚧 E6 Defense: Co-training infrastructure

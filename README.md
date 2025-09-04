@@ -1,122 +1,154 @@
-# Security Verifiers
+# Open Security Verifiers
 
 [![CI](https://github.com/intertwine/security-verifiers/actions/workflows/ci.yml/badge.svg)](https://github.com/intertwine/security-verifiers/actions/workflows/ci.yml)
 
-A monorepo scaffold for six Reinforcement Learning (RL) environments built in Python and intended to use the Prime Intellect verifiers library. This repo currently contains placeholders and initial implementations for security-focused RL environments.
+An integrated suite of composable security and alignment RL environments for Prime Intellect's Environments Hub. This project implements verifiable, executable rewards for training and evaluating AI systems on critical security tasks.
 
-## Monorepo Layout
+## Vision & Approach
 
-- **environments/**
-  - `sv-env-network-logs`: Network logs anomaly detection (SingleTurnEnv)
-  - `sv-env-phishing-detection`: Phishing email detection (SingleTurnEnv)
-  - `sv-env-redteam-defense`: Defensive AI assistant security (MultiTurnEnv)
-  - `sv-env-redteam-attack`: Red team attack generation (MultiTurnEnv)
-  - `sv-env-code-vulnerability`: Code vulnerability assessment (ToolEnv/MultiTurnEnv)
-  - `sv-env-config-verification`: Configuration security verification (MultiTurnEnv)
-- **docs/**
-  - `prd-environments.md`, `prd-verifiers.md`: Product/implementation planning docs
+Building on Prime Intellect's Verifiers framework, this project demonstrates how composable RL environments with executable rewards can advance both security and alignment research. Our environments share schemas, tools, and evaluation methods so skills transfer across tasks.
 
-## Getting Started (uv)
+See [EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md) for the high-level vision and [PRD.md](PRD.md) for detailed specifications.
+
+## Environment Suite
+
+### Production-Ready
+
+- **`sv-env-network-logs`**: Network log anomaly detection with calibration and abstention (_toy prototype for Hub validation_)
+
+### In Development (Work in Progress)
+
+- **`sv-env-phishing-detection`**: Phishing detection with evidence-seeking and calibrated abstention
+- **`sv-env-config-verification`**: Tool-using security configuration auditing (OPA/Rego, KubeLinter, Semgrep)
+- **`sv-env-code-vulnerability`**: Vulnerability repair with patch-and-test loops
+- **`sv-env-redteam-attack`**: Red-team attack simulator for eliciting unsafe outputs
+- **`sv-env-redteam-defense`**: Adversarial alignment defender balancing helpfulness and harmlessness
+
+## Repository Structure
+
+- **`environments/`**: Six RL environment packages (each independently installable)
+- **`docs/`**: Research notes and application materials
+- **`EXECUTIVE_SUMMARY.md`**: High-level project overview
+- **`PRD.md`**: Detailed product requirements and specifications
+
+## Getting Started
 
 ### Prerequisites
 
 - Python 3.12+
-- [uv](https://github.com/astral-sh/uv) installed
+- [uv](https://github.com/astral-sh/uv) package manager
+- [Prime CLI](https://github.com/PrimeIntellect-ai/prime-cli) (for Hub deployment)
+- `make` (usually pre-installed on Unix systems)
 
-### 1. Create and Activate a Virtual Environment
+### Quick Setup
+
+The easiest way to get started is using the Makefile:
 
 ```bash
+# Complete one-command setup
+make setup
+
+# Activate the virtual environment
+source .venv/bin/activate
+```
+
+This will create a Python 3.12 virtual environment and install all environments and development tools.
+
+### Manual Setup (Alternative)
+
+If you prefer manual setup or need more control:
+
+```bash
+# Create virtual environment
 uv venv --python=python3.12
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-```
+source .venv/bin/activate
 
-### 2. Install Environment Packages
+# Install all environments
+make install
 
-Each environment has its own dependencies. Install them using `uv sync`:
-
-```bash
-# Install dependencies for each environment
-cd environments/sv-env-network-logs && uv sync && cd ../..
-cd environments/sv-env-phishing-detection && uv sync && cd ../..
-cd environments/sv-env-redteam-defense && uv sync && cd ../..
-cd environments/sv-env-redteam-attack && uv sync && cd ../..
-cd environments/sv-env-code-vulnerability && uv sync && cd ../..
-cd environments/sv-env-config-verification && uv sync && cd ../..
-```
-
-Then install all environments in editable mode:
-
-```bash
-# Install all local packages in editable mode
-uv pip install -e environments/sv-env-network-logs
-uv pip install -e environments/sv-env-phishing-detection
-uv pip install -e environments/sv-env-redteam-defense
-uv pip install -e environments/sv-env-redteam-attack
-uv pip install -e environments/sv-env-code-vulnerability
-uv pip install -e environments/sv-env-config-verification
-```
-
-### 3. Install Development Tools
-
-```bash
-uv pip install pytest ruff build pre-commit
+# Install development tools
+make install-dev
 ```
 
 ## Development Commands
 
-### Linting and Formatting
+### Using Make (Recommended)
 
 ```bash
-# Lint entire repo
-uv run ruff check .
+# Run all quality checks
+make check
 
-# Format code
-uv run ruff format .
+# Run tests
+make test                        # All tests
+make test-env E=network-logs     # Specific environment
+make e1                          # Shortcut for network-logs
+
+# Code quality
+make lint                        # Check code style
+make format                      # Auto-format code
+make lint-fix                    # Fix linting issues
+
+# Building
+make build                       # Build all wheels
+make build-env E=network-logs   # Build specific environment
+
+# Deployment
+make deploy E=network-logs      # Deploy to Environments Hub
+
+# Evaluation
+make eval E=network-logs MODEL=gpt-4o-mini N=100
+
+# Cleanup
+make clean                       # Remove build artifacts
+make clean-all                   # Remove everything including venv
 ```
 
-### Running Tests
+### Using uv Directly
 
 ```bash
-# Run all tests
-uv run pytest -q
+# Linting and formatting
+uv run ruff check .
+uv run ruff format .
 
-# Run tests for a specific environment
+# Running tests
+uv run pytest -q
 uv run pytest environments/sv-env-network-logs/ -q
 
-# Run tests matching a pattern
-uv run pytest -k "network" -q
-```
-
-### Building Wheels
-
-Build a wheel for a specific environment:
-
-```bash
+# Building wheels
 uv run python -m build --wheel environments/sv-env-network-logs
 ```
 
-Artifacts are emitted to the subproject's `dist/` directory.
-
-## Pre-commit Hooks (Optional)
+## Pre-commit Hooks
 
 ```bash
-# Install pre-commit and enable hooks
-uv run pre-commit install
+# Install and setup pre-commit hooks
+make pre-commit
 
-# Run on all files
+# Or manually
+uv run pre-commit install
 uv run pre-commit run --all-files
 ```
 
-## Environment Details
+## Environment Specifications
 
-| Environment                  | Type                 | Description                                              |
-| ---------------------------- | -------------------- | -------------------------------------------------------- |
-| `sv-env-network-logs`        | SingleTurnEnv        | Classifies network log entries as malicious or benign    |
-| `sv-env-phishing-detection`  | SingleTurnEnv        | Detects phishing attempts in emails                      |
-| `sv-env-redteam-defense`     | MultiTurnEnv         | Defensive AI assistant maintaining security boundaries   |
-| `sv-env-redteam-attack`      | MultiTurnEnv         | Red team attack scenario generation                      |
-| `sv-env-code-vulnerability`  | ToolEnv/MultiTurnEnv | Code vulnerability assessment with static analysis tools |
-| `sv-env-config-verification` | MultiTurnEnv         | Security configuration verification                      |
+| Environment                  | Type          | Reward Focus                              | Key Innovation                            |
+| ---------------------------- | ------------- | ----------------------------------------- | ----------------------------------------- |
+| `sv-env-network-logs`        | SingleTurnEnv | Calibration, abstention, asymmetric costs | Operational SOC metrics over raw accuracy |
+| `sv-env-phishing-detection`  | SingleTurnEnv | Evidence-seeking, FN penalties            | Tool-calling for URL/domain reputation    |
+| `sv-env-config-verification` | ToolEnv       | Machine-verified fixes                    | OPA/Rego/KubeLinter ground truth          |
+| `sv-env-code-vulnerability`  | MultiTurnEnv  | Test-passing, minimal diffs               | Executable verification loop              |
+| `sv-env-redteam-attack`      | MultiTurnEnv  | Unsafe elicitation success                | Llama Guard 3 safety scoring              |
+| `sv-env-redteam-defense`     | MultiTurnEnv  | Helpful/harmless balance                  | Co-training with attacker agent           |
+
+## Shared Toolbox
+
+All environments leverage a common set of components for consistency and composability:
+
+- **Strict JSON Schemas**: Enforced output formats with zero reward for violations
+- **Executable Verification**: Tests, policy engines, linters prioritized over LLM judges
+- **Calibration Rewards**: Bonuses for well-calibrated confidence scores
+- **Abstention Support**: Safe "I don't know" options with appropriate rewards
+- **Cost-Sensitive Scoring**: Asymmetric penalties reflecting real operational costs
 
 ## Contributing
 

@@ -73,3 +73,6 @@ coverage.xml
 
 # Environment variables
 .env
+
+# Private Docs
+docs-internal/

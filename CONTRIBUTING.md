@@ -1,51 +1,209 @@
-# Contributing to Security Verifiers
+# Contributing to Open Security Verifiers
 
-Thank you for your interest in contributing! This repository is a Python 3.12 monorepo managed with uv, using ruff for linting/formatting and pytest for tests.
+Welcome to the Open Security Verifiers project! We're building a composable suite of security and alignment RL environments for Prime Intellect's Environments Hub. Your contributions help advance verifiable, executable rewards for AI safety and security research.
 
-Prerequisites
+## Project Vision
 
-- Python 3.12
-- uv (<https://github.com/astral-sh/uv>)
+This project implements six composable RL environments with shared tooling and evaluation methods, emphasizing:
 
-Setup
+- **Executable verification** (tests, policy engines, linters) over LLM judges
+- **Calibration and abstention** for operational deployment
+- **Asymmetric cost functions** reflecting real security priorities
+- **Cross-task skill transfer** through shared schemas and rewards
 
-1. Create and activate a virtualenv
+See [EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md) and [PRD.md](PRD.md) for the complete vision.
 
-- uv venv --python=python3.12
-- source .venv/bin/activate
+## Prerequisites
 
-1. Install local packages and developer tools
+- Python 3.12+
+- [uv](https://github.com/astral-sh/uv) package manager
+- [Prime CLI](https://github.com/PrimeIntellect-ai/prime-cli) (for Hub deployment)
+- Git for version control
 
-- for env in environments/\*/; do uv pip install -e "$env"; done
-- uv pip install pytest ruff build pre-commit
+## Development Setup
 
-Developer workflow
+### 1. Clone and Initialize
 
-- Lint: uv run ruff check .
-- Format: uv run ruff format .
-- Tests (all): uv run pytest -q
-- Tests (single file): uv run pytest environments/sv-env-network-logs/sv_env_network_logs_test.py -q
-- Build a wheel for a subproject: uv run python -m build --wheel environments/sv-env-network-logs
+```bash
+git clone https://github.com/intertwine/security-verifiers.git
+cd security-verifiers
+```
 
-Pre-commit hooks (recommended)
+### 2. Create Virtual Environment
 
-- Install hooks: uv run pre-commit install
-- Run on all files: uv run pre-commit run --all-files
+```bash
+uv venv --python=python3.12
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+```
 
-Adding or modifying an environment
+### 3. Install Dependencies
 
-- Each environment lives under `environments/<env-name>` with a flat layout and its own pyproject.toml.
-- If you add dependencies for a single environment, declare them in that environment’s pyproject.toml under [project].dependencies, then reinstall that package in editable mode.
-- Keep public APIs minimal and type-annotated. Run ruff and pytest before opening a PR.
+```bash
+# Install all environments in editable mode
+for env in environments/*/; do
+    cd "$env" && uv sync && cd ../..
+    uv pip install -e "$env"
+done
 
-Implementing verifiers and environments
+# Install development tools
+uv pip install pytest ruff build pre-commit verifiers prime
+```
 
-- Each environment is implemented as a single module file <package_name>.py with its corresponding test file <package_name>\_test.py.
-- Use the templates in templates/ directory as a starting point for new environments.
-- Implement parser classes, reward functions, and the load_environment() entry point.
-- See templates/README.md for detailed guidance on creating new environments.
+### 4. Set Up Pre-commit Hooks (Recommended)
 
-Pull requests
+```bash
+uv run pre-commit install
+```
 
-- Keep changes focused and include tests where applicable.
-- Ensure ruff and pytest pass locally before submitting.
+## Development Workflow
+
+### Code Quality
+
+```bash
+# Run linter
+uv run ruff check .
+
+# Auto-fix linting issues
+uv run ruff check . --fix
+
+# Format code
+uv run ruff format .
+
+# Run pre-commit on all files
+uv run pre-commit run --all-files
+```
+
+### Testing
+
+```bash
+# Run all tests
+uv run pytest
+
+# Test specific environment
+uv run pytest environments/sv-env-network-logs/
+
+# Run tests with coverage
+uv run pytest --cov=environments --cov-report=term-missing
+```
+
+### Building Environments
+
+```bash
+# Build wheel for deployment
+cd environments/sv-env-network-logs
+uv run python -m build --wheel
+
+# Push to Environments Hub
+prime login
+prime env push -v PUBLIC
+```
+
+## Contributing Guidelines
+
+### Environment Development
+
+When creating or modifying environments:
+
+1. **Follow the PRD specifications**: Each environment has detailed specs in [PRD.md](PRD.md)
+2. **Use shared components**: Leverage the common toolbox (schemas, rewards, verifiers)
+3. **Implement proper interfaces**:
+   - `load_environment()` entry point
+   - Strict JSON output schemas
+   - Calibration/abstention support where specified
+4. **Add comprehensive tests**: Include unit tests and integration tests
+5. **Document thoroughly**: Update READMEs with examples and usage
+
+### Code Style
+
+- Follow PEP 8 and use type hints
+- Keep functions focused and testable
+- Use descriptive variable names
+- Add docstrings to all public functions
+- Ensure rewards are normalized to [0.0, 1.0]
+
+### Reward Design Principles
+
+1. **Executable verification first**: Use tests, linters, policy engines
+2. **Format compliance**: Zero reward for malformed outputs
+3. **Calibration bonuses**: Reward well-calibrated confidence
+4. **Asymmetric costs**: Reflect operational priorities (FN >> FP for security)
+5. **Abstention support**: Allow safe "I don't know" responses
+
+### Pull Request Process
+
+1. **Create a feature branch**: `git checkout -b feature/your-feature`
+2. **Make focused changes**: One feature/fix per PR
+3. **Write/update tests**: Ensure all tests pass
+4. **Update documentation**: Including environment READMEs if needed
+5. **Run quality checks**: `ruff`, `pytest`, `pre-commit`
+6. **Submit PR with clear description**: Reference relevant PRD sections
+
+### Commit Message Format
+
+```markdown
+type: Brief description
+
+- Detailed change 1
+- Detailed change 2
+
+Refs: #issue-number
+```
+
+Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`
+
+## Environment-Specific Guidelines
+
+### Network Logs (E1)
+
+- Focus on calibration and abstention mechanics
+- Test with IoT-23, CIC-IDS-2017, UNSW-NB15 datasets
+- Implement bin reliability for calibration scoring
+
+### Config Auditing (E2)
+
+- Integrate OPA/Rego, KubeLinter, Semgrep tools
+- Provide tool wrappers with clear interfaces
+- Test against real K8s/Terraform configs
+
+### Code Vulnerability (E3)
+
+- Implement sandboxed test execution
+- Track coverage to ensure patch quality
+- Use Devign/Big-Vul/CVEfixes datasets
+
+### Phishing Detection (E4)
+
+- Support evidence extraction
+- Implement URL/domain reputation tools
+- Cross-corpus OOD evaluation
+
+### Attack/Defense (E5/E6)
+
+- Integrate Llama Guard 3 for safety scoring
+- Support co-training infrastructure
+- Use JailbreakBench/HarmBench benchmarks
+
+## Security Considerations
+
+- **Never commit secrets**: API keys, tokens, passwords
+- **Sanitize datasets**: Hash/remove sensitive content
+- **Sandbox execution**: For code evaluation environments
+- **Rate limit API calls**: Respect service limits
+
+## Community
+
+- **Issues**: Report bugs and request features on [GitHub Issues](https://github.com/intertwine/security-verifiers/issues)
+- **Discussions**: Join conversations about design and research
+- **Hub**: Share environments on [Prime Intellect Environments Hub](https://app.primeintellect.ai/dashboard/environments)
+
+## License
+
+This project is released under MIT License to maximize reuse and contribution. See [LICENSE](LICENSE) for details.
+
+## Acknowledgments
+
+Built on [Prime Intellect's Verifiers](https://github.com/willccbb/verifiers) framework and designed for the [Environments Hub](https://app.primeintellect.ai/dashboard/environments). Special thanks to the Prime Intellect team for creating the infrastructure that makes this work possible.
+
+---
+
+By contributing, you agree to abide by our code of conduct and license terms. Thank you for helping build verifiable security AI!

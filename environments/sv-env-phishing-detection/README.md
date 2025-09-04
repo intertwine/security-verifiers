@@ -1,65 +1,83 @@
-# sv-env-phishing-detection
+# Phishing Email Detection (Work in Progress)
 
-Security Verifiers RL environment for **Phishing Email Detection** - a SingleTurnEnv implementation where models classify emails as phishing attempts or legitimate emails.
+Security Verifiers RL environment for **Phishing Email Detection with Evidence-Seeking and Calibrated Abstention** - implementing Environment E4 from the [PRD](../../PRD.md).
 
 ## Overview
 
-This environment implements PRD Environment #4: A classification environment where the model must determine if a given email is a phishing attempt or a legitimate email. This is implemented as a single-turn Q&A: the prompt is the text of an email (possibly including subject, sender info, and body), and the model outputs a label like "Phishing" or "Legitimate".
+This environment (currently in development) will implement advanced phishing detection with:
 
-## Task Description
+- Classification as Phishing / Legitimate / **Abstain** (when uncertain)
+- Calibrated confidence scores for risk-aware decision making
+- Optional evidence extraction via tool calls (URL/domain reputation lookups)
+- Strong penalties for false negatives reflecting real operational costs
 
-- **Input**: Email text (subject, sender, body content)
-- **Output**: Classification label ("Phishing" or "Legitimate")
-- **Environment Type**: SingleTurnEnv (one email → one classification)
-- **Reward**: Binary reward based on correct classification
+## Planned Features (Per PRD Specification)
 
-## Example
+### Input/Output Schema
 
-```text
-Prompt: "Dear user, your account is compromised, click this link to reset password: http://suspicious-site.com/reset"
-Expected Output: "Phishing"
+- **Input**: Email headers + body content
+- **Output Schema**:
 
-Prompt: "Meeting reminder: Our quarterly review is scheduled for tomorrow at 2 PM in Conference Room B."
-Expected Output: "Legitimate"
+```json
+{
+  "label": "Phishing|Legitimate|Abstain",
+  "confidence": 0.0..1.0,
+  "evidence": ["url_or_header_feature", "..."]
+}
 ```
 
-## Implementation
+### Reward Structure
 
-Uses the Verifiers framework with:
+- Exact label match reward
+- Schema compliance bonus
+- Calibration rewards for well-calibrated confidence
+- Asymmetric cost penalties (false negatives >> false positives)
+- Evidence quality bonus when tool calls provide verification
 
-- Dataset: Phishing email datasets (e.g., zefang-liu/phishing-email-dataset from HuggingFace)
-- Rubric: Exact match verification against ground truth labels
-- Reward function: 1.0 for correct classification, 0.0 for incorrect
-- System prompt: Instructs model to respond with classification label only
+### Datasets
 
-## Why This Task is Useful
+- Primary: Nazario/APWG-style phishing samples
+- Legitimate baseline: Enron ham corpus
+- Modern curated sets for OOD evaluation
+- Cross-corpus testing to avoid overfitting
 
-- **Cybersecurity**: Phishing remains one of the most common cyber threats
-- **Email Security**: Can be deployed in email filters or clients to flag phishing attempts
-- **Language Understanding**: LLMs can understand context and semantics to catch novel phishing strategies
-- **User Protection**: Helps protect users from scams and social engineering attacks
-- **Adaptive Detection**: Can learn to recognize new phishing tactics through RL training
+## Key Innovations
 
-## Detection Capabilities
+1. **Abstention Mechanism**: Unlike simple binary classification, the model can safely abstain when uncertain, critical for deployment where false positives have costs
 
-The model learns to identify:
+2. **Evidence-Seeking**: Optional tool integration for URL/domain reputation lookups, encouraging verifiable reasoning
 
-- Deceptive language and urgent calls to action
-- Suspicious URLs and domains
-- Social engineering cues and manipulation tactics
-- Spelling and grammar anomalies
-- Requests for credentials or personal information
-- Impersonation of trusted organizations
+3. **Calibration Focus**: Rewards well-calibrated confidence scores, not just accuracy
+
+4. **Operational Metrics**: Asymmetric penalties reflecting that missing a phishing email is worse than flagging a legitimate one
+
+## Current Status
+
+This environment is a work in progress. The current implementation provides basic phishing classification as a foundation. Future development will add:
+
+- Abstention support with appropriate rewards
+- Confidence calibration scoring
+- Tool integration for evidence gathering
+- Advanced reward shaping for operational priorities
+
+See [PRD.md](../../PRD.md) Environment E4 for full specifications.
 
 ## Structure
 
 - `sv_env_phishing_detection.py`: Main implementation file
 - `sv_env_phishing_detection_test.py`: Test suite
 
-## Local install (editable)
+## Local Install (editable)
 
 From repo root after creating a uv venv:
 
 ```bash
 uv pip install -e environments/sv-env-phishing-detection
 ```
+
+## Related Work
+
+This environment is part of the Open Security Verifiers suite. For the complete vision, see:
+
+- [EXECUTIVE_SUMMARY.md](../../EXECUTIVE_SUMMARY.md) - Project overview
+- [PRD.md](../../PRD.md) - Detailed specifications for all six environments
