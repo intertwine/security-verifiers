@@ -1,343 +1,379 @@
-"""sv_env_config_verification: Security Verifiers environment
-for Security Configuration Verification.
+"""Security configuration auditing environment (E2).
 
-This package implements PRD Environment #2: A ToolEnv where models audit security
-configuration files to identify misconfigurations or policy violations. The model can
-invoke analysis tools to parse or test the config and produce compliance verdicts.
+This module implements PRD Environment #2. Models examine security
+configuration files, optionally call analysis tools, and must return a
+structured report of violations along with optional patches and a
+confidence estimate.
 """
 
 from __future__ import annotations
 
-from pathlib import Path
+import json
 import sys
-from typing import Any, Dict
+from pathlib import Path
+from typing import Any, Dict, List
 
 import verifiers as vf
 from datasets import Dataset
 
+# Allow importing shared utilities when developing from the repo
 sys.path.append(str(Path(__file__).resolve().parents[2]))
-from sv_shared.utils import get_response_text  # type: ignore  # pylint: disable=wrong-import-position
+from sv_shared.utils import (  # type: ignore  # pylint: disable=wrong-import-position
+    get_response_text,
+)
 
 
 class ConfigVerificationParser(vf.Parser):
-    """Parser to extract security findings from model responses."""
+    """Parser to extract structured findings from model responses."""
 
-    def parse_answer(self, completion: Any) -> str:
-        """Extract security findings or compliance verdict from the response.
+    def parse_answer(self, completion: Any) -> Dict[str, Any]:
+        """Parse the model completion into the expected schema.
 
         Args:
-            completion: The raw model completion/response.
+            completion: Raw model response.
 
         Returns:
-            The extracted findings or verdict in standard format.
+            Parsed dictionary with ``violations``, ``patch``, and
+            ``confidence`` keys. Returns an empty dict if parsing fails.
         """
-        response = get_response_text(completion)
-        cleaned = response.strip().lower()
-
-        # Look for compliance verdicts
-        # Check non-compliant before compliant
-        if "non-compliant" in cleaned or "non compliant" in cleaned or "violation" in cleaned:
-            return "Non-compliant"
-        if "compliant" in cleaned:
-            return "Compliant"
-        if "insecure" in cleaned or "vulnerable" in cleaned:
-            return "Insecure"
-        if "secure" in cleaned and "insecure" not in cleaned:
-            return "Secure"
-
-        # Return original if no clear verdict found
-        return response.strip()
+        text = get_response_text(completion)
+        try:
+            data = json.loads(text)
+            if not isinstance(data, dict):
+                return {}
+        except Exception:  # pragma: no cover - defensive programming
+            return {}
+        return data
 
     def get_format_reward_func(self):
-        """Return a format reward function that checks for proper analysis format."""
+        """Return a format reward function checking JSON structure."""
 
-        def format_reward(
+        def format_reward(  # pylint: disable=unused-argument
             completion,
-            answer="",  # pylint: disable=unused-argument
-            **kwargs,  # pylint: disable=unused-argument
-        ):
-            """Reward proper security analysis format."""
-            response = get_response_text(completion)
-            cleaned = response.strip().lower()
+            answer: str = "",
+            **kwargs: Dict[str, Any],
+        ) -> float:
+            text = get_response_text(completion)
+            try:
+                data = json.loads(text)
+            except Exception:  # pragma: no cover - defensive programming
+                return 0.0
 
-            # Perfect format: includes clear verdict and reasoning
-            if any(
-                verdict in cleaned
-                for verdict in [
-                    "secure",
-                    "insecure",
-                    "compliant",
-                    "non-compliant",
-                    "vulnerable",
-                ]
-            ) and ("because" in cleaned or "issue" in cleaned or "found" in cleaned or "detected" in cleaned):  # pylint: disable=line-too-long
+            violations = data.get("violations")
+            has_conf = isinstance(data.get("confidence"), (int, float))
+            has_patch = isinstance(data.get("patch"), str)
+
+            if (
+                isinstance(violations, list)
+                and all(
+                    isinstance(v, dict)
+                    and "id" in v
+                    and v.get("severity") in {"low", "med", "high"}
+                    for v in violations
+                )
+                and has_conf
+                and has_patch
+            ):
                 return 1.0
 
-            # Good format: has verdict but minimal reasoning
-            if any(
-                verdict in cleaned
-                for verdict in [
-                    "secure",
-                    "insecure",
-                    "compliant",
-                    "non-compliant",
-                    "vulnerable",
-                ]
-            ):
+            if isinstance(data, dict):
                 return 0.5
 
-            # Poor format: no clear verdict
             return 0.0
 
         return format_reward
 
 
 def analyze_ssh_config(config: str) -> Dict[str, Any]:
-    """Tool function to analyze SSH configuration for security issues.
+    """Analyze SSH configuration for security issues."""
 
-    Args:
-        config: SSH configuration text to analyze.
+    violations: List[Dict[str, str]] = []
+    patches: List[str] = []
+    cfg = " ".join(config.lower().split())
 
-    Returns:
-        Dictionary containing analysis results and detected issues.
-    """
-    issues = []
-    recommendations = []
-
-    config_lower = config.lower()
-    # Normalize whitespace for better matching
-    config_normalized = " ".join(config_lower.split())
-
-    # Check for insecure settings
-    if "permitrootlogin yes" in config_normalized:
-        issues.append("Root login is enabled - high security risk")
-        recommendations.append("Set 'PermitRootLogin no' or 'PermitRootLogin prohibit-password'")
-
-    if "passwordauthentication yes" in config_normalized:
-        issues.append("Password authentication enabled - vulnerable to brute force")
-        recommendations.append("Use key-based authentication: 'PasswordAuthentication no'")
-
-    if "permitemptypasswords yes" in config_normalized:
-        issues.append("Empty passwords allowed - critical security vulnerability")
-        recommendations.append("Set 'PermitEmptyPasswords no'")
-
-    if "protocol 1" in config_normalized:
-        issues.append("SSH Protocol 1 enabled - outdated and insecure")
-        recommendations.append("Use only Protocol 2")
-
-    if "strictmodes no" in config_normalized:
-        issues.append("StrictModes disabled - weakens file permission checks")
-        recommendations.append("Set 'StrictModes yes'")
+    if "permitrootlogin yes" in cfg:
+        violations.append({"id": "ssh-permit-root-login", "severity": "high"})
+        patches.append("PermitRootLogin no")
+    if "passwordauthentication yes" in cfg:
+        violations.append({"id": "ssh-password-auth", "severity": "med"})
+        patches.append("PasswordAuthentication no")
+    if "permitemptypasswords yes" in cfg:
+        violations.append({"id": "ssh-empty-passwords", "severity": "high"})
+        patches.append("PermitEmptyPasswords no")
+    if "protocol 1" in cfg:
+        violations.append({"id": "ssh-protocol-v1", "severity": "high"})
+        patches.append("Protocol 2")
+    if "strictmodes no" in cfg:
+        violations.append({"id": "ssh-strictmodes-disabled", "severity": "med"})
+        patches.append("StrictModes yes")
 
     return {
-        "config_type": "SSH",
-        "issues_found": len(issues),
-        "issues": issues,
-        "recommendations": recommendations,
-        "verdict": "Insecure" if issues else "Secure",
+        "violations": violations,
+        "patch": "\n".join(patches),
+        "confidence": 1.0,
     }
 
 
 def analyze_firewall_rules(rules: str) -> Dict[str, Any]:
-    """Tool function to analyze firewall rules for security issues.
+    """Analyze firewall rules for security issues."""
 
-    Args:
-        rules: Firewall rules text to analyze.
-
-    Returns:
-        Dictionary containing analysis results and detected issues.
-    """
-    issues = []
-    recommendations = []
-
+    violations: List[Dict[str, str]] = []
+    patches: List[str] = []
     rules_lower = rules.lower()
 
-    # Check for overly permissive rules
     if "0.0.0.0/0" in rules or "any any" in rules_lower:
-        issues.append("Overly permissive rule allowing all traffic")
-        recommendations.append("Restrict rules to specific IP ranges and ports")
-
+        violations.append({"id": "fw-open-to-world", "severity": "high"})
+        patches.append("Restrict source addresses")
     if "allow all" in rules_lower:
-        issues.append("Rule allows all traffic - security risk")
-        recommendations.append("Use specific protocol and port restrictions")
-
+        violations.append({"id": "fw-allow-all", "severity": "high"})
+        patches.append("Replace 'allow all' with specific rules")
     if "telnet" in rules_lower or "port 23" in rules_lower:
-        issues.append("Telnet (port 23) allowed - unencrypted protocol")
-        recommendations.append("Use SSH instead of Telnet")
-
+        violations.append({"id": "fw-telnet-allowed", "severity": "med"})
+        patches.append("Remove telnet access")
     if "ftp" in rules_lower or "port 21" in rules_lower:
-        issues.append("FTP (port 21) allowed - unencrypted protocol")
-        recommendations.append("Use SFTP or FTPS instead")
-
-    # Check for missing deny rules
+        violations.append({"id": "fw-ftp-allowed", "severity": "med"})
+        patches.append("Remove FTP access")
     if "deny" not in rules_lower and "drop" not in rules_lower:
-        issues.append("No explicit deny rules found")
-        recommendations.append("Add explicit deny rules for unauthorized traffic")
+        violations.append({"id": "fw-missing-deny", "severity": "low"})
+        patches.append("Add explicit deny rules")
 
     return {
-        "config_type": "Firewall",
-        "issues_found": len(issues),
-        "issues": issues,
-        "recommendations": recommendations,
-        "verdict": "Insecure" if issues else "Secure",
+        "violations": violations,
+        "patch": "\n".join(patches),
+        "confidence": 1.0,
+    }
+
+
+def analyze_iam_policy(policy: str) -> Dict[str, Any]:
+    """Analyze IAM policy for wildcard permissions."""
+
+    violations: List[Dict[str, str]] = []
+    patches: List[str] = []
+    policy_lower = policy.lower()
+    policy_norm = policy_lower.replace(" ", "")
+
+    if "\"action\":\"*\"" in policy_norm or "\"action\":[\"*\"]" in policy_norm:
+        violations.append({"id": "iam-wildcard-action", "severity": "high"})
+        patches.append("Specify allowed actions explicitly")
+    if "\"resource\":\"*\"" in policy_norm:
+        violations.append({"id": "iam-wildcard-resource", "severity": "high"})
+        patches.append("Restrict resource ARNs")
+
+    return {
+        "violations": violations,
+        "patch": "\n".join(patches),
+        "confidence": 1.0,
+    }
+
+
+def analyze_nginx_config(config: str) -> Dict[str, Any]:
+    """Analyze nginx configuration for insecure directives."""
+
+    violations: List[Dict[str, str]] = []
+    patches: List[str] = []
+    cfg = config.lower()
+
+    if "autoindex on" in cfg:
+        violations.append({"id": "nginx-autoindex-on", "severity": "low"})
+        patches.append("autoindex off")
+    if "server_tokens on" in cfg:
+        violations.append({"id": "nginx-server-tokens-on", "severity": "low"})
+        patches.append("server_tokens off")
+    if "client_max_body_size 0" in cfg:
+        violations.append({"id": "nginx-no-body-limit", "severity": "med"})
+        patches.append("client_max_body_size 10M")
+
+    return {
+        "violations": violations,
+        "patch": "\n".join(patches),
+        "confidence": 1.0,
+    }
+
+
+def analyze_rego_policy(policy: str) -> Dict[str, Any]:
+    """Analyze OPA/Rego policy for insecure defaults."""
+
+    violations: List[Dict[str, str]] = []
+    patches: List[str] = []
+    text = policy.replace(" ", "").lower()
+
+    if "defaultallow=true" in text:
+        violations.append({"id": "rego-default-allow", "severity": "high"})
+        patches.append("default allow = false")
+    if "allow=true" in text or "allow{true}" in text:
+        violations.append({"id": "rego-allow-all", "severity": "high"})
+        patches.append("Specify allow conditions")
+
+    return {
+        "violations": violations,
+        "patch": "\n".join(patches),
+        "confidence": 1.0,
+    }
+
+
+def analyze_k8s_config(config: str) -> Dict[str, Any]:
+    """Analyze Kubernetes configuration for risky settings."""
+
+    violations: List[Dict[str, str]] = []
+    patches: List[str] = []
+    cfg = config.lower()
+
+    if "privileged: true" in cfg:
+        violations.append({"id": "k8s-privileged-container", "severity": "high"})
+        patches.append("privileged: false")
+    if "runasuser: 0" in cfg or "runasnonroot: false" in cfg:
+        violations.append({"id": "k8s-run-as-root", "severity": "high"})
+        patches.append("runAsNonRoot: true")
+    if ":latest" in cfg:
+        violations.append({"id": "k8s-latest-tag", "severity": "med"})
+        patches.append("Pin image tag")
+
+    return {
+        "violations": violations,
+        "patch": "\n".join(patches),
+        "confidence": 1.0,
+    }
+
+
+def analyze_semgrep_code(code: str) -> Dict[str, Any]:
+    """Analyze code snippet for patterns Semgrep would flag."""
+
+    violations: List[Dict[str, str]] = []
+    patches: List[str] = []
+    lower = code.lower()
+
+    if "eval(" in lower or "exec(" in lower:
+        violations.append({"id": "semgrep-eval", "severity": "high"})
+        patches.append("Avoid eval/exec")
+    if "subprocess" in lower and "shell=true" in lower:
+        violations.append({"id": "semgrep-shell", "severity": "med"})
+        patches.append("Avoid shell=True")
+    if "os.system" in lower:
+        violations.append({"id": "semgrep-os-system", "severity": "med"})
+        patches.append("Use subprocess without shell")
+
+    return {
+        "violations": violations,
+        "patch": "\n".join(patches),
+        "confidence": 1.0,
     }
 
 
 def reward_correct_analysis(
     completion,
-    answer: str = "",
-    tools_used: list | None = None,
-    **kwargs,  # pylint: disable=unused-argument
+    answer: Dict[str, Any] | None = None,
+    tools_used: List[str] | None = None,
+    **kwargs: Dict[str, Any],  # pylint: disable=unused-argument
 ) -> float:
-    """Reward function that checks if the security analysis is correct.
+    """Reward function that checks if the security analysis is correct."""
 
-    Args:
-        completion: The model's response with security findings.
-        answer: The ground truth issues from the dataset.
-        tools_used: List of tools the model used for analysis.
-        **kwargs: Additional arguments.
+    text = get_response_text(completion)
+    try:
+        parsed = json.loads(text)
+        if not isinstance(parsed, dict):  # pragma: no cover - defensive
+            return 0.0
+    except Exception:  # pragma: no cover - defensive programming
+        return 0.0
 
-    Returns:
-        Reward based on accuracy of issue detection.
-    """
-    response = get_response_text(completion)
-    response_lower = response.lower()
+    expected = answer or {}
+    weight_map = {"high": 1.0, "med": 0.6, "low": 0.3}
+    expected_ids = {v["id"]: v["severity"] for v in expected.get("violations", [])}
+    max_weight = sum(weight_map.get(sev, 0.0) for sev in expected_ids.values())
 
-    # Check if model used appropriate analysis tools
-    tool_bonus = 0.2 if tools_used else 0.0
+    tp_weight = 0.0
+    fp_weight = 0.0
+    for vio in parsed.get("violations", []):
+        vio_id = vio.get("id")
+        severity = vio.get("severity")
+        weight = weight_map.get(severity, 0.0)
+        if vio_id in expected_ids and expected_ids[vio_id] == severity:
+            tp_weight += weight
+        else:
+            fp_weight += weight
 
-    # Simple heuristic: check if key issues are mentioned
-    if not answer:
-        return 0.0 + tool_bonus
-
-    answer_lower = answer.lower()
-
-    # Count how many expected issues were found
-    issues_found = 0
-    expected_issues = answer_lower.split(",")
-
-    for issue in expected_issues:
-        issue = issue.strip()
-        if issue and issue in response_lower:
-            issues_found += 1
-
-    if expected_issues:
-        accuracy = issues_found / len(expected_issues)
+    if max_weight == 0:
+        base = 1.0 if tp_weight == 0 and fp_weight == 0 else 0.0
     else:
-        accuracy = 1.0 if "secure" in response_lower else 0.0
+        recall = tp_weight / max_weight
+        precision = tp_weight / (tp_weight + fp_weight) if (tp_weight + fp_weight) else 0.0
+        base = 0.7 * recall + 0.3 * precision
 
-    return min(1.0, accuracy + tool_bonus)
+    patch_bonus = 0.1 if parsed.get("patch") else 0.0
+    tool_bonus = 0.1 if tools_used else 0.0
+
+    reward = base + patch_bonus + tool_bonus
+    return float(min(1.0, max(0.0, reward)))
 
 
 def load_environment(
     dataset_name: str = "synthetic",  # pylint: disable=unused-argument
     max_examples: int = 100,
 ) -> vf.ToolEnv:
-    """Load the Configuration Verification environment.
+    """Load the Configuration Verification environment."""
 
-    This environment is a tool-enabled task where the model audits security
-    configuration files and identifies misconfigurations or policy violations.
-
-    Args:
-        dataset_name: Dataset name (currently only synthetic supported).
-        max_examples: Maximum number of examples to use.
-
-    Returns:
-        A Verifiers ToolEnv configured for the task.
-    """
-
-    def _create_synthetic_dataset():
+    def _create_synthetic_dataset() -> Dataset:
         """Create a synthetic dataset of configuration files with known issues."""
-        examples = []
 
-        # pylint: disable=line-too-long
-        config_examples = [
-            # SSH configurations
+        configs = [
             {
-                "question": (
-                    "Analyze this SSH configuration:\n"
+                "config_type": "ssh",
+                "config": (
                     "Port 22\n"
                     "PermitRootLogin yes\n"
                     "PasswordAuthentication yes\n"
                     "PermitEmptyPasswords no\n"
                     "StrictModes yes"
                 ),
-                "answer": "Root login enabled, Password authentication vulnerable to brute force",
-                "config_type": "ssh",
+                "tool": analyze_ssh_config,
             },
             {
-                "question": (
-                    "Analyze this SSH configuration:\n"
+                "config_type": "ssh",
+                "config": (
                     "Port 2222\n"
                     "PermitRootLogin no\n"
                     "PasswordAuthentication no\n"
                     "PubkeyAuthentication yes\n"
                     "StrictModes yes"
                 ),
-                "answer": "Secure",
-                "config_type": "ssh",
+                "tool": analyze_ssh_config,
             },
             {
-                "question": (
-                    "Review this SSH config:\nProtocol 1\nPermitRootLogin yes\nPermitEmptyPasswords yes\nStrictModes no"
-                ),
-                "answer": ("Protocol 1 insecure, Root login enabled, Empty passwords allowed, StrictModes disabled"),
-                "config_type": "ssh",
-            },
-            # Firewall rules
-            {
-                "question": (
-                    "Analyze these firewall rules:\n"
+                "config_type": "firewall",
+                "config": (
                     "allow tcp from any to any port 22\n"
                     "allow tcp from 0.0.0.0/0 to any port 80\n"
                     "allow all from any to any"
                 ),
-                "answer": "Overly permissive rules, Allow all traffic risk, Unrestricted access",
-                "config_type": "firewall",
+                "tool": analyze_firewall_rules,
             },
             {
-                "question": (
-                    "Review these firewall rules:\n"
+                "config_type": "firewall",
+                "config": (
                     "allow tcp from 192.168.1.0/24 to any port 22\n"
                     "allow tcp from 10.0.0.0/8 to any port 443\n"
                     "deny all from any to any"
                 ),
-                "answer": "Secure",
-                "config_type": "firewall",
+                "tool": analyze_firewall_rules,
             },
             {
-                "question": (
-                    "Check these firewall rules:\n"
-                    "allow tcp from any to any port 23\n"
-                    "allow tcp from any to any port 21\n"
-                    "allow udp from 0.0.0.0/0 to any"
-                ),
-                "answer": "Telnet allowed, FTP unencrypted, Overly permissive UDP",
-                "config_type": "firewall",
-            },
-            # Cloud IAM policies
-            {
-                "question": (
-                    "Review this IAM policy:\n"
+                "config_type": "iam",
+                "config": (
                     '{"Version": "2012-10-17", "Statement": '
                     '[{"Effect": "Allow", "Action": "*", "Resource": "*"}]}'
                 ),
-                "answer": "Wildcard permissions, Full admin access, No resource restrictions",
-                "config_type": "iam",
+                "tool": analyze_iam_policy,
             },
             {
-                "question": (
-                    "Analyze this IAM policy:\n"
-                    '{"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": ["s3:GetObject"], '
-                    '"Resource": "arn:aws:s3:::mybucket/*"}]}'
+                "config_type": "iam",
+                "config": (
+                    '{"Version": "2012-10-17", "Statement": [{"Effect": "Allow", '
+                    '"Action": ["s3:GetObject"], "Resource": "arn:aws:s3:::mybucket/*"}]}'
                 ),
-                "answer": "Secure",
-                "config_type": "iam",
+                "tool": analyze_iam_policy,
             },
-            # Nginx configurations
             {
-                "question": (
-                    "Review this nginx config:\n"
+                "config_type": "nginx",
+                "config": (
                     "server {\n"
                     "  listen 80;\n"
                     "  autoindex on;\n"
@@ -345,12 +381,11 @@ def load_environment(
                     "  client_max_body_size 0;\n"
                     "}"
                 ),
-                "answer": "Directory listing enabled, Server version exposed, No upload size limit",
-                "config_type": "nginx",
+                "tool": analyze_nginx_config,
             },
             {
-                "question": (
-                    "Check this nginx config:\n"
+                "config_type": "nginx",
+                "config": (
                     "server {\n"
                     "  listen 443 ssl;\n"
                     "  ssl_protocols TLSv1.2 TLSv1.3;\n"
@@ -358,23 +393,90 @@ def load_environment(
                     "  client_max_body_size 10M;\n"
                     "}"
                 ),
-                "answer": "Secure",
-                "config_type": "nginx",
+                "tool": analyze_nginx_config,
+            },
+            {
+                "config_type": "rego",
+                "config": (
+                    "package example\n"
+                    "default allow = true\n"
+                ),
+                "tool": analyze_rego_policy,
+            },
+            {
+                "config_type": "rego",
+                "config": (
+                    "package example\n"
+                    "default allow = false\n"
+                    "allow { input.user == \"admin\" }\n"
+                ),
+                "tool": analyze_rego_policy,
+            },
+            {
+                "config_type": "k8s",
+                "config": (
+                    "apiVersion: v1\n"
+                    "kind: Pod\n"
+                    "metadata:\n  name: test\n"
+                    "spec:\n  containers:\n  - name: app\n    image: myapp:latest\n    securityContext:\n      runAsUser: 0\n      privileged: true\n"
+                ),
+                "tool": analyze_k8s_config,
+            },
+            {
+                "config_type": "k8s",
+                "config": (
+                    "apiVersion: v1\n"
+                    "kind: Pod\n"
+                    "metadata:\n  name: test\n"
+                    "spec:\n  containers:\n  - name: app\n    image: myapp:v1\n    securityContext:\n      runAsUser: 1000\n      privileged: false\n"
+                ),
+                "tool": analyze_k8s_config,
+            },
+            {
+                "config_type": "code",
+                "config": (
+                    "import os, subprocess\n"
+                    "user = input()\n"
+                    "eval(user)\n"
+                    "subprocess.Popen(user, shell=True)\n"
+                ),
+                "tool": analyze_semgrep_code,
+            },
+            {
+                "config_type": "code",
+                "config": (
+                    "def safe():\n"
+                    "    return 'ok'\n"
+                    "print(safe())\n"
+                ),
+                "tool": analyze_semgrep_code,
             },
         ]
-        # pylint: enable=line-too-long
 
-        examples.extend(config_examples[:max_examples] if max_examples else config_examples)
+        examples = []
+        for item in configs[: max_examples if max_examples else None]:
+            answer = item["tool"](item["config"])
+            question = f"Analyze this {item['config_type']} configuration:\n{item['config']}"
+            examples.append(
+                {
+                    "question": question,
+                    "answer": answer,
+                    "config_type": item["config_type"],
+                }
+            )
         return Dataset.from_list(examples)
 
     dataset = _create_synthetic_dataset()
-
     parser = ConfigVerificationParser()
 
-    # Define tools available to the model
     tools = [
         analyze_ssh_config,
         analyze_firewall_rules,
+        analyze_iam_policy,
+        analyze_nginx_config,
+        analyze_rego_policy,
+        analyze_k8s_config,
+        analyze_semgrep_code,
     ]
 
     rubric = vf.Rubric(
@@ -382,21 +484,19 @@ def load_environment(
             reward_correct_analysis,
             parser.get_format_reward_func(),
         ],
-        weights=[1.0, 0.3],  # Analysis accuracy is primary, format is secondary
+        weights=[1.0, 0.3],
     )
 
     return vf.ToolEnv(
         name="sv-env-config-verification",
         description=(
-            "Audit security configuration files to identify misconfigurations and policy violations."  # pylint: disable=line-too-long
+            "Audit security configuration files to identify misconfigurations and policy violations."
         ),
         dataset=dataset,
         parser=parser,
         rubric=rubric,
         tools=tools,
         system_prompt=(
-            "You are a security configuration auditor. Analyze the provided configuration files "
-            "for security vulnerabilities and policy violations. Use the available analysis tools "
-            "when appropriate. Report your findings clearly, including specific issues and recommendations."  # pylint: disable=line-too-long
+            "You are a security configuration auditor. Return JSON with keys 'violations', 'patch', and 'confidence'."
         ),
     )
