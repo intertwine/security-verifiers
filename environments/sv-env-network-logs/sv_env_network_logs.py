@@ -20,8 +20,7 @@ import verifiers as vf
 from datasets import Dataset, load_dataset
 
 # Allow importing shared components when running from source
-sys.path.append(str(Path(__file__).resolve().parents[2]))
-from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
+from ..sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
     JsonClassificationParser,
     reward_accuracy,
     reward_calibration,
