@@ -19,6 +19,7 @@ security-verifiers/
 │ ├── sv-env-code-vulnerability/ # E3: Patch-and-test repair
 │ ├── sv-env-redteam-attack/ # E5: Attack simulator
 │ └── sv-env-redteam-defense/ # E6: Alignment defender
+├── sv_shared/ # Shared parsers, rewards, utilities
 ├── docs/ # Research notes and application materials
 ├── EXECUTIVE_SUMMARY.md # High-level vision
 ├── PRD.md # Detailed specifications
@@ -144,8 +145,9 @@ def load_environment(split="train"):
 
 ## Current Status
 
-- **E1 (Network Logs)**: Toy prototype deployed to Hub for validation
-- **E2-E6**: Work in progress, READMEs updated with PRD specifications
+- **E1 (Network Logs)**: Baseline environment using shared `sv_shared` utilities, deployed to Hub
+- **E2 (Config Verification)**: Scaffold in place leveraging `sv_shared`; tool integrations pending
+- **E3-E6**: Specifications drafted; implementations ongoing
 
 ## Important Notes for Claude
 

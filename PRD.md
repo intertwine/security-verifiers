@@ -34,6 +34,7 @@ Security evaluation for LLMs is fragmented and mostly non‑verifiable. This pro
 
 - Verifiers library for environment scaffolding; environments are installable modules with `load_environment()`.
 - Environments Hub for publishing/installing environments; prime‑rl for training; vLLM for serving.
+- `sv_shared/` module consolidates parsers, reward components, and utilities shared across environments.
 - Data from established corpora/tools per environment (links in Resources).
 
 ---
@@ -126,7 +127,7 @@ Each environment lists: Inputs, Output Schema, Reward, Datasets/Tools, Baselines
 
 ## 6. Milestones
 
-- **M1 (Weeks 1-4):** E1-E2 released with baselines + OOD; toolbox finalized; docs & seeds.
+- **M1 (Weeks 1-4):** E1 released with shared `sv_shared` toolbox; E2 scaffold started; docs & seeds.
 - **M2 (Weeks 5-8):** E3-E4 released; attacker/defender scaffolding landed; first mixture‑of‑envs run.
 - **M3 (Weeks 9-12):** E5-E6 released; robustness metrics; optional self‑play; consolidated report.
 

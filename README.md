@@ -15,7 +15,7 @@ See [EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md) for the high-level vision and [
 
 ### Production-Ready
 
-- **`sv-env-network-logs`**: Network log anomaly detection with calibration and abstention (_toy prototype for Hub validation_)
+- **`sv-env-network-logs`**: Network log anomaly detection with calibration and abstention using shared parsers and reward helpers
 
 ### In Development (Work in Progress)
 
@@ -28,6 +28,7 @@ See [EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md) for the high-level vision and [
 ## Repository Structure
 
 - **`environments/`**: Six RL environment packages (each independently installable)
+- **`sv_shared/`**: Shared parsers, reward components, and utilities
 - **`docs/`**: Research notes and application materials
 - **`EXECUTIVE_SUMMARY.md`**: High-level project overview
 - **`PRD.md`**: Detailed product requirements and specifications
@@ -145,6 +146,7 @@ uv run pre-commit run --all-files
 
 All environments leverage a common set of components for consistency and composability:
 
+- Implemented in **`sv_shared/`** for reuse across environments
 - **Strict JSON Schemas**: Enforced output formats with zero reward for violations
 - **Executable Verification**: Tests, policy engines, linters prioritized over LLM judges
 - **Calibration Rewards**: Bonuses for well-calibrated confidence scores
