@@ -8,16 +8,21 @@ invoke analysis tools to parse or test the config and produce compliance verdict
 
 from __future__ import annotations
 
+from pathlib import Path
+import sys
 from typing import Any, Dict
 
 import verifiers as vf
 from datasets import Dataset
 
+sys.path.append(str(Path(__file__).resolve().parents[2]))
+from sv_shared.utils import get_response_text  # type: ignore  # pylint: disable=wrong-import-position
+
 
 class ConfigVerificationParser(vf.Parser):
     """Parser to extract security findings from model responses."""
 
-    def parse_answer(self, completion: str) -> str:
+    def parse_answer(self, completion: Any) -> str:
         """Extract security findings or compliance verdict from the response.
 
         Args:
@@ -26,8 +31,8 @@ class ConfigVerificationParser(vf.Parser):
         Returns:
             The extracted findings or verdict in standard format.
         """
-        # Clean and normalize the response
-        cleaned = completion.strip().lower()
+        response = get_response_text(completion)
+        cleaned = response.strip().lower()
 
         # Look for compliance verdicts
         # Check non-compliant before compliant
@@ -41,7 +46,7 @@ class ConfigVerificationParser(vf.Parser):
             return "Secure"
 
         # Return original if no clear verdict found
-        return completion.strip()
+        return response.strip()
 
     def get_format_reward_func(self):
         """Return a format reward function that checks for proper analysis format."""
@@ -52,12 +57,7 @@ class ConfigVerificationParser(vf.Parser):
             **kwargs,  # pylint: disable=unused-argument
         ):
             """Reward proper security analysis format."""
-            # Extract response text from completion
-            if isinstance(completion, list):
-                response = completion[-1]["content"] if completion else ""
-            else:
-                response = str(completion)
-
+            response = get_response_text(completion)
             cleaned = response.strip().lower()
 
             # Perfect format: includes clear verdict and reasoning
@@ -200,12 +200,7 @@ def reward_correct_analysis(
     Returns:
         Reward based on accuracy of issue detection.
     """
-    # Extract the response text from completion
-    if isinstance(completion, list):
-        response = completion[-1]["content"] if completion else ""
-    else:
-        response = str(completion)
-
+    response = get_response_text(completion)
     response_lower = response.lower()
 
     # Check if model used appropriate analysis tools
