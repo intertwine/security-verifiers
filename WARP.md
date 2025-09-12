@@ -8,7 +8,7 @@ Open Security Verifiers: A composable suite of six security and alignment RL env
 
 - **Vision**: Build environments where agents learn behaviors we can verify
 - **Docs**: See EXECUTIVE_SUMMARY.md and PRD.md for specifications
-- **Status**: E1 (network-logs) deployed as prototype, E2-E6 in development
+- **Status**: E1 baseline using shared `sv_shared` utilities; E2 scaffold started; E3-E6 in development
 
 ## Quick Commands
 
@@ -64,6 +64,7 @@ security-verifiers/
 │   ├── sv-env-code-vulnerability/  # E3: Vuln repair (tests)
 │   ├── sv-env-redteam-attack/      # E5: Attack simulator
 │   └── sv-env-redteam-defense/     # E6: Alignment defender
+├── sv_shared/                  # Shared parsers, rewards, utilities
 ├── EXECUTIVE_SUMMARY.md       # High-level vision
 ├── PRD.md                     # Detailed specifications (E1-E6)
 └── CONTRIBUTING.md            # Dev guidelines
@@ -162,8 +163,8 @@ uv run python -m build --wheel
 
 ## Project Status
 
-- ✅ E1 Network Logs: Prototype deployed
-- 🚧 E2 Config Audit: Tool integration pending
+- ✅ E1 Network Logs: Baseline using shared `sv_shared` components
+- 🚧 E2 Config Audit: Scaffold with shared utilities, tool integration pending
 - 🚧 E3 Code Repair: Sandbox setup needed
 - 🚧 E4 Phishing: Evidence tools pending
 - 🚧 E5 Attack: Llama Guard 3 integration

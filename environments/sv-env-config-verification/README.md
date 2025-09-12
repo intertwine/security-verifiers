@@ -1,6 +1,6 @@
 # Security Configuration Auditing (Work in Progress)
 
-Security Verifiers RL environment for **Tool-Using Security Configuration Auditing** - implementing Environment E2 from the [PRD](../../PRD.md).
+Security Verifiers RL environment for **Tool-Using Security Configuration Auditing** - implementing Environment E2 from the [PRD](../../PRD.md). The scaffold already pulls in shared parsers and reward helpers from the `sv_shared` package.
 
 ## Overview
 

@@ -26,6 +26,7 @@
 
 ## Shared Toolbox (used across all six)
 
+- Centralized in the repository's `sv_shared/` module for reuse across environments
 - Strict JSON schemas + format rewards; zero reward for format drift. (Supported directly by Verifiers' rubrics/parsers.)
 - Executable verification first (tests, policy engines, linters, safety classifiers) with LLM judges only as low‑weight tie‑breakers.
 - Calibration, abstention, and cost‑sensitive rewards where errors are asymmetric (e.g., missed intrusion).

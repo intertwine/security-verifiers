@@ -1,6 +1,6 @@
 # Network Log Anomaly Detection
 
-This environment implements the full E1 specification from the [PRD](../../PRD.md). Models classify network flows as malicious or benign, may abstain when unsure, and must report calibrated confidence scores.
+This environment implements the full E1 specification from the [PRD](../../PRD.md). Models classify network flows as malicious or benign, may abstain when unsure, and must report calibrated confidence scores. It now leverages the shared `sv_shared` package for parsers, reward helpers, and utilities used across environments.
 
 ## Overview
 
