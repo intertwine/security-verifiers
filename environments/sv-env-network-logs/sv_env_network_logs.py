@@ -1,106 +1,39 @@
-"""sv_env_network_logs: Security Verifiers environment for Anomaly Detection in Network Logs.
+"""sv_env_network_logs: Network log anomaly detection environment.
 
-This package implements PRD Environment #1: A SingleTurnEnv where models classify
-network log entries as malicious or benign. It provides a controlled setup to evaluate
-an LLM's ability to interpret semi-structured log text and detect threats.
+This module implements PRD Environment #1. The model receives a textual
+representation of a network flow and must return a JSON object of the form:
+
+```
+{"label": "Benign|Malicious|Abstain", "confidence": 0.0..1.0, "rationale": "str"}
+```
+
+Rewards combine classification accuracy, strict schema adherence, calibration,
+and asymmetric cost penalties for missed attacks.
 """
 
 from __future__ import annotations
 
+from pathlib import Path
+import sys
+
 import verifiers as vf
 from datasets import Dataset, load_dataset
 
-
-class NetworkLogParser(vf.Parser):
-    """Parser to extract classification label from model responses."""
-
-    def parse_answer(self, completion: str) -> str:
-        """Extract 'Malicious' or 'Benign' from the response.
-
-        Args:
-            completion: The raw model completion/response.
-
-        Returns:
-            The extracted classification label in standard format.
-        """
-        # Clean and normalize the response
-        cleaned = completion.strip().lower()
-
-        # Look for the classification labels
-        if "malicious" in cleaned:
-            return "Malicious"
-
-        if "benign" in cleaned:
-            return "Benign"
-
-        # Return original if no clear label found
-        return completion.strip()
-
-    def get_format_reward_func(self):
-        """Return a format reward function that checks for proper classification format."""
-
-        def format_reward(
-            completion,
-            answer="",  # pylint: disable=unused-argument
-            **kwargs,  # pylint: disable=unused-argument
-        ):
-            """Reward proper classification format (single word: Malicious or Benign)."""
-            # Extract response text from completion
-            if isinstance(completion, list):
-                response = completion[-1]["content"] if completion else ""
-            else:
-                response = str(completion)
-
-            # Check if response is a single classification word
-            cleaned = response.strip().lower()
-
-            # Perfect format: exactly "malicious" or "benign" (case insensitive)
-            if cleaned in ["malicious", "benign"]:
-                return 1.0
-
-            # Good format: contains the word but has extra text
-            if "malicious" in cleaned or "benign" in cleaned:
-                return 0.5
-
-            # Poor format: doesn't contain expected classification
-            return 0.0
-
-        return format_reward
+# Allow importing shared components when running from source
+sys.path.append(str(Path(__file__).resolve().parents[2]))
+from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
+    JsonClassificationParser,
+    reward_accuracy,
+    reward_calibration,
+    reward_asymmetric_cost,
+)
 
 
-def reward_correct_classification(
-    completion,
-    answer: str = "",
-    parser: vf.Parser | None = None,
-    **kwargs,  # pylint: disable=unused-argument
-) -> float:
-    """Reward function that checks if the parsed classification matches the expected label.
+class NetworkLogParser(JsonClassificationParser):
+    """Parser for network log classification outputs."""
 
-    Args:
-        completion: The model's response (predicted classification).
-        answer: The ground truth answer from the dataset.
-        parser: The parser instance to extract the classification.
-        **kwargs: Additional arguments (prompt, state, etc).
-
-    Returns:
-        1.0 if the prediction matches the ground truth, 0.0 otherwise.
-    """
-    # Extract the response text from completion
-    if isinstance(completion, list):
-        response = completion[-1]["content"] if completion else ""
-    else:
-        response = str(completion)
-
-    # Use parser to extract classification if available
-    if parser:
-        predicted = parser.parse_answer(response)
-    else:
-        predicted = response.strip()
-
-    # Case-insensitive comparison
-    if not predicted or not answer:
-        return 0.0
-    return 1.0 if predicted.lower() == answer.strip().lower() else 0.0
+    def __init__(self) -> None:
+        super().__init__(allowed_labels=["Benign", "Malicious", "Abstain"])
 
 
 def transform_dataset(raw_dataset: Dataset, max_examples: int | None) -> Dataset:
@@ -249,21 +182,23 @@ def load_environment(
 
     rubric = vf.Rubric(
         funcs=[
-            reward_correct_classification,
+            reward_accuracy,
             parser.get_format_reward_func(),
+            reward_calibration,
+            reward_asymmetric_cost,
         ],
-        weights=[1.0, 0.2],  # Classification accuracy is primary, format is secondary
+        weights=[1.0, 0.1, 0.2, 0.5],
     )
 
     return vf.SingleTurnEnv(
         name="sv-env-network-logs",
-        description="Classify network logs as 'Malicious' or 'Benign'.",
+        description="Classify network logs as 'Malicious', 'Benign', or 'Abstain'.",
         dataset=dataset,
         parser=parser,
         rubric=rubric,
         system_prompt=(
-            "You are a network security analyst. Analyze the provided network log entry "
-            "and classify it as either 'Malicious' or 'Benign'. Respond with only the "
-            "classification label."
+            "You are a network security analyst. Analyze the provided network log entry and "
+            "respond with a JSON object: {\"label\": 'Benign|Malicious|Abstain', "
+            '"confidence": 0.0-1.0, "rationale": optional}.'
         ),
     )

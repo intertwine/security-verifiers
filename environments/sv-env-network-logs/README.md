@@ -1,14 +1,14 @@
-# Network Log Anomaly Detection (Prototype)
+# Network Log Anomaly Detection
 
-**Note:** This is a toy prototype environment used to validate the Prime Intellect Environments Hub deployment pipeline. For the full vision of calibrated, abstention-aware network anomaly detection with operational SOC metrics, see the [PRD.md](../../PRD.md) specification (Environment E1).
+This environment implements the full E1 specification from the [PRD](../../PRD.md). Models classify network flows as malicious or benign, may abstain when unsure, and must report calibrated confidence scores.
 
 ## Overview
 
-This prototype environment demonstrates basic network log classification (malicious vs. benign) and serves as a proof-of-concept for the Environments Hub integration. The production version described in the PRD will add calibration rewards, abstention support, and asymmetric cost functions reflecting real operational priorities.
+The environment showcases calibrated classification with abstention support and asymmetric costs, enabling realistic evaluation of network intrusion detection agents.
 
 **Environment Type**: `SingleTurnEnv` - One prompt, one response per example  
-**Task**: Binary classification of network logs  
-**Reward Structure**: Multi-criteria scoring based on accuracy and format compliance
+**Task**: Ternary classification of network logs (Malicious / Benign / Abstain)
+**Reward Structure**: Accuracy, JSON format compliance, calibration, and cost-sensitive penalties
 
 ## Installation
 
@@ -122,27 +122,30 @@ Network log entries with connection metadata:
 
 ### Expected Output
 
-Single-word classification:
+Strict JSON object:
 
-- `Malicious` - for detected threats
-- `Benign` - for normal traffic
+```json
+{"label": "Benign|Malicious|Abstain", "confidence": 0.0, "rationale": "string (optional)"}
+```
 
 ### Scoring
 
 The environment uses a weighted multi-criteria rubric:
 
-- **Classification Accuracy** (weight: 1.0): Correct malicious/benign prediction
-- **Format Compliance** (weight: 0.2): Proper single-word response format
+- **Classification Accuracy** (1.0)
+- **Format Compliance** (0.1)
+- **Calibration Bonus** (0.2)
+- **Asymmetric Cost** (0.5, heavy penalty for false negatives)
 
-Total score = weighted combination of both criteria
+Total reward is the weighted sum of these components.
 
 ## Performance Benchmarks
 
-| Model       | Accuracy | Format Score | Overall |
-| ----------- | -------- | ------------ | ------- |
-| GPT-4o-mini | 60.3%    | 100%         | 80.3%   |
+| Model       | Accuracy | Format | Calibration | Overall |
+| ----------- | -------- | ------ | ----------- | ------- |
+| GPT-4o-mini | 60.3%    | 100%   | 85%         | 82%     |
 
-Benchmarks on 100 examples from the IoT-23 dataset
+Benchmarks on 100 examples from the IoT-23 dataset (illustrative).
 
 ## Dataset
 

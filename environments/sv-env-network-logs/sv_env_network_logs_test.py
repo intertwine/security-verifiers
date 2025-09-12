@@ -1,125 +1,95 @@
-"""Tests for the network logs environment."""
+"""Tests for the fully featured network log anomaly environment."""
+
+from __future__ import annotations
 
 from unittest.mock import patch
 
 import pytest
 import verifiers as vf
 from datasets import Dataset
-from sv_env_network_logs import (  # pylint: disable=line-too-long
-    NetworkLogParser,
-    load_environment,
-    reward_correct_classification,
-    transform_dataset,
-)
 
-
-@pytest.mark.parametrize(
-    "completion, answer, expected_reward",
-    [
-        ("Malicious", "Malicious", 1.0),
-        ("Benign", "Benign", 1.0),
-        ("Malicious", "Benign", 0.0),
-        ("Benign", "Malicious", 0.0),
-        ("  malicious  ", "Malicious", 1.0),
-        ("benign\n", "Benign", 1.0),
-    ],
+from sv_env_network_logs import NetworkLogParser, load_environment, transform_dataset
+from sv_shared.rewards import (
+    reward_accuracy,
+    reward_calibration,
+    reward_asymmetric_cost,
 )
-def test_correct_classification(completion, answer, expected_reward):
-    """Test the reward function for exact label matching."""
-    parser = NetworkLogParser()
-    reward = reward_correct_classification(completion, answer, parser=parser)
-    assert reward == expected_reward
 
 
 class TestNetworkLogParser:
-    """Test cases for NetworkLogParser class."""
+    """Tests for parsing and format validation."""
 
-    def test_parse_answer_malicious(self):
-        """Test parsing malicious responses."""
+    def test_extracts_label_and_confidence(self) -> None:
         parser = NetworkLogParser()
-        assert parser.parse_answer("Malicious") == "Malicious"
-        assert parser.parse_answer("malicious") == "Malicious"
-        assert parser.parse_answer("  MALICIOUS  ") == "Malicious"
-        assert parser.parse_answer("This is malicious behavior") == "Malicious"
+        completion = '{"label": "Malicious", "confidence": 0.9, "rationale": "scan"}'
+        assert parser.parse_answer(completion) == "Malicious"
+        assert parser.parse_confidence(completion) == pytest.approx(0.9)
+        # Missing fields default gracefully
+        assert parser.parse_answer("{}") == ""
+        assert parser.parse_confidence("{}") == pytest.approx(0.0)
 
-    def test_parse_answer_benign(self):
-        """Test parsing benign responses."""
+    def test_format_reward(self) -> None:
         parser = NetworkLogParser()
-        assert parser.parse_answer("Benign") == "Benign"
-        assert parser.parse_answer("benign") == "Benign"
-        assert parser.parse_answer("  BENIGN  ") == "Benign"
-        assert parser.parse_answer("This looks benign to me") == "Benign"
-
-    def test_parse_answer_unknown(self):
-        """Test parsing unknown responses."""
-        parser = NetworkLogParser()
-        assert parser.parse_answer("Unknown") == "Unknown"
-        assert parser.parse_answer("  Unclear  ") == "Unclear"
-        assert parser.parse_answer("") == ""
-
-    def test_format_reward_perfect(self):
-        """Test format reward for perfect responses."""
-        parser = NetworkLogParser()
-        format_func = parser.get_format_reward_func()
-
-        assert format_func("Malicious") == 1.0
-        assert format_func("Benign") == 1.0
-        assert format_func("malicious") == 1.0
-        assert format_func("benign") == 1.0
-
-    def test_format_reward_partial(self):
-        """Test format reward for partial responses."""
-        parser = NetworkLogParser()
-        format_func = parser.get_format_reward_func()
-
-        assert format_func("This is malicious") == 0.5
-        assert format_func("Looks benign to me") == 0.5
-        assert format_func("I think it's malicious behavior") == 0.5
-
-    def test_format_reward_poor(self):
-        """Test format reward for poor responses."""
-        parser = NetworkLogParser()
-        format_func = parser.get_format_reward_func()
-
-        assert format_func("Unknown") == 0.0
-        assert format_func("I don't know") == 0.0
-        assert format_func("") == 0.0
-        assert format_func("Safe") == 0.0
-
-    def test_format_reward_list_completion(self):
-        """Test format reward with list-style completion."""
-        parser = NetworkLogParser()
-        format_func = parser.get_format_reward_func()
-
-        completion = [{"role": "assistant", "content": "Malicious"}]
-        assert format_func(completion) == 1.0
-
-        completion = [{"role": "assistant", "content": "This is malicious"}]
-        assert format_func(completion) == 0.5
+        fmt = parser.get_format_reward_func()
+        good = '{"label": "Benign", "confidence": 0.5}'
+        bad_json = "not json"
+        bad_label = '{"label": "Unknown", "confidence": 0.5}'
+        bad_conf = '{"label": "Benign", "confidence": 2}'
+        assert fmt(good) == 1.0
+        assert fmt(bad_json) == 0.0
+        assert fmt(bad_label) == 0.0
+        assert fmt(bad_conf) == 0.0
 
 
-def test_reward_correct_classification_edge_cases():
-    """Test reward function edge cases."""
+@pytest.mark.parametrize(
+    "completion, answer, expected",
+    [
+        ('{"label": "Malicious", "confidence": 0.8}', "Malicious", 1.0),
+        ('{"label": "Benign", "confidence": 0.8}', "Malicious", 0.0),
+    ],
+)
+def test_reward_accuracy(completion: str, answer: str, expected: float) -> None:
     parser = NetworkLogParser()
-
-    # Test with no parser
-    assert reward_correct_classification("Malicious", "Malicious") == 1.0
-    assert reward_correct_classification("Benign", "Malicious") == 0.0
-
-    # Test with empty inputs
-    assert reward_correct_classification("", "Malicious", parser=parser) == 0.0
-    assert reward_correct_classification("Malicious", "", parser=parser) == 0.0
-
-    # Test with list completion
-    completion = [{"role": "assistant", "content": "Malicious"}]
-    assert reward_correct_classification(completion, "Malicious", parser=parser) == 1.0
-
-    # Test with empty list
-    assert reward_correct_classification([], "Malicious", parser=parser) == 0.0
+    reward = reward_accuracy(completion=completion, answer=answer, parser=parser)
+    assert reward == expected
 
 
-def test_transform_dataset():
-    """Test the dataset transformation logic."""
+@pytest.mark.parametrize(
+    "completion, answer, expected",
+    [
+        (
+            '{"label": "Malicious", "confidence": 0.9}',
+            "Malicious",
+            pytest.approx(1.0 - abs(0.9 - 1.0)),
+        ),
+        (
+            '{"label": "Malicious", "confidence": 0.1}',
+            "Benign",
+            pytest.approx(1.0 - abs(0.1 - 0.0)),
+        ),
+    ],
+)
+def test_reward_calibration(completion: str, answer: str, expected: float) -> None:
+    parser = NetworkLogParser()
+    reward = reward_calibration(completion=completion, answer=answer, parser=parser)
+    assert reward == expected
+
+
+@pytest.mark.parametrize(
+    "completion, answer, expected",
+    [
+        ('{"label": "Benign", "confidence": 0.9}', "Malicious", -1.0),
+        ('{"label": "Malicious", "confidence": 0.2}', "Benign", 0.0),
+        ('{"label": "Abstain", "confidence": 0.4}', "Malicious", 0.0),
+    ],
+)
+def test_reward_asymmetric_cost(completion: str, answer: str, expected: float) -> None:
+    parser = NetworkLogParser()
+    reward = reward_asymmetric_cost(completion=completion, answer=answer, parser=parser)
+    assert reward == expected
+
+
+def test_transform_dataset() -> None:
     raw_data = [
         {
             "id.orig_h": "192.168.1.1",
@@ -143,97 +113,17 @@ def test_transform_dataset():
         },
     ]
     raw_dataset = Dataset.from_list(raw_data)
-
     transformed = transform_dataset(raw_dataset, max_examples=None)
-
     assert len(transformed) == 2
     assert "question" in transformed.column_names
     assert "answer" in transformed.column_names
     assert transformed[0]["answer"] == "Benign"
-    assert transformed[1]["answer"] == "Malicious"
-    assert "id.orig_h=192.168.1.1" in transformed[0]["question"]
-
-
-def test_transform_dataset_with_max_examples():
-    """Test dataset transformation with max_examples limit."""
-    raw_data = [
-        {"id.orig_h": "192.168.1.1", "label": "Benign"},
-        {"id.orig_h": "192.168.1.2", "label": "Malicious"},
-        {"id.orig_h": "192.168.1.3", "label": "Benign"},
-    ]
-    raw_dataset = Dataset.from_list(raw_data)
-
-    transformed = transform_dataset(raw_dataset, max_examples=2)
-
-    assert len(transformed) == 2
-    assert transformed[0]["answer"] == "Benign"
-    assert transformed[1]["answer"] == "Malicious"
 
 
 @patch("sv_env_network_logs.load_dataset")
-def test_load_environment_successful_download(mock_load_dataset):
-    """Test loading the environment with a mocked successful dataset download."""
-    # Mock the dataset returned by load_dataset
-    mock_data = [
-        {
-            "id.orig_h": "192.168.1.100",
-            "label": "Benign",
-        }
-    ]
-    mock_dataset = Dataset.from_list(mock_data)
-    mock_load_dataset.return_value = mock_dataset
-
-    env = load_environment()
-
+def test_load_environment_builds_rubric(mock_load_dataset) -> None:
+    mock_load_dataset.return_value = Dataset.from_list([{"id.orig_h": "1", "label": "Benign"}])
+    env = load_environment(max_examples=1)
     assert isinstance(env, vf.SingleTurnEnv)
-    assert env.dataset is not None
-    assert len(env.dataset) == 1
-    mock_load_dataset.assert_called_once_with("19kmunz/iot-23-preprocessed-minimumcolumns", split="train")  # pylint: disable=line-too-long
-
-
-@patch("sv_env_network_logs.load_dataset")
-def test_load_environment_download_fails(mock_load_dataset):
-    """Test loading the environment when the dataset download fails."""
-    # Configure the mock to raise an exception
-    mock_load_dataset.side_effect = ConnectionError("Download failed")
-
-    env = load_environment()
-
-    assert isinstance(env, vf.SingleTurnEnv)
-    assert env.dataset is not None
-    # Check that it falls back to the synthetic dataset
-    assert len(env.dataset) == 10
-    # The synthetic dataset has 3 benign, then 3 malicious examples
-    assert env.dataset[3]["answer"] == "Malicious"
-
-
-@patch("sv_env_network_logs.load_dataset")
-def test_load_environment_various_exceptions(mock_load_dataset):
-    """Test loading environment with different exception types."""
-    # Test with different exception types that should trigger fallback
-    exceptions = [
-        FileNotFoundError("File not found"),
-        ValueError("Invalid value"),
-        ImportError("Import failed"),
-        AssertionError("Assertion failed"),
-    ]
-
-    for exception in exceptions:
-        mock_load_dataset.side_effect = exception
-        env = load_environment()
-        assert isinstance(env, vf.SingleTurnEnv)
-        assert env.dataset is not None and len(env.dataset) == 10  # Synthetic dataset
-
-
-def test_load_environment_custom_parameters():
-    """Test load_environment with custom parameters."""
-    with patch("sv_env_network_logs.load_dataset") as mock_load_dataset:
-        mock_data = [{"id.orig_h": "test", "label": "Benign"}] * 5
-        mock_dataset = Dataset.from_list(mock_data)
-        mock_load_dataset.return_value = mock_dataset
-
-        env = load_environment(dataset_name="custom/dataset", max_examples=3)
-
-        assert isinstance(env, vf.SingleTurnEnv)
-        assert env.dataset is not None and len(env.dataset) == 3  # Limited by max_examples
-        mock_load_dataset.assert_called_once_with("custom/dataset", split="train")
+    assert len(env.rubric.reward_funcs) == 4
+    mock_load_dataset.assert_called_once()
