@@ -8,10 +8,15 @@ invoke analysis tools to parse or test the config and produce compliance verdict
 
 from __future__ import annotations
 
+from pathlib import Path
+import sys
 from typing import Any, Dict
 
 import verifiers as vf
 from datasets import Dataset
+
+sys.path.append(str(Path(__file__).resolve().parents[2]))
+from sv_shared.utils import get_response_text  # type: ignore  # pylint: disable=wrong-import-position
 
 
 class ConfigVerificationParser(vf.Parser):
@@ -52,12 +57,7 @@ class ConfigVerificationParser(vf.Parser):
             **kwargs,  # pylint: disable=unused-argument
         ):
             """Reward proper security analysis format."""
-            # Extract response text from completion
-            if isinstance(completion, list):
-                response = completion[-1]["content"] if completion else ""
-            else:
-                response = str(completion)
-
+            response = get_response_text(completion)
             cleaned = response.strip().lower()
 
             # Perfect format: includes clear verdict and reasoning
@@ -200,12 +200,7 @@ def reward_correct_analysis(
     Returns:
         Reward based on accuracy of issue detection.
     """
-    # Extract the response text from completion
-    if isinstance(completion, list):
-        response = completion[-1]["content"] if completion else ""
-    else:
-        response = str(completion)
-
+    response = get_response_text(completion)
     response_lower = response.lower()
 
     # Check if model used appropriate analysis tools
