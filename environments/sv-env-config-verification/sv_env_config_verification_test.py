@@ -37,6 +37,12 @@ class TestConfigVerificationParser:
         assert parser.parse_answer("Need more information") == "Need more information"
         assert parser.parse_answer("") == ""
 
+    def test_parse_answer_structured_completion(self):
+        """Parser should handle structured completion objects."""
+        parser = ConfigVerificationParser()
+        completion = [{"content": "Compliant"}]
+        assert parser.parse_answer(completion) == "Compliant"
+
     def test_format_reward_perfect(self):
         """Test format reward for perfect responses."""
         parser = ConfigVerificationParser()
