@@ -52,7 +52,7 @@ class JsonClassificationParser(vf.Parser):
             return 0.0
         return conf_f if 0.0 <= conf_f <= 1.0 else 0.0
 
-    def get_format_reward_func(self):  # type: ignore[override]
+    def get_format_reward_func(self):  # type: ignore[override]  # The signature differs from the base class to allow for custom reward formatting with additional kwargs.
         parser = self
 
         def format_reward(completion: Any, **kwargs: Any) -> float:  # noqa: ANN401
