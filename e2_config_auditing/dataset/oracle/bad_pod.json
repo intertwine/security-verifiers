@@ -1,0 +1,5 @@
+{
+  "violations": [
+    {"id": "kube-linter/run-as-non-root", "severity": "high"}
+  ]
+}

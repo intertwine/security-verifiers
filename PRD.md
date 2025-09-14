@@ -63,17 +63,17 @@ Each environment lists: Inputs, Output Schema, Reward, Datasets/Tools, Baselines
 
 ### E2. Security Configuration Auditing (ToolEnv)
 
-- **Inputs:** K8s/Terraform config
+- **Inputs:** Kubernetes YAML and Terraform HCL
 - **Output Schema:**
 
 ```json
 {"violations":[{"id":"string","severity":"low|med|high"}],"patch":"string|diff","confidence":0.0..1.0}
 ```
 
-- **Reward:** weighted true violations found/fixed (OPA/Rego oracle); penalties for false claims/format drift.
-- **Tools:** OPA/Rego, KubeLinter, Semgrep.
+- **Reward:** severity‑weighted precision/recall against tool‑derived oracle plus bonus for violations removed after re‑scanning patched configs.
+- **Tools:** OPA/Rego, KubeLinter, Semgrep (versions pinned in `e2_config_auditing/ci/versions.txt`).
 - **Baselines/Ablations:** tools‑only; LLM‑explainer (no RL); RLFT with tool‑use.
-- **Risks:** flaky rules—pin rule versions; add unit tests for rule packs.
+- **Risks:** flaky rules—pin rule versions; add unit tests for rule packs; verify oracle drift in CI.
 
 ### E3. Vulnerability Repair in Code (multi‑turn patch‑and‑test)
 

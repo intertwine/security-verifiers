@@ -7,7 +7,7 @@ name = "security-verifiers"
 version = "0.0.0"
 description = "Security Verifiers monorepo: shared tooling config (no runtime)."
 requires-python = ">=3.12"
-dependencies = []
+dependencies = ["pydantic>=2"]
 
 [tool.setuptools]
 packages = []  # This is a monorepo root, no packages to include
@@ -15,14 +15,14 @@ packages = []  # This is a monorepo root, no packages to include
 [tool.ruff]
 target-version = "py312"
 line-length = 110
-src = ["environments"]
+src = ["environments", "e2_config_auditing"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 ignore = []
 
 [tool.pytest.ini_options]
-testpaths = ["environments"]
+testpaths = ["environments", "e2_config_auditing/tests"]
 python_files = ["*_test.py"]
 addopts = "-q"
 filterwarnings = [

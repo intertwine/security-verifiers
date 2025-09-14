@@ -146,7 +146,7 @@ def load_environment(split="train"):
 ## Current Status
 
 - **E1 (Network Logs)**: Baseline environment using shared `sv_shared` utilities, deployed to Hub
-- **E2 (Config Verification)**: Scaffold in place leveraging `sv_shared`; tool integrations pending
+- **E2 (Config Verification)**: Implements `e2_config_auditing` with OPA, KubeLinter, and Semgrep adapters plus patch-aware rewards
 - **E3-E6**: Specifications drafted; implementations ongoing
 
 ## Important Notes for Claude

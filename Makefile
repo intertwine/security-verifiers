@@ -296,3 +296,15 @@ info:
 	else \
 		echo "Status: $(YELLOW)Run 'make setup' to get started$(NC)"; \
 	fi
+
+# E2 convenience targets
+.PHONY: e2-setup-tools e2-test e2-baseline-tools
+
+e2-setup-tools:
+	@echo "No external tools installation in this lightweight example"
+
+e2-test: venv
+	@$(ACTIVATE) && uv run pytest e2_config_auditing/tests -q
+
+e2-baseline-tools: venv
+	@$(ACTIVATE) && python -c "import json,os;from e2_config_auditing.baselines.tools_only import emit_oracle_as_prediction as e;f=os.environ.get('FIXTURE','e2_config_auditing/dataset/fixtures/k8s/bad_pod.yaml');t=os.environ.get('TYPE','k8s');print(json.dumps(e(f,t), indent=2))"
