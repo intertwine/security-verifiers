@@ -37,17 +37,18 @@ def opa_eval(
     for p in policy_paths:
         cmd.extend(["--data", str(p)])
 
-    proc = subprocess.run(
-        cmd,
-        input=input_str,
-        capture_output=True,
-        text=True,
-        timeout=timeout_s,
-        env=env,
-        check=False,
-    )
-    if proc.returncode != 0:
-        raise OPAError(proc.stderr.strip() or "opa eval failed")
+    try:
+        proc = subprocess.run(
+            cmd,
+            input=input_str,
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+            env=env,
+            check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise OPAError(exc.stderr.strip() or "opa eval failed") from exc
     try:
         data = json.loads(proc.stdout)
         results = data.get("result", [])
