@@ -37,16 +37,17 @@ def semgrep_scan(
             cmd.extend(["--exclude", exc])
     cmd.extend([str(t) for t in targets])
 
-    proc = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=timeout_s,
-        env=env,
-        check=False,
-    )
-    if proc.returncode != 0:
-        raise SemgrepError(proc.stderr.strip() or "semgrep failed")
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+            env=env,
+            check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise SemgrepError(exc.stderr.strip() or "semgrep failed") from exc
     try:
         data = json.loads(proc.stdout)
         findings_json = data.get("results", [])
