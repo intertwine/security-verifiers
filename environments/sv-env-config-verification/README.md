@@ -20,7 +20,7 @@ It exposes Kubernetes and Terraform fixtures with precomputed oracle outputs.
 ## Tools
 
 The environment exposes deterministic wrappers around pinned tools:
-- `kubelinter_lint` – Kubernetes static analysis
+- `kubelinter_lint` – Kubernetes static analysis with file and line range metadata
 - `semgrep_scan` – Terraform / generic pattern scanning
 Tool versions are pinned in `e2_config_auditing/ci/versions.txt` to ensure reproducibility.
 

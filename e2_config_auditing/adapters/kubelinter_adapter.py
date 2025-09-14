@@ -52,7 +52,7 @@ def kubelinter_lint(
                 message=str(item.get("message", "")),
                 file=item.get("kubeObject", {}).get("file"),
                 start_line=item.get("kubeObject", {}).get("line"),
-                end_line=item.get("kubeObject", {}).get("column"),
+                end_line=item.get("kubeObject", {}).get("endLine"),
                 extra=item,
             )
         )
