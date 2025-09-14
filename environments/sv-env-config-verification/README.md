@@ -1,76 +1,58 @@
-# Security Configuration Auditing
+Security Verifiers environment for **Configuration Auditing** (PRD Environment E2).
 
-Security Verifiers RL environment for **Tool‑Using Security Configuration Auditing** – implementing Environment E2 from the [PRD](../../PRD.md).
-Models inspect configuration files, invoke lightweight analysis tools, and
-return a structured report of violations with optional patches.
+This environment wraps the `e2_config_auditing` package which runs real
+security linters against configuration files and computes executable rewards.
+It exposes Kubernetes and Terraform fixtures with precomputed oracle outputs.
 
-## Input/Output Schema
+## Input / Output
 
-**Input:** configuration text (SSH, firewall, IAM policy, nginx config,
-OPA/Rego policy, Kubernetes config, or code snippet for semgrep-style
-rules).
+**Input:** raw configuration text (YAML or HCL).
 
-**Expected model output**:
-
+**Model output schema:**
 ```json
 {
   "violations": [{"id": "string", "severity": "low|med|high"}],
-  "patch": "string|diff",
-  "confidence": 0.0..1.0
+  "patch": "string",
+  "confidence": 0.0
 }
 ```
 
 ## Tools
 
-The environment exposes deterministic analysis tools used by the model and
-for dataset generation:
-
-- `analyze_ssh_config`
-- `analyze_firewall_rules`
-- `analyze_iam_policy`
-- `analyze_nginx_config`
-- `analyze_rego_policy`
-- `analyze_k8s_config`
-- `analyze_semgrep_code`
-
-Each tool returns the schema above, enabling executable rewards and expanded
-coverage beyond the initial four config types.
+The environment exposes deterministic wrappers around pinned tools:
+- `kubelinter_lint` – Kubernetes static analysis
+- `semgrep_scan` – Terraform / generic pattern scanning
+Tool versions are pinned in `e2_config_auditing/ci/versions.txt` to ensure reproducibility.
 
 ## Reward
 
-Rewards combine:
-
-1. **Analysis accuracy** – weighted match between reported violations and the
-   oracle output.
-2. **Format bonus** – strict JSON schema adherence.
-3. **Tool bonus** – extra credit when any tool is called.
-4. **Patch bonus** – small reward if a patch is proposed.
-
-All components are normalized to the `[0.0, 1.0]` range.
+Rewards are computed with `e2_config_auditing.reward.final_reward`, combining
+severity-weighted F1 with credit for violations removed after applying a
+proposed patch and re-running the tools.
 
 ## Usage
 
 ```python
 from sv_env_config_verification import load_environment
 
-env = load_environment(max_examples=2)
-print(env.dataset[0]["question"])  # configuration text
-print(env.dataset[0]["answer"])     # oracle violations
+env = load_environment()
+sample = env.dataset[0]
+print(sample["question"])  # config text
+print(sample["answer"]["oracle"])  # oracle violations
 ```
 
-Install locally in editable mode:
-
+Install in editable mode:
 ```bash
 uv pip install -e environments/sv-env-config-verification
 ```
 
 Run tests for just this environment:
-
 ```bash
 make test-env E=config-verification
 ```
 
-## Related Documents
+Regenerate oracle labels if fixtures or tool versions change (run from repository root):
 
-- [EXECUTIVE_SUMMARY.md](../../EXECUTIVE_SUMMARY.md)
-- [PRD.md](../../PRD.md)
+```bash
+make e2-regenerate-oracle
+```

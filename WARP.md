@@ -8,7 +8,7 @@ Open Security Verifiers: A composable suite of six security and alignment RL env
 
 - **Vision**: Build environments where agents learn behaviors we can verify
 - **Docs**: See EXECUTIVE_SUMMARY.md and PRD.md for specifications
-- **Status**: E1 baseline using shared `sv_shared` utilities; E2 scaffold started; E3-E6 in development
+- **Status**: E1 baseline using shared `sv_shared` utilities; E2 implemented with tool-grounded adapters; E3-E6 in development
 
 ## Quick Commands
 
@@ -164,7 +164,7 @@ uv run python -m build --wheel
 ## Project Status
 
 - ✅ E1 Network Logs: Baseline using shared `sv_shared` components
-- 🚧 E2 Config Audit: Scaffold with shared utilities, tool integration pending
+- ✅ E2 Config Audit: Tool-grounded environment using `e2_config_auditing` adapters and patch verification
 - 🚧 E3 Code Repair: Sandbox setup needed
 - 🚧 E4 Phishing: Evidence tools pending
 - 🚧 E5 Attack: Llama Guard 3 integration

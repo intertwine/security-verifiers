@@ -6,6 +6,7 @@ Guidelines for agents working on the Security Verifiers repository.
 
 - Run `make lint` and `make test` (or `make check`) before committing. Use the Makefile targets rather than calling tools directly, and run `make install-dev` first if dependencies are missing.
 - Ensure documentation and READMEs are updated alongside code changes.
+- When working on configuration auditing (E2), rely on the `e2_config_auditing` adapters and pinned tool versions in `e2_config_auditing/ci/versions.txt` instead of heuristic checks.
 
 ## Coding Practices
 
