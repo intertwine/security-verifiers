@@ -5,6 +5,7 @@ This package wraps the :mod:`e2_config_auditing` module and exposes it as a
 configuration files, optionally call analysis tools, and must return a JSON
 object with violations, an optional patch, and a confidence score.
 """
+
 from __future__ import annotations
 
 import json
@@ -17,6 +18,7 @@ from datasets import Dataset
 
 # Allow importing shared utilities when developing from the repo
 import sys
+
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 from sv_shared.utils import get_response_text  # type: ignore  # pylint: disable=wrong-import-position
 
@@ -148,9 +150,7 @@ def load_environment(
     )
     return vf.ToolEnv(
         name="sv-env-config-verification",
-        description=(
-            "Audit Kubernetes and Terraform configurations using pinned tool outputs."
-        ),
+        description=("Audit Kubernetes and Terraform configurations using pinned tool outputs."),
         dataset=dataset,
         parser=parser,
         rubric=rubric,
