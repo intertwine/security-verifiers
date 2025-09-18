@@ -1,4 +1,4 @@
-from e2_config_auditing.patching import apply_json_patch, apply_patch_to_text
+from sv_env_config_verification.e2_config_auditing.patching import apply_json_patch, apply_patch_to_text
 
 
 def test_detect_and_apply_unified_diff() -> None:

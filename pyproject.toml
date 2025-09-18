@@ -15,14 +15,14 @@ packages = []  # This is a monorepo root, no packages to include
 [tool.ruff]
 target-version = "py312"
 line-length = 110
-src = ["environments", "e2_config_auditing"]
+src = ["environments"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 ignore = []
 
 [tool.pytest.ini_options]
-testpaths = ["environments", "e2_config_auditing/tests"]
+testpaths = ["environments"]
 python_files = ["*_test.py"]
 addopts = "-q"
 filterwarnings = [

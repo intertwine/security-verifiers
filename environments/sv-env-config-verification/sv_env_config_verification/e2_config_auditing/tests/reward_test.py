@@ -1,5 +1,5 @@
-from e2_config_auditing.adapters.types import Violation
-from e2_config_auditing.reward import final_reward, score_detection
+from sv_env_config_verification.e2_config_auditing.adapters.types import Violation
+from sv_env_config_verification.e2_config_auditing.reward import final_reward, score_detection
 
 
 def test_score_detection() -> None:

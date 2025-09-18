@@ -1,5 +1,5 @@
-from e2_config_auditing.adapters.types import ToolFinding
-from e2_config_auditing.mapping import normalize_findings, to_prd_schema
+from sv_env_config_verification.e2_config_auditing.adapters.types import ToolFinding
+from sv_env_config_verification.e2_config_auditing.mapping import normalize_findings, to_prd_schema
 
 
 def test_normalize_and_prd_schema() -> None:
