@@ -1,4 +1,4 @@
-"""Central rollout logging utilities for Security Verifiers environments."""
+"""Central rollout logging utilities shared across Security Verifiers."""
 
 from __future__ import annotations
 
@@ -326,8 +326,41 @@ class RolloutLogger:
                 _LOGGER.debug("Failed to log payload to wandb: %s", exc)
 
 
+DEFAULT_ROLLOUT_LOGGING_CONFIG = RolloutLoggingConfig(
+    enabled=False,
+    weave_enabled=True,
+    wandb_enabled=True,
+    weave_project="security-verifiers",
+    wandb_project="security-verifiers-rl",
+    wandb_entity=None,
+    default_tags=("security-verifiers",),
+)
+
+
+def build_rollout_logger(
+    overrides: Mapping[str, Any] | None = None,
+) -> RolloutLogger:
+    """Create a :class:`RolloutLogger` using the shared defaults.
+
+    Args:
+        overrides: Optional mapping of configuration overrides. When provided the
+            values replace the defaults defined in :data:`DEFAULT_ROLLOUT_LOGGING_CONFIG`.
+
+    Returns:
+        A configured :class:`RolloutLogger` instance ready for injection into
+        environments or training loops.
+    """
+
+    config = dataclass_replace(DEFAULT_ROLLOUT_LOGGING_CONFIG)
+    if overrides:
+        config = dataclass_replace(config, **dict(overrides))
+    return RolloutLogger(config=config)
+
+
 __all__ = [
     "RolloutLogger",
     "RolloutLoggingConfig",
     "RolloutLoggingState",
+    "DEFAULT_ROLLOUT_LOGGING_CONFIG",
+    "build_rollout_logger",
 ]

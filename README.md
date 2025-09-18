@@ -159,14 +159,14 @@ Security Verifiers now ships with a central rollout logging utility that can str
 environment metadata and RL interaction traces to both [Weave](https://docs.wandb.com/weave/)
 and [Weights & Biases](https://docs.wandb.ai/).
 
-- The `security_verifiers.utils.rollout_logging.RolloutLogger` class lazily initialises
+- The `sv_shared.rollout_logging.RolloutLogger` class lazily initialises
   both backends and keeps a local buffer so you can query for reward dips or other
   security insights (`logger.find_reward_dips(0.2)`).
-- Default configuration lives in `security_verifiers/config.py`. Enable logging by
-  cloning the default settings:
+- Default configuration lives in `sv_shared/rollout_logging.py` as
+  `DEFAULT_ROLLOUT_LOGGING_CONFIG`. Enable logging by cloning the default settings:
 
   ```python
-  from security_verifiers import build_rollout_logger
+  from sv_shared import build_rollout_logger
   from environments.sv-env-network-logs.sv_env_network_logs import load_environment
 
   logger = build_rollout_logger({

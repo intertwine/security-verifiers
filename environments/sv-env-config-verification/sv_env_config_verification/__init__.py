@@ -20,8 +20,10 @@ from datasets import Dataset
 import sys
 
 sys.path.append(str(Path(__file__).resolve().parents[3]))
-from sv_shared.utils import get_response_text  # type: ignore  # pylint: disable=wrong-import-position
-from security_verifiers.utils import RolloutLogger
+from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
+    RolloutLogger,
+    get_response_text,
+)
 
 from .e2_config_auditing.adapters.kubelinter_adapter import kubelinter_lint
 from .e2_config_auditing.adapters.semgrep_adapter import semgrep_scan

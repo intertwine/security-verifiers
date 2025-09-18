@@ -6,7 +6,12 @@ import importlib
 import types
 
 import pytest
-from security_verifiers.utils import RolloutLogger, RolloutLoggingConfig
+from sv_shared import (
+    DEFAULT_ROLLOUT_LOGGING_CONFIG,
+    RolloutLogger,
+    RolloutLoggingConfig,
+    build_rollout_logger,
+)
 
 
 @pytest.fixture
@@ -124,3 +129,16 @@ def test_rollout_logger_filters_and_queries(monkeypatch):
     assert len(dips) == 1
     assert dips[0].step_index == 1
     assert logger.query_events(lambda event: event.metrics.get("policy_change"))
+
+
+def test_build_rollout_logger_uses_shared_defaults():
+    """Factory helper should clone defaults and allow overrides."""
+
+    default_logger = build_rollout_logger()
+    assert default_logger.enabled is False
+
+    overrides = {"enabled": True, "wandb_enabled": False, "weave_enabled": False}
+    override_logger = build_rollout_logger(overrides)
+    assert override_logger.enabled is True
+
+    assert DEFAULT_ROLLOUT_LOGGING_CONFIG.default_tags == ("security-verifiers",)
