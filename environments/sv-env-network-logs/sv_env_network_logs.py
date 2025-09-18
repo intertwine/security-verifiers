@@ -27,6 +27,7 @@ from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
     reward_calibration,
     reward_asymmetric_cost,
 )
+from security_verifiers.utils import RolloutLogger
 
 
 class NetworkLogParser(JsonClassificationParser):
@@ -70,6 +71,7 @@ def transform_dataset(raw_dataset: Dataset, max_examples: int | None) -> Dataset
 def load_environment(
     dataset_name: str = "19kmunz/iot-23-preprocessed-minimumcolumns",
     max_examples: int = 1000,
+    logger: RolloutLogger | None = None,
 ) -> vf.SingleTurnEnv:
     """Load the Network Logs Anomaly Detection environment.
 
@@ -79,6 +81,7 @@ def load_environment(
     Args:
         dataset_name: HuggingFace dataset name for network logs.
         max_examples: Maximum number of examples to use from the dataset.
+        logger: Optional rollout logger for instrumenting environment metadata.
 
     Returns:
         A Verifiers SingleTurnEnv configured for the task.
@@ -177,6 +180,7 @@ def load_environment(
             return Dataset.from_list(examples)
 
         dataset = _create_synthetic_dataset()
+        dataset_name = f"synthetic::{dataset_name}"
 
     parser = NetworkLogParser()
 
@@ -189,6 +193,14 @@ def load_environment(
         ],
         weights=[1.0, 0.1, 0.2, 0.5],
     )
+
+    if logger and logger.enabled:
+        logger.log_environment_init(
+            environment_name="sv-env-network-logs",
+            dataset_name=dataset_name,
+            total_examples=len(dataset) if dataset is not None else None,
+            metadata={"max_examples": max_examples},
+        )
 
     return vf.SingleTurnEnv(
         name="sv-env-network-logs",

@@ -153,6 +153,38 @@ All environments leverage a common set of components for consistency and composa
 - **Abstention Support**: Safe "I don't know" options with appropriate rewards
 - **Cost-Sensitive Scoring**: Asymmetric penalties reflecting real operational costs
 
+## Rollout Logging & Telemetry
+
+Security Verifiers now ships with a central rollout logging utility that can stream
+environment metadata and RL interaction traces to both [Weave](https://docs.wandb.com/weave/)
+and [Weights & Biases](https://docs.wandb.ai/).
+
+- The `security_verifiers.utils.rollout_logging.RolloutLogger` class lazily initialises
+  both backends and keeps a local buffer so you can query for reward dips or other
+  security insights (`logger.find_reward_dips(0.2)`).
+- Default configuration lives in `security_verifiers/config.py`. Enable logging by
+  cloning the default settings:
+
+  ```python
+  from security_verifiers import build_rollout_logger
+  from environments.sv-env-network-logs.sv_env_network_logs import load_environment
+
+  logger = build_rollout_logger({
+      "enabled": True,
+      "wandb_project": "security-verifiers-rl",
+      "weave_project": "security-verifiers",
+  })
+  env = load_environment(logger=logger)
+  ```
+
+- All environment loaders accept an optional ``logger`` argument and will emit dataset
+  metadata when present. Training loops can then call ``logger.log_step`` and
+  ``logger.log_episode_summary`` to stream detailed rollout metrics.
+- Install the optional telemetry dependencies with ``uv pip install -r requirements.txt``.
+- Learn more about the logging backends via the official docs:
+  [Weave Tracing](https://docs.wandb.com/weave/tracing) •
+  [WandB Logging](https://docs.wandb.ai/guides/track/log).
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, style, and workflow details.
