@@ -19,18 +19,18 @@ from datasets import Dataset
 # Allow importing shared utilities when developing from the repo
 import sys
 
-sys.path.append(str(Path(__file__).resolve().parents[2]))
+sys.path.append(str(Path(__file__).resolve().parents[3]))
 from sv_shared.utils import get_response_text  # type: ignore  # pylint: disable=wrong-import-position
 
-from e2_config_auditing.adapters.kubelinter_adapter import kubelinter_lint
-from e2_config_auditing.adapters.semgrep_adapter import semgrep_scan
-from e2_config_auditing.adapters.types import Violation
-from e2_config_auditing.mapping import normalize_findings
-from e2_config_auditing.patching import try_apply_patch
-from e2_config_auditing.reward import final_reward
-from e2_config_auditing.schema import parse_model_output
+from .e2_config_auditing.adapters.kubelinter_adapter import kubelinter_lint
+from .e2_config_auditing.adapters.semgrep_adapter import semgrep_scan
+from .e2_config_auditing.adapters.types import Violation
+from .e2_config_auditing.mapping import normalize_findings
+from .e2_config_auditing.patching import try_apply_patch
+from .e2_config_auditing.reward import final_reward
+from .e2_config_auditing.schema import parse_model_output
 
-DATASET_ROOT = Path(__file__).resolve().parents[2] / "e2_config_auditing" / "dataset"
+DATASET_ROOT = Path(__file__).resolve().parent / "e2_config_auditing" / "dataset"
 
 
 def run_kubelinter(paths: List[str]) -> List[Dict[str, Any]]:

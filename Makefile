@@ -304,7 +304,7 @@ e2-setup-tools:
 	@echo "No external tools installation in this lightweight example"
 
 e2-test: venv
-	@$(ACTIVATE) && uv run pytest e2_config_auditing/tests -q
+	@$(ACTIVATE) && uv run pytest environments/sv-env-config-verification/sv_env_config_verification/e2_config_auditing/tests -q
 
 e2-baseline-tools: venv
-	@$(ACTIVATE) && python -c "import json,os;from e2_config_auditing.baselines.tools_only import emit_oracle_as_prediction as e;f=os.environ.get('FIXTURE','e2_config_auditing/dataset/fixtures/k8s/bad_pod.yaml');t=os.environ.get('TYPE','k8s');print(json.dumps(e(f,t), indent=2))"
+	@$(ACTIVATE) && python -c "import json,os;from sv_env_config_verification.e2_config_auditing.baselines.tools_only import emit_oracle_as_prediction as e;f=os.environ.get('FIXTURE','environments/sv-env-config-verification/sv_env_config_verification/e2_config_auditing/dataset/fixtures/k8s/bad_pod.yaml');t=os.environ.get('TYPE','k8s');print(json.dumps(e(f,t), indent=2))"

@@ -23,6 +23,7 @@ dependencies = [
   "pandas>=2.0.0",
   "pyyaml>=6.0.0",
   "configparser>=5.3.0",
+  "pydantic>=2.0.0",
 ]
 
 [project.entry-points."verifiers.environments"]
@@ -40,7 +41,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build]
 include = [
-  "sv_env_config_verification.py",
+  "sv_env_config_verification",
   "sv_env_config_verification_test.py",
 ]
 

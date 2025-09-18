@@ -4,7 +4,7 @@ import json
 import subprocess
 from typing import Any
 
-from e2_config_auditing.adapters import kubelinter_adapter
+from sv_env_config_verification.e2_config_auditing.adapters import kubelinter_adapter
 
 
 def test_kubelinter_end_line(monkeypatch: Any) -> None:
