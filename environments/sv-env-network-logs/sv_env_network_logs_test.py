@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 import verifiers as vf
@@ -123,7 +123,14 @@ def test_transform_dataset() -> None:
 @patch("sv_env_network_logs.load_dataset")
 def test_load_environment_builds_rubric(mock_load_dataset) -> None:
     mock_load_dataset.return_value = Dataset.from_list([{"id.orig_h": "1", "label": "Benign"}])
-    env = load_environment(max_examples=1)
+    logger = Mock()
+    logger.enabled = True
+
+    env = load_environment(max_examples=1, logger=logger)
     assert isinstance(env, vf.SingleTurnEnv)
     assert len(env.rubric.reward_funcs) == 4
     mock_load_dataset.assert_called_once()
+    logger.log_environment_init.assert_called_once()
+    call_kwargs = logger.log_environment_init.call_args.kwargs
+    assert call_kwargs["environment_name"] == "sv-env-network-logs"
+    assert call_kwargs["total_examples"] == 1

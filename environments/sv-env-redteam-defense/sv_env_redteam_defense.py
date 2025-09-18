@@ -7,8 +7,15 @@ simulates hostile users trying to elicit unsafe responses.
 
 from __future__ import annotations
 
+from pathlib import Path
+import sys
+
+sys.path.append(str(Path(__file__).resolve().parents[2]))
+
 import verifiers as vf
 from datasets import Dataset
+
+from security_verifiers.utils import RolloutLogger
 
 
 class RedTeamDefenseParser(vf.Parser):
@@ -146,6 +153,7 @@ def load_environment(
     dataset_name: str = "synthetic",  # pylint: disable=unused-argument
     max_turns: int = 3,  # pylint: disable=unused-argument
     max_examples: int = 100,  # pylint: disable=unused-argument
+    logger: RolloutLogger | None = None,
 ) -> vf.SingleTurnEnv:
     """Load the Red Team Defense environment.
 
@@ -156,6 +164,7 @@ def load_environment(
         dataset_name: Dataset name (currently only synthetic supported).
         max_turns: Maximum conversation turns.
         max_examples: Maximum number of examples to use.
+        logger: Optional rollout logger for environment setup tracing.
 
     Returns:
         A Verifiers MultiTurnEnv configured for defensive training.
@@ -248,6 +257,14 @@ def load_environment(
         ],
         weights=[1.0, 0.2],  # Safety is paramount
     )
+
+    if logger and logger.enabled:
+        logger.log_environment_init(
+            environment_name="sv-env-redteam-defense",
+            dataset_name=dataset_name,
+            total_examples=len(dataset),
+            metadata={"max_examples": max_examples, "max_turns": max_turns},
+        )
 
     # Note: Using SingleTurnEnv as placeholder - will upgrade to MultiTurnEnv when implementing
     # the full multi-turn conversation logic with env_response and is_completed methods
