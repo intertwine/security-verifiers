@@ -351,7 +351,7 @@ def build_rollout_logger(
         environments or training loops.
     """
 
-    config = dataclass_replace(DEFAULT_ROLLOUT_LOGGING_CONFIG)
+    config = DEFAULT_ROLLOUT_LOGGING_CONFIG
     if overrides:
         config = dataclass_replace(config, **dict(overrides))
     return RolloutLogger(config=config)
