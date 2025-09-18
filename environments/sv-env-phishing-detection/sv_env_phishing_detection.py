@@ -7,8 +7,15 @@ as prompts and expects classification labels as outputs.
 
 from __future__ import annotations
 
+from pathlib import Path
+import sys
+
+sys.path.append(str(Path(__file__).resolve().parents[2]))
+
 import verifiers as vf
 from datasets import Dataset, load_dataset
+
+from security_verifiers.utils import RolloutLogger
 
 
 class PhishingEmailParser(vf.Parser):
@@ -157,6 +164,7 @@ def transform_dataset(raw_dataset: Dataset, max_examples: int | None) -> Dataset
 def load_environment(
     dataset_name: str = "zefang-liu/phishing-email-dataset",
     max_examples: int = 1000,
+    logger: RolloutLogger | None = None,
 ) -> vf.SingleTurnEnv:
     """Load the Phishing Email Detection environment.
 
@@ -166,6 +174,7 @@ def load_environment(
     Args:
         dataset_name: HuggingFace dataset name for phishing emails.
         max_examples: Maximum number of examples to use from the dataset.
+        logger: Optional rollout logger for environment lifecycle events.
 
     Returns:
         A Verifiers SingleTurnEnv configured for the task.
@@ -303,6 +312,7 @@ def load_environment(
             return Dataset.from_list(examples)
 
         dataset = _create_synthetic_dataset()
+        dataset_name = f"synthetic::{dataset_name}"
 
     parser = PhishingEmailParser()
 
@@ -313,6 +323,14 @@ def load_environment(
         ],
         weights=[1.0, 0.2],  # Classification accuracy is primary, format is secondary
     )
+
+    if logger and logger.enabled:
+        logger.log_environment_init(
+            environment_name="sv-env-phishing-detection",
+            dataset_name=dataset_name,
+            total_examples=len(dataset) if dataset is not None else None,
+            metadata={"max_examples": max_examples},
+        )
 
     return vf.SingleTurnEnv(
         name="sv-env-phishing-detection",
