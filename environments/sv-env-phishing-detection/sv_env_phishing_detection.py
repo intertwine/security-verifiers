@@ -15,7 +15,7 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 import verifiers as vf
 from datasets import Dataset, load_dataset
 
-from security_verifiers.utils import RolloutLogger
+from sv_shared import RolloutLogger  # type: ignore  # pylint: disable=wrong-import-position
 
 
 class PhishingEmailParser(vf.Parser):

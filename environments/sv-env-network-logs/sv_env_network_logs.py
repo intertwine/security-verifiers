@@ -23,11 +23,11 @@ from datasets import Dataset, load_dataset
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
     JsonClassificationParser,
+    RolloutLogger,
     reward_accuracy,
     reward_calibration,
     reward_asymmetric_cost,
 )
-from security_verifiers.utils import RolloutLogger
 
 
 class NetworkLogParser(JsonClassificationParser):
