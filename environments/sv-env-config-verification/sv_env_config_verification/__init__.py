@@ -21,6 +21,7 @@ import sys
 
 sys.path.append(str(Path(__file__).resolve().parents[3]))
 from sv_shared.utils import get_response_text  # type: ignore  # pylint: disable=wrong-import-position
+from security_verifiers.utils import RolloutLogger
 
 from .e2_config_auditing.adapters.kubelinter_adapter import kubelinter_lint
 from .e2_config_auditing.adapters.semgrep_adapter import semgrep_scan
@@ -139,8 +140,15 @@ def _load_examples(max_examples: int | None = None) -> List[Dict[str, Any]]:
 def load_environment(
     dataset_name: str = "builtin",  # pylint: disable=unused-argument
     max_examples: int = 100,
+    logger: RolloutLogger | None = None,
 ) -> vf.ToolEnv:
-    """Load the configuration auditing environment."""
+    """Load the configuration auditing environment.
+
+    Args:
+        dataset_name: Placeholder dataset name for compatibility.
+        max_examples: Maximum number of fixtures to surface in the dataset.
+        logger: Optional rollout logger to capture dataset metadata.
+    """
 
     dataset = Dataset.from_list(_load_examples(max_examples))
     parser = ConfigVerificationParser()
@@ -148,6 +156,14 @@ def load_environment(
         funcs=[reward_config_auditing, parser.get_format_reward_func()],
         weights=[1.0, 0.05],
     )
+    if logger and logger.enabled:
+        logger.log_environment_init(
+            environment_name="sv-env-config-verification",
+            dataset_name=dataset_name,
+            total_examples=len(dataset),
+            metadata={"max_examples": max_examples, "fixture_root": str(DATASET_ROOT)},
+        )
+
     return vf.ToolEnv(
         name="sv-env-config-verification",
         description=("Audit Kubernetes and Terraform configurations using pinned tool outputs."),
