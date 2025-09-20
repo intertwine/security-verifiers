@@ -15,7 +15,15 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Sequence
+
+import verifiers as vf
+from datasets import Dataset
 from pydantic import BaseModel, ConfigDict
+
+from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
+    RolloutLogger,
+    get_response_text,
+)
 
 from .e2_config_auditing.adapters.kubelinter_adapter import kubelinter_lint
 from .e2_config_auditing.adapters.opa_adapter import opa_eval
@@ -26,17 +34,13 @@ from .e2_config_auditing.patching import try_apply_patch
 from .e2_config_auditing.reward import final_reward
 from .e2_config_auditing.schema import parse_model_output
 
-import verifiers as vf
-from datasets import Dataset
-
-from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
-    RolloutLogger,
-    get_response_text,
-)
+sys.path.append(str(Path(__file__).resolve().parents[3]))
 
 
 # Pydantic model for tool finding dictionaries
 class ToolFindingModel(BaseModel):
+    """Pydantic model for tool finding dictionaries."""
+
     tool: Literal["opa", "kube-linter", "semgrep"]
     rule_id: str
     severity: str
@@ -47,8 +51,6 @@ class ToolFindingModel(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-
-sys.path.append(str(Path(__file__).resolve().parents[3]))
 
 DATASET_ROOT = Path(__file__).resolve().parent / "e2_config_auditing" / "dataset"
 
