@@ -56,6 +56,37 @@ source .venv/bin/activate
 
 This will create a Python 3.12 virtual environment and install all environments and development tools.
 
+### Environment Configuration
+
+Before using any of the security verification environments, you need to set up your API keys:
+
+1. **Copy the example environment file**:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Add your API keys to the `.env` file**:
+
+   ```bash
+   # Required: OpenAI API Key (for model inference)
+   OPENAI_API_KEY=your-openai-api-key-here
+
+   # Optional: HuggingFace Token (for dataset access)
+   HF_TOKEN=your-huggingface-token-here
+   ```
+
+3. **Load environment variables before running commands**:
+
+   ```bash
+   # Load environment variables from .env file
+   set -a && source .env && set +a
+   ```
+
+**Security Note**: The `.env` file is already included in `.gitignore` to prevent accidentally committing your API keys. Never commit actual API keys to version control.
+
+**Note**: Some environments may require additional API keys or external tools. Check individual environment READMEs for specific requirements.
+
 ### Manual Setup (Alternative)
 
 If you prefer manual setup or need more control:
@@ -72,40 +103,9 @@ make install
 make install-dev
 ```
 
-## Development Commands
+#### Using Make (Recommended)
 
-### Using Make (Recommended)
-
-```bash
-# Run all quality checks
-make check
-
-# Run tests
-make test                        # All tests
-make test-env E=network-logs     # Specific environment
-make e1                          # Shortcut for network-logs
-
-# Code quality
-make lint                        # Check code style
-make format                      # Auto-format code
-make lint-fix                    # Fix linting issues
-
-# Building
-make build                       # Build all wheels
-make build-env E=network-logs   # Build specific environment
-
-# Deployment
-make deploy E=network-logs      # Deploy to Environments Hub
-
-# Evaluation
-make eval E=network-logs MODEL=gpt-4o-mini N=100
-
-# Cleanup
-make clean                       # Remove build artifacts
-make clean-all                   # Remove everything including venv
-```
-
-### Using uv Directly
+#### Using uv Directly
 
 ```bash
 # Linting and formatting
@@ -133,14 +133,14 @@ uv run pre-commit run --all-files
 
 ## Environment Specifications
 
-| Environment                  | Type          | Reward Focus                              | Key Innovation                            |
-| ---------------------------- | ------------- | ----------------------------------------- | ----------------------------------------- |
-| `sv-env-network-logs`        | SingleTurnEnv | Calibration, abstention, asymmetric costs | Operational SOC metrics over raw accuracy |
-| `sv-env-phishing-detection`  | SingleTurnEnv | Evidence-seeking, FN penalties            | Tool-calling for URL/domain reputation    |
-| `sv-env-config-verification` | ToolEnv       | Machine-verified fixes with patch verification | OPA/Rego/KubeLinter/Semgrep ground truth |
-| `sv-env-code-vulnerability`  | MultiTurnEnv  | Test-passing, minimal diffs               | Executable verification loop              |
-| `sv-env-redteam-attack`      | MultiTurnEnv  | Unsafe elicitation success                | Llama Guard 3 safety scoring              |
-| `sv-env-redteam-defense`     | MultiTurnEnv  | Helpful/harmless balance                  | Co-training with attacker agent           |
+| Environment                  | Type          | Reward Focus                                   | Key Innovation                            |
+| ---------------------------- | ------------- | ---------------------------------------------- | ----------------------------------------- |
+| `sv-env-network-logs`        | SingleTurnEnv | Calibration, abstention, asymmetric costs      | Operational SOC metrics over raw accuracy |
+| `sv-env-phishing-detection`  | SingleTurnEnv | Evidence-seeking, FN penalties                 | Tool-calling for URL/domain reputation    |
+| `sv-env-config-verification` | ToolEnv       | Machine-verified fixes with patch verification | OPA/Rego/KubeLinter/Semgrep ground truth  |
+| `sv-env-code-vulnerability`  | MultiTurnEnv  | Test-passing, minimal diffs                    | Executable verification loop              |
+| `sv-env-redteam-attack`      | MultiTurnEnv  | Unsafe elicitation success                     | Llama Guard 3 safety scoring              |
+| `sv-env-redteam-defense`     | MultiTurnEnv  | Helpful/harmless balance                       | Co-training with attacker agent           |
 
 ## Shared Toolbox
 
@@ -155,7 +155,7 @@ All environments leverage a common set of components for consistency and composa
 
 ## Rollout Logging & Telemetry
 
-Security Verifiers now ships with a central rollout logging utility that can stream
+Security Verifiers ships with a central rollout logging utility that can stream
 environment metadata and RL interaction traces to both [Weave](https://docs.wandb.com/weave/)
 and [Weights & Biases](https://docs.wandb.ai/).
 
@@ -177,10 +177,10 @@ and [Weights & Biases](https://docs.wandb.ai/).
   env = load_environment(logger=logger)
   ```
 
-- All environment loaders accept an optional ``logger`` argument and will emit dataset
-  metadata when present. Training loops can then call ``logger.log_step`` and
-  ``logger.log_episode_summary`` to stream detailed rollout metrics.
-- Install the optional telemetry dependencies with ``uv pip install -r requirements.txt``.
+- All environment loaders accept an optional `logger` argument and will emit dataset
+  metadata when present. Training loops can then call `logger.log_step` and
+  `logger.log_episode_summary` to stream detailed rollout metrics.
+- Install the optional telemetry dependencies with `uv pip install -r requirements.txt`.
 - Learn more about the logging backends via the official docs:
   [Weave Tracing](https://docs.wandb.com/weave/tracing) •
   [WandB Logging](https://docs.wandb.ai/guides/track/log).

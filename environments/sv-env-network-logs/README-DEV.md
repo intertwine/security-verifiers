@@ -19,7 +19,7 @@ To test the environment locally, you can use the `vf-eval` command from the `ver
 
 ```bash
 # Evaluate the environment with a small model
-vf-eval sv-env-network-logs --model gpt-4-mini --num-examples 3
+vf-eval sv-env-network-logs --model gpt-5-mini --num-examples 3
 ```
 
 ### Configuration Notes
@@ -35,7 +35,7 @@ vf-eval sv-env-network-logs --model gpt-4-mini --num-examples 3
 
   ```bash
   # Load .env file and run evaluation
-  set -a && source .env && set +a && vf-eval sv-env-network-logs --model gpt-4-mini --num-examples 3
+  set -a && source .env && set +a && vf-eval sv-env-network-logs --model gpt-5-mini --num-examples 3
   ```
 
 - **Hugging Face Authentication**: Loading the `19kmunz/iot-23-preprocessed-minimumcolumns` dataset requires authentication. If you see a `401 Unauthorized` error, you need to log in to Hugging Face or set the `HF_TOKEN` environment variable:
@@ -87,7 +87,9 @@ This will create a wheel file in the `dist/` directory.
 
 - `sv_env_network_logs.py`: Contains the environment implementation with:
   - `NetworkLogParser`: Extracts and validates classification responses
-  - `reward_correct_classification`: Evaluates classification accuracy
+  - `reward_accuracy`: Binary reward function from `sv_shared` for classification accuracy
+  - `reward_calibration`: Calibration bonus function from `sv_shared`
+  - `reward_asymmetric_cost`: Asymmetric cost penalty function from `sv_shared`
   - `load_environment`: Entry point that creates the SingleTurnEnv with multi-criteria rubric
 - `sv_env_network_logs_test.py`: Test suite for the environment and reward functions
 - `pyproject.toml`: Project configuration with dependencies and build settings
@@ -100,10 +102,12 @@ The environment uses the Verifiers framework with:
 
 - **Dataset**: `19kmunz/iot-23-preprocessed-minimumcolumns` from Hugging Face. A synthetic dataset with 10 examples is used as a fallback if the download fails.
 - **Parser**: `NetworkLogParser` extracts classification labels from model responses and provides format validation.
-- **Rubric**: Multi-criteria evaluation with two reward functions:
-  - `reward_correct_classification`: Binary reward (1.0 for correct classification, 0.0 otherwise)
-  - `format_reward`: Rewards proper response format (1.0 for exact "Malicious"/"Benign", 0.5 for containing the word, 0.0 otherwise)
-- **System Prompt**: Guides the model to act as a network security analyst and respond only with the classification label.
+- **Rubric**: Multi-criteria evaluation with four reward functions from `sv_shared`:
+  - `reward_accuracy`: Binary reward (1.0 for correct classification, 0.0 otherwise)
+  - `parser.get_format_reward_func()`: Rewards proper JSON format (1.0 for valid, 0.0 for invalid)
+  - `reward_calibration`: Bonuses for well-calibrated confidence scores
+  - `reward_asymmetric_cost`: Heavy penalty for false negatives (missed attacks)
+- **System Prompt**: Guides the model to act as a network security analyst and respond with a JSON object containing label, confidence, and optional rationale.
 
 ## Contributing
 
@@ -113,5 +117,5 @@ When making changes:
 2. Add tests for new functionality
 3. Run the linter: `uv run ruff check .`
 4. Run the formatter: `uv run ruff format .`
-5. Ensure all tests pass: `uv run pytest`
+5. Ensure all tests pass: `uv run pytest -q`
 6. Update both README.md and README-DEV.md if needed

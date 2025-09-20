@@ -15,13 +15,13 @@ The environment showcases calibrated classification with abstention support and 
 Install the environment using the Prime CLI:
 
 ```bash
-prime env install intertwine/sv-env-network-logs
+prime env install sv-env-network-logs
 ```
 
 Or using pip/uv directly:
 
 ```bash
-pip install intertwine-sv-env-network-logs
+pip install sv-env-network-logs
 ```
 
 ## Setup
@@ -30,31 +30,58 @@ pip install intertwine-sv-env-network-logs
 
 Before using this environment, you need to configure API keys for model inference and dataset access:
 
-1. **OpenAI API Key** (optional, for OpenAI models):
+1. **Copy the example environment file**:
 
    ```bash
-   export OPENAI_API_KEY="your-openai-api-key"
+   cp ../../../.env.example ../../../.env
    ```
 
-2. **HuggingFace Token** (required for IoT-23 dataset access):
+2. **Add your API keys to the `.env` file**:
 
    ```bash
-   export HF_TOKEN="your-huggingface-token"
+   # OpenAI API Key (required for OpenAI models)
+   OPENAI_API_KEY="your-openai-api-key"
+   ```
+
+   ```bash
+   # HuggingFace Token (optional, for IoT-23 dataset access)
+   HF_TOKEN="your-huggingface-token"
    ```
 
    Get your HuggingFace token from [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
 
+**Security Note**: The `.env` file is already included in `.gitignore` to prevent accidentally committing your API keys. Never commit actual API keys to version control.
+
 **Note**: Without the HF_TOKEN, the environment will fall back to using a synthetic dataset with limited examples.
+
+**Note**: The examples in this README use `gpt-5-mini` as a model name. Make sure to use actual model names that are available in your setup.
+
+### Loading Environment Variables
+
+Before running any evaluation commands, load the API keys from the `.env` file:
+
+```bash
+# Load environment variables from .env file
+set -a && source .env && set +a
+```
+
+This will export the `OPENAI_API_KEY` and `HF_TOKEN` variables needed for the environment to work.
 
 ## Usage
 
 ### With Verifiers Library
 
 ```python
+import os
 import verifiers as vf
 
+# Load environment variables from .env file (if running in Python script)
+# Alternatively, set them manually:
+# os.environ['OPENAI_API_KEY'] = 'your-openai-api-key'
+# os.environ['HF_TOKEN'] = 'your-huggingface-token'  # optional
+
 # Load the environment
-env = vf.load_environment("intertwine/sv-env-network-logs")
+env = vf.load_environment("sv-env-network-logs")
 
 # Evaluate a model
 results = env.evaluate(
@@ -71,13 +98,16 @@ print(f"Average reward: {results.stats['mean_reward']:.2%}")
 Use the verifiers CLI for quick testing:
 
 ```bash
+# First, load environment variables from .env file
+set -a && source .env && set +a
+
 # For OpenAI models (requires OPENAI_API_KEY environment variable)
-vf-eval intertwine/sv-env-network-logs \
+vf-eval sv-env-network-logs \
   --model gpt-5-mini \
   --num-examples 10
 
 # With custom API endpoint
-vf-eval intertwine/sv-env-network-logs \
+vf-eval sv-env-network-logs \
   --model your-model-name \
   --api-host-base https://your-api-endpoint.com/v1 \
   --api-key-var YOUR_API_KEY_ENV_VAR \
@@ -98,15 +128,19 @@ In your Prime RL orchestrator configuration:
 
 ```toml
 [environment]
-id = "intertwine/sv-env-network-logs"
+id = "sv-env-network-logs"
 ```
 
 Then launch training:
 
 ```bash
+# First, load environment variables from .env file
+set -a && source .env && set +a
+
+# Then run training
 uv run rl \
   --trainer.model.name "Qwen/Qwen-7B" \
-  --orchestrator.environment.id "intertwine/sv-env-network-logs" \
+  --orchestrator.environment.id "sv-env-network-logs" \
   --trainer.steps 1000
 ```
 
