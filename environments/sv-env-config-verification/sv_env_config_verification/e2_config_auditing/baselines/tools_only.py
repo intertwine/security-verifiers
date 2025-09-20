@@ -1,3 +1,5 @@
+"""Baseline that emits the oracle as the prediction."""
+
 from __future__ import annotations
 
 from typing import Literal

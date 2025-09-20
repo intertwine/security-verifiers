@@ -1,3 +1,5 @@
+"""Generate oracle violations for Kubernetes and Terraform manifests."""
+
 from __future__ import annotations
 
 from typing import Any, Dict, Sequence

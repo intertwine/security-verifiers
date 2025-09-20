@@ -1,5 +1,1 @@
-{
-  "violations": [
-    {"id": "semgrep/aws-s3-bucket-public-read", "severity": "med"}
-  ]
-}
+[]

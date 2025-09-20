@@ -1,5 +1,1 @@
-{
-  "violations": [
-    {"id": "kube-linter/run-as-non-root", "severity": "high"}
-  ]
-}
+[{"id": "kube-linter/latest-tag", "severity": "med"}, {"id": "kube-linter/no-read-only-root-fs", "severity": "med"}, {"id": "kube-linter/run-as-non-root", "severity": "med"}, {"id": "kube-linter/unset-cpu-requirements", "severity": "med"}, {"id": "kube-linter/unset-memory-requirements", "severity": "med"}]

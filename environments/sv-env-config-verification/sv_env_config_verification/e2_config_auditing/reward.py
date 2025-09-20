@@ -1,3 +1,5 @@
+"""Reward functions for the environment."""
+
 from __future__ import annotations
 
 from typing import List, Tuple

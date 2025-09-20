@@ -1,3 +1,5 @@
+"""Minimal gym-style environment for config auditing."""
+
 from __future__ import annotations
 
 import tempfile
@@ -29,9 +31,11 @@ class ConfigAuditingEnv:
             self.oracle = build_oracle_for_tf([self.fixture_path])
 
     def reset(self) -> Dict[str, Any]:  # pragma: no cover - simple
+        """Reset the environment."""
         return {"fixture": self.fixture_path}
 
     def step(self, model_json: Dict[str, Any]) -> Dict[str, Any]:
+        """Step the environment."""
         violations_pred, patch, _confidence = parse_model_output(model_json)
         post: List[Violation] | None = None
         if patch:

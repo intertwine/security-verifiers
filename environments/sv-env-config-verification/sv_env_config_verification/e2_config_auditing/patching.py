@@ -1,3 +1,5 @@
+"""Patch application utilities."""
+
 from __future__ import annotations
 
 import copy
@@ -28,7 +30,7 @@ def apply_patch_to_text(original: str, patch: str) -> str:
 
     with tempfile.TemporaryDirectory() as td:
         file_path = Path(td, "file.txt")
-        file_path.write_text(original)
+        file_path.write_text(original, encoding="utf-8")
         proc = subprocess.run(
             ["patch", str(file_path)],
             input=patch,
@@ -38,7 +40,7 @@ def apply_patch_to_text(original: str, patch: str) -> str:
         )
         if proc.returncode != 0:
             raise PatchError(proc.stderr.strip() or "patch failed")
-        return file_path.read_text()
+        return file_path.read_text(encoding="utf-8")
 
 
 def apply_json_patch(obj: dict, patch_ops: list[dict]) -> dict:
@@ -64,7 +66,7 @@ def apply_json_patch(obj: dict, patch_ops: list[dict]) -> dict:
 def try_apply_patch(path: str, patch: str) -> Tuple[bool, str]:
     """Apply ``patch`` to the file at ``path`` and return ``(applied, text)``."""
 
-    original = Path(path).read_text()
+    original = Path(path).read_text(encoding="utf-8")
     fmt = detect_patch_format(patch)
     if fmt == "unified-diff":
         try:
@@ -76,7 +78,7 @@ def try_apply_patch(path: str, patch: str) -> Tuple[bool, str]:
         ops = json.loads(patch)
         new_obj = apply_json_patch(json.loads(original), ops)
         return True, json.dumps(new_obj, indent=2)
-    except Exception:  # pragma: no cover - defensive
+    except (json.JSONDecodeError, ValueError, PatchError):
         return False, original
 
 

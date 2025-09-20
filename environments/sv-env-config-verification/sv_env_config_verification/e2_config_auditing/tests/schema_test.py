@@ -1,7 +1,10 @@
+"""Test that parse_model_output works as expected."""
+
 from sv_env_config_verification.e2_config_auditing.schema import parse_model_output
 
 
 def test_parse_model_output_valid() -> None:
+    """Test that parse_model_output works as expected."""
     model_json = {
         "violations": [{"id": "a", "severity": "low"}],
         "patch": "",

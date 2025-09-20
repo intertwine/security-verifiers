@@ -1,3 +1,5 @@
+"""Adapter for KubeLinter."""
+
 from __future__ import annotations
 
 import json
@@ -34,25 +36,29 @@ def kubelinter_lint(
         env=env,
         check=False,
     )
-    if proc.returncode != 0:
-        raise KubeLinterError(proc.stderr.strip() or "kube-linter failed")
+    # kube-linter exits with code 1 when violations are found, which is expected
+    # Only treat as error if we can't parse JSON output or there's a real error
     try:
         data = json.loads(proc.stdout)
-        findings_json = data.get("reports", [])
+        findings_json = data.get("Reports", [])
     except json.JSONDecodeError as exc:  # pragma: no cover - defensive
+        # If JSON parsing fails, check if it's a real error
+        if proc.returncode != 0 and not proc.stdout.strip():
+            raise KubeLinterError(proc.stderr.strip() or "kube-linter failed") from exc
         raise KubeLinterError("invalid kube-linter output") from exc
 
     findings: List[ToolFinding] = []
     for item in findings_json:
+        diagnostic = item.get("Diagnostic", {})
         findings.append(
             ToolFinding(
                 tool="kube-linter",
-                rule_id=str(item.get("check")),
-                severity=str(item.get("severity", "")),
-                message=str(item.get("message", "")),
-                file=item.get("kubeObject", {}).get("file"),
-                start_line=item.get("kubeObject", {}).get("line"),
-                end_line=item.get("kubeObject", {}).get("endLine"),
+                rule_id=str(item.get("Check", "")),
+                severity="",  # kube-linter doesn't provide severity in this format
+                message=str(diagnostic.get("Message", "")),
+                file=item.get("Object", {}).get("Metadata", {}).get("FilePath"),
+                start_line=None,  # Not provided in this format
+                end_line=None,  # Not provided in this format
                 extra=item,
             )
         )

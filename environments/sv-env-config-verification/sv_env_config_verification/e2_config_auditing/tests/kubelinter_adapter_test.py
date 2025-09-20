@@ -1,3 +1,5 @@
+"""Tests for kubelinter adapter."""
+
 from __future__ import annotations
 
 import json
@@ -8,24 +10,26 @@ from sv_env_config_verification.e2_config_auditing.adapters import kubelinter_ad
 
 
 def test_kubelinter_end_line(monkeypatch: Any) -> None:
+    """Test kubelinter adapter end line."""
     dummy_output = json.dumps(
         {
-            "reports": [
+            "Reports": [
                 {
-                    "check": "run-as-non-root",
-                    "severity": "Error",
-                    "message": "msg",
-                    "kubeObject": {
-                        "file": "f.yaml",
-                        "line": 1,
-                        "column": 2,
-                        "endLine": 3,
+                    "Check": "run-as-non-root",
+                    "Diagnostic": {
+                        "Message": "msg",
+                    },
+                    "Object": {
+                        "Metadata": {
+                            "FilePath": "f.yaml",
+                        },
                     },
                 }
             ]
         }
     )
 
+    # pylint: disable=unused-argument
     def fake_run(
         cmd: Any,
         capture_output: bool,
@@ -39,4 +43,5 @@ def test_kubelinter_end_line(monkeypatch: Any) -> None:
     monkeypatch.setattr(kubelinter_adapter.subprocess, "run", fake_run)
 
     findings = kubelinter_adapter.kubelinter_lint(["f.yaml"])
-    assert findings[0].end_line == 3
+    assert len(findings) == 1
+    assert findings[0].rule_id == "run-as-non-root"

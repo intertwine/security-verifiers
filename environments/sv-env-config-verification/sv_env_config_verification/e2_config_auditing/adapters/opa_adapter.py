@@ -1,3 +1,5 @@
+"""Adapter for OPA."""
+
 from __future__ import annotations
 
 import json
@@ -56,7 +58,11 @@ def opa_eval(
             value = results[0]["expressions"][0]["value"]
         else:
             value = []
-    except (json.JSONDecodeError, KeyError, IndexError) as exc:  # pragma: no cover - defensive
+    except (
+        json.JSONDecodeError,
+        KeyError,
+        IndexError,
+    ) as exc:  # pragma: no cover - defensive
         raise OPAError("invalid OPA output") from exc
 
     findings: List[ToolFinding] = []

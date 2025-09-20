@@ -9,23 +9,16 @@ object with violations, an optional patch, and a confidence score.
 from __future__ import annotations
 
 import json
-import tempfile
-from pathlib import Path
-from typing import Any, Dict, List
-
-import verifiers as vf
-from datasets import Dataset
 
 # Allow importing shared utilities when developing from the repo
 import sys
-
-sys.path.append(str(Path(__file__).resolve().parents[3]))
-from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
-    RolloutLogger,
-    get_response_text,
-)
+import tempfile
+from pathlib import Path
+from typing import Any, Dict, List, Literal, Optional, Sequence
+from pydantic import BaseModel, ConfigDict
 
 from .e2_config_auditing.adapters.kubelinter_adapter import kubelinter_lint
+from .e2_config_auditing.adapters.opa_adapter import opa_eval
 from .e2_config_auditing.adapters.semgrep_adapter import semgrep_scan
 from .e2_config_auditing.adapters.types import Violation
 from .e2_config_auditing.mapping import normalize_findings
@@ -33,19 +26,88 @@ from .e2_config_auditing.patching import try_apply_patch
 from .e2_config_auditing.reward import final_reward
 from .e2_config_auditing.schema import parse_model_output
 
+import verifiers as vf
+from datasets import Dataset
+
+from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
+    RolloutLogger,
+    get_response_text,
+)
+
+
+# Pydantic model for tool finding dictionaries
+class ToolFindingModel(BaseModel):
+    tool: Literal["opa", "kube-linter", "semgrep"]
+    rule_id: str
+    severity: str
+    message: str
+    file: Optional[str] = None
+    start_line: Optional[int] = None
+    end_line: Optional[int] = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
+sys.path.append(str(Path(__file__).resolve().parents[3]))
+
 DATASET_ROOT = Path(__file__).resolve().parent / "e2_config_auditing" / "dataset"
 
 
 def run_kubelinter(paths: List[str]) -> List[Dict[str, Any]]:
     """Expose ``kubelinter_lint`` as a simple tool."""
 
-    return [f.__dict__ for f in kubelinter_lint(paths)]
+    findings = []
+    for f in kubelinter_lint(paths):
+        # Create dict without extra field to avoid schema issues
+        finding_dict = {
+            "tool": f.tool,
+            "rule_id": f.rule_id,
+            "severity": f.severity,
+            "message": f.message,
+            "file": f.file,
+            "start_line": f.start_line,
+            "end_line": f.end_line,
+        }
+        findings.append(finding_dict)
+    return findings
 
 
 def run_semgrep(paths: List[str]) -> List[Dict[str, Any]]:
     """Expose ``semgrep_scan`` as a simple tool."""
 
-    return [f.__dict__ for f in semgrep_scan(paths)]
+    findings = []
+    for f in semgrep_scan(paths):
+        # Create dict without extra field to avoid schema issues
+        finding_dict = {
+            "tool": f.tool,
+            "rule_id": f.rule_id,
+            "severity": f.severity,
+            "message": f.message,
+            "file": f.file,
+            "start_line": f.start_line,
+            "end_line": f.end_line,
+        }
+        findings.append(finding_dict)
+    return findings
+
+
+def run_opa(data: Dict[str, Any], policy_paths: Sequence[str]) -> List[Dict[str, Any]]:
+    """Expose ``opa_eval`` as a simple tool."""
+
+    findings = []
+    for f in opa_eval(data, policy_paths):
+        # Create dict without extra field to avoid schema issues
+        finding_dict = {
+            "tool": f.tool,
+            "rule_id": f.rule_id,
+            "severity": f.severity,
+            "message": f.message,
+            "file": f.file,
+            "start_line": f.start_line,
+            "end_line": f.end_line,
+        }
+        findings.append(finding_dict)
+    return findings
 
 
 class ConfigVerificationParser(vf.Parser):
@@ -56,7 +118,7 @@ class ConfigVerificationParser(vf.Parser):
         try:
             data = json.loads(text)
             violations, patch, confidence = parse_model_output(data)
-        except Exception:  # pragma: no cover - defensive
+        except (json.JSONDecodeError, ValueError):  # pragma: no cover - defensive
             return {}
         return {
             "violations": [v.__dict__ for v in violations],
@@ -70,17 +132,18 @@ class ConfigVerificationParser(vf.Parser):
             try:
                 data = json.loads(text)
                 parse_model_output(data)
-            except Exception:
+            except (json.JSONDecodeError, ValueError):
                 return 0.0
             return 1.0
 
         return format_reward
 
 
+# pylint: disable=unused-argument
 def reward_config_auditing(
     completion,
     answer: Dict[str, Any] | None = None,
-    **kwargs: Dict[str, Any],  # pylint: disable=unused-argument
+    **kwargs: Dict[str, Any],
 ) -> float:
     """Reward combining detection accuracy and patch verification."""
 
@@ -88,7 +151,7 @@ def reward_config_auditing(
     try:
         data = json.loads(text)
         violations_pred, patch, _ = parse_model_output(data)
-    except Exception:
+    except (json.JSONDecodeError, ValueError, KeyError):
         return 0.0
 
     oracle_dicts = (answer or {}).get("oracle", [])
@@ -128,8 +191,8 @@ def _load_examples(max_examples: int | None = None) -> List[Dict[str, Any]]:
     ]
     items: List[Dict[str, Any]] = []
     for item in fixtures[: max_examples if max_examples else None]:
-        question = Path(item["path"]).read_text()
-        oracle = json.loads(Path(item["oracle"]).read_text())
+        question = Path(item["path"]).read_text(encoding="utf-8")
+        oracle = json.loads(Path(item["oracle"]).read_text(encoding="utf-8"))
         answer = {
             "oracle": oracle,
             "fixture_path": str(item["path"]),
@@ -143,6 +206,7 @@ def load_environment(
     dataset_name: str = "builtin",  # pylint: disable=unused-argument
     max_examples: int = 100,
     logger: RolloutLogger | None = None,
+    include_tools: bool = True,
 ) -> vf.ToolEnv:
     """Load the configuration auditing environment.
 
@@ -150,6 +214,7 @@ def load_environment(
         dataset_name: Placeholder dataset name for compatibility.
         max_examples: Maximum number of fixtures to surface in the dataset.
         logger: Optional rollout logger to capture dataset metadata.
+        include_tools: Whether to include security tools (can be disabled for testing).
     """
 
     dataset = Dataset.from_list(_load_examples(max_examples))
@@ -172,9 +237,9 @@ def load_environment(
         dataset=dataset,
         parser=parser,
         rubric=rubric,
-        tools=[run_kubelinter, run_semgrep],
+        tools=[run_kubelinter, run_semgrep, run_opa] if include_tools else [],
         system_prompt=(
-            "You audit Kubernetes/Terraform configs. Return JSON with keys 'violations', 'patch', and 'confidence'."
+            "You audit Kubernetes/Terraform configs. Return JSON with keys 'violations', 'patch', and 'confidence'."  # pylint: disable=line-too-long
         ),
     )
 

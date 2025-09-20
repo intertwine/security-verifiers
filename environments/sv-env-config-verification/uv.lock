@@ -1058,6 +1058,7 @@ dependencies = [
     { name = "configparser" },
     { name = "datasets" },
     { name = "pandas" },
+    { name = "pydantic" },
     { name = "pyyaml" },
     { name = "verifiers" },
 ]
@@ -1073,6 +1074,7 @@ requires-dist = [
     { name = "configparser", specifier = ">=5.3.0" },
     { name = "datasets", specifier = ">=2.0.0" },
     { name = "pandas", specifier = ">=2.0.0" },
+    { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pyyaml", specifier = ">=6.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12.11" },

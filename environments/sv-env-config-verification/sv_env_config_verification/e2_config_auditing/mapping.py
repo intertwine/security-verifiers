@@ -1,3 +1,5 @@
+"""Mapping between tool-specific findings and the common :class:`Violation` schema."""
+
 from __future__ import annotations
 
 from typing import List

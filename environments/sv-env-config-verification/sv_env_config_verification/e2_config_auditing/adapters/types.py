@@ -1,3 +1,5 @@
+"""Adapters for different analysis tools."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

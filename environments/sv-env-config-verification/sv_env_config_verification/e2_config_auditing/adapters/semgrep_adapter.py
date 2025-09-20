@@ -1,3 +1,5 @@
+"""Adapter for Semgrep."""
+
 from __future__ import annotations
 
 import json
@@ -26,9 +28,9 @@ def semgrep_scan(
     cmd = [str(semgrep_bin), "--json", "--quiet"]
     if isinstance(rules, (list, tuple)):
         for r in rules:
-            cmd.extend(["--rules", str(r)])
+            cmd.extend(["--config", str(r)])
     else:
-        cmd.extend(["--rules", str(rules)])
+        cmd.extend(["--config", str(rules)])
     if include:
         for inc in include:
             cmd.extend(["--include", inc])
