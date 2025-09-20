@@ -1,6 +1,6 @@
 # E2 Configuration Auditing — Implementation Canvas
-**Date:** 2025-09-12  
-**Audience:** Human developers & LLM agent developers  
+**Date:** 2025-09-12
+**Audience:** Human developers & LLM agent developers
 **Goal:** A practical, end‑to‑end plan with concrete wrapper signatures, data models, reward logic, tests, and CI so Environment **E2** meets the PRD: *tool‑grounded config auditing for K8s & Terraform using OPA/Rego, KubeLinter, and Semgrep, with executable rewards and patch verification.*
 
 ---
@@ -15,8 +15,8 @@
 ---
 
 ## 1) PRD slice for E2 (one page)
-**Inputs**: Kubernetes manifests (YAML) and Terraform (HCL).  
-**Tools**: OPA/Rego, KubeLinter, Semgrep.  
+**Inputs**: Kubernetes manifests (YAML) and Terraform (HCL).
+**Tools**: OPA/Rego, KubeLinter, Semgrep.
 **Model Output schema** (enforced):
 ```json
 {
@@ -25,7 +25,7 @@
   "confidence": 0.0
 }
 ```
-**Reward**: Weighted TP/FP/FN on `violations` (tool‑derived oracle) **+** positive credit for patches that actually eliminate oracle violations when applied, **–** penalties for format drift / unverifiable claims.  
+**Reward**: Weighted TP/FP/FN on `violations` (tool‑derived oracle) **+** positive credit for patches that actually eliminate oracle violations when applied, **–** penalties for format drift / unverifiable claims.
 **Risks**: Tool/rule drift; flaky CI; non‑applicable patches ⇒ **pin versions, golden files, and run post‑patch verification.**
 
 ---
@@ -497,7 +497,7 @@ package security
 
 default deny = []
 
-deny[{"id": "k8s/run-as-root", "severity": "high", "message": "container runs as root", "file": input.file, "line": input.line}] { 
+deny[{"id": "k8s/run-as-root", "severity": "high", "message": "container runs as root", "file": input.file, "line": input.line}] {
   input.kind == "Pod"
   input.spec.securityContext.runAsNonRoot == false
 }

@@ -30,7 +30,7 @@ jobs:
           PY=$(python -c 'import sys; print(sys.executable)')
           uv venv --python="$PY"
           source .venv/bin/activate
-          
+
           # Install each environment with its dependencies
           for env in environments/*/; do
             echo "Installing $env..."
@@ -40,7 +40,7 @@ jobs:
               uv pip install -e "$env"
             fi
           done
-          
+
           # Install development tools
           uv pip install pytest pytest-cov ruff build pre-commit
 

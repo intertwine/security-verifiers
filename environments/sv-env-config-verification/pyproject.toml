@@ -51,4 +51,3 @@ testpaths = ["."]
 
 [tool.ruff]
 line-length = 120
-

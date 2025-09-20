@@ -1,7 +1,7 @@
 # PRD — Open Security Verifiers (v1)
 
-**Owner:** Bryan Young (Intertwine / Expel)  
-**Status:** Draft for OSS release  
+**Owner:** Bryan Young (Intertwine / Expel)
+**Status:** Draft for OSS release
 **Scope:** Six security + alignment RL environments with a shared toolbox and standardized evaluation harness
 
 ---

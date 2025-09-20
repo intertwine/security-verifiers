@@ -6,7 +6,7 @@ This environment implements the full E1 specification from the [PRD](../../PRD.m
 
 The environment showcases calibrated classification with abstention support and asymmetric costs, enabling realistic evaluation of network intrusion detection agents.
 
-**Environment Type**: `SingleTurnEnv` - One prompt, one response per example  
+**Environment Type**: `SingleTurnEnv` - One prompt, one response per example
 **Task**: Ternary classification of network logs (Malicious / Benign / Abstain)
 **Reward Structure**: Accuracy, JSON format compliance, calibration, and cost-sensitive penalties
 
