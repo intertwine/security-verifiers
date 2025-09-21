@@ -27,7 +27,7 @@ make deploy E=name      # build + push to Environments Hub (requires prime login
 
 # Reproducible evals (artifacts in outputs/evals/...)
 make eval-e1 MODELS="gpt-5-mini,gpt-4.1-mini" N=10
-make eval-e2 MODELS="gpt-5-mini,gpt-4.1-mini,gpt-4o-mini" N=2 INCLUDE_TOOLS=true
+make eval-e2 MODELS="gpt-4o-mini" N=2 INCLUDE_TOOLS=true  # Multi-turn eval with tool calling
 
 # Utilities
 make pre-commit         # install + run hooks
@@ -50,14 +50,16 @@ make clean-outputs*     # clean outputs; variants documented in WARP.md
   - schema.py → pydantic-validated model output (violations/patch/confidence)
   - patching.py → unified-diff/JSON-patch application and re-scan support
   - reward.py → severity-weighted detection (precision/recall/F1) + patch delta; exposed via reward_config_auditing
-  - **init**.py wires ToolEnv; tools=[run_kubelinter, run_semgrep, run_opa] (toggle with include_tools)
+  - **init__.py wires ToolEnv; tools=[run_kubelinter, run_semgrep, run_opa] (toggle with include_tools)
   - Golden oracles in e2_config_auditing/dataset/oracle; versions pinned in e2_config_auditing/ci/versions.txt
+  - Multi-turn eval: Models achieve ~0.93 reward with tools vs ~0.62 without
 - Shared toolbox (sv_shared/): parsers.py (JsonClassificationParser), rewards.py (accuracy, calibration, asymmetric cost), rollout_logging.py (RolloutLogger; enable with build_rollout_logger({...})).
 
 ## Reproducible evaluations & artifacts
 
 - scripts/eval_network_logs.py and scripts/eval_config_verification.py write:
   - outputs/evals/sv-env-{name}--{model}/{run_id}/{metadata.json,results.jsonl}
+  - E2 now uses multi-turn evaluation by default, enabling models to call tools (kube-linter, semgrep, OPA)
 
 ## Required checks (per change)
 

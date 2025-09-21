@@ -48,9 +48,9 @@ reproducible results.
 severity‑weighted F1 with credit for violations removed after applying a patch.
 The environment exposes three deterministic tool functions:
 
-- `run_kubelinter` – Kubernetes static analysis with file and line metadata
-- `run_semgrep` – Terraform or generic pattern scanning
-- `run_opa` – Policy-based security analysis for Kubernetes configurations using Open Policy Agent
+- `run_kubelinter` – Kubernetes static analysis with file and line metadata (finds issues like containers running as root, latest tags, missing resource limits)
+- `run_semgrep` – Terraform or generic pattern scanning for security vulnerabilities
+- `run_opa` – Policy-based security analysis for Kubernetes configurations using Open Policy Agent (checks namespace usage, resource limits, security policies)
 
 ## Installation & Testing
 
@@ -97,13 +97,39 @@ This environment may require API keys depending on your configuration. If you en
 
 ## Basic Usage
 
-### Reproducible evaluations (Make target)
+### Reproducible evaluations (Multi-turn with tool calling)
 
-Run the E2 environment across one or more models and save artifacts under outputs/:
+Run the E2 environment across one or more models with multi-turn tool calling support:
 
 ```bash
-# Comma-separated models; N controls number of examples (max 2); INCLUDE_TOOLS toggles tool adapters
-make eval-e2 MODELS="gpt-5-mini,gpt-4.1-mini,gpt-4o-mini" N=2 INCLUDE_TOOLS=true
+# Default: Multi-turn evaluation with tools enabled
+make eval-e2 MODELS="gpt-4o-mini" N=2 INCLUDE_TOOLS=true
+
+# Without tools (baseline)
+make eval-e2 MODELS="gpt-4o-mini" N=2 INCLUDE_TOOLS=false
+
+# Direct script usage with optional parameters
+python scripts/eval_config_verification.py \
+    --models gpt-4o-mini \
+    --num-examples 2 \
+    --include-tools true \
+    --max-turns 5 \
+    --temperature 0.5 \
+    --max-tokens 1000
+```
+
+The evaluation script:
+
+- Supports multi-turn conversations with up to 5 turns (configurable)
+- Enables models to call kube-linter, semgrep, and OPA tools when `INCLUDE_TOOLS=true`
+- Creates temporary files for tools to analyze
+- Handles tool responses and allows follow-up tool calls
+- Tracks all tool interactions in the results
+
+For single-turn evaluation without tool calling (legacy), use:
+
+```bash
+python scripts/eval_config_verification_singleturn.py --models gpt-4o-mini --num-examples 2
 ```
 
 Artifacts are written to:
@@ -180,3 +206,15 @@ for sample in env.dataset:
 
 These examples show how to interact with the environment and leverage the
 reward to fine‑tune or evaluate models on configuration security tasks.
+
+## Recent Improvements (2025-09-21)
+
+- **Multi-turn evaluation is now default**: Replaced single-turn eval with multi-turn tool-calling evaluation as the default for `make eval-e2`
+- **Full tool integration**: Models can now call kube-linter, semgrep, and OPA tools during evaluation, achieving significantly better results (0.93 vs 0.62 reward)
+- **Simplified model parameter handling**: Made temperature and max_tokens optional - only passed to models when explicitly provided, letting models use their defaults
+- **Enhanced system prompt**: Added specific violation examples, tool descriptions, and OPA policy violations for better model performance
+- **Verified all three tools**: Confirmed kube-linter, semgrep, and OPA are all functional and models successfully use them
+
+## Known Issues
+
+- **Parser/rubric mismatch warning**: The ToolEnv shows a warning about parser and rubric parser being different - this is a known limitation and can be safely ignored

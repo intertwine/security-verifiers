@@ -31,7 +31,7 @@ make deploy E=name      # build + push to Environments Hub (requires prime login
 
 # Reproducible evaluations (artifacts go to outputs/evals/...)
 make eval-e1 MODELS="gpt-5-mini,gpt-4.1-mini" N=10
-make eval-e2 MODELS="gpt-5-mini,gpt-4.1-mini,gpt-4o-mini" N=2 INCLUDE_TOOLS=true
+make eval-e2 MODELS="gpt-4o-mini" N=2 INCLUDE_TOOLS=true  # Multi-turn eval with tool calling
 
 # Shortcuts
 make e1  # test E1 (network-logs)

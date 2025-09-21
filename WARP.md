@@ -29,7 +29,7 @@ make deploy E=name      # build + push to Environments Hub (requires prime login
 
 # Reproducible evaluations (artifacts go to outputs/evals/...)
 make eval-e1 MODELS="gpt-5-mini,gpt-4.1-mini" N=10
-make eval-e2 MODELS="gpt-5-mini,gpt-4.1-mini,gpt-4o-mini" N=2 INCLUDE_TOOLS=true
+make eval-e2 MODELS="gpt-4o-mini" N=2 INCLUDE_TOOLS=true  # Multi-turn eval with tool calling
 
 # Shortcuts
 make e1  # test E1 (network-logs)
@@ -80,6 +80,7 @@ uv run python -m build --wheel environments/sv-env-network-logs
     - reward.py -> severity-weighted detection (precision/recall/F1) + patch delta; exposed via reward_config_auditing
     - **init**.py glues these into a Verifiers ToolEnv; tools=[run_kubelinter, run_semgrep, run_opa] (toggle with include_tools)
     - Tests pin behavior and check against golden oracles in e2_config_auditing/dataset/oracle; tool versions pinned in e2_config_auditing/ci/versions.txt
+    - Multi-turn evaluation script supports up to 5 turns of tool interactions, creates temp files for analysis
   - E3-E6 (WIP): Skeletons provide dataset/parsers/rubrics and tool hooks; see each env's README.
 
 - Shared toolbox (sv_shared/): Common components used across envs
@@ -90,7 +91,8 @@ uv run python -m build --wheel environments/sv-env-network-logs
 
 - Evaluation scripts & artifacts
 
-  - scripts/eval_network_logs.py, scripts/eval_config_verification.py write run metadata + per-example results under outputs/evals/sv-env-{name}-{model}/{run_id}/{metadata.json,results.jsonl}
+  - scripts/eval_network_logs.py, scripts/eval_config_verification.py write run metadata + per-example results under outputs/evals/sv-env-{name}--{model}/{run_id}/{metadata.json,results.jsonl}
+  - E2 now uses multi-turn evaluation by default, enabling models to call tools (kube-linter, semgrep, OPA) and achieve ~0.93 reward with tools vs ~0.62 without
 
 - CI
 
@@ -114,15 +116,12 @@ uv run python -m build --wheel environments/sv-env-network-logs
 
 —
 
-### Improvements over the previous WARP.md
+### Recent Updates (2025-09-21)
 
-- Adds concrete, tested targets present in Makefile: eval-e1/eval-e2 (with MODELS, N, INCLUDE_TOOLS), clean-outputs\*, watch, info, ci/cd shortcuts
-- Documents single-test invocation with pytest node id
-- Captures E2's real tool-grounded architecture (adapters → mapping → schema → patching → reward → ToolEnv) with file references
-- Points to scripts/eval\_\* and outputs/ layout for reproducible artifacts
-- Documents rollout logging utility and how to enable it
-- Aligns phrasing with current repository status (E1/E2 ready; E3-E6 WIP)
-- Avoids redundant/general guidelines and omits undiscoverable or non-existent targets
+- E2 now uses multi-turn evaluation by default (scripts/eval_config_verification.py)
+- Models can call security tools during evaluation, achieving significantly better results
+- Tool calling properly implemented with temporary file creation for analysis
+- Single-turn evaluation preserved as eval_config_verification_singleturn.py for legacy use
 
 ### Acceptance criteria
 

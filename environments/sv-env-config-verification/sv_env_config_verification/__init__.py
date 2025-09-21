@@ -291,7 +291,36 @@ def load_environment(
         # Expose only tools whose schemas convert cleanly to strict JSON schema for tool calling
         tools=[run_kubelinter, run_semgrep, run_opa] if include_tools else [],
         system_prompt=(
-            "You audit Kubernetes/Terraform configs. Return JSON with keys 'violations', 'patch', and 'confidence'."  # pylint: disable=line-too-long
+            "You are a security auditor for Kubernetes and Terraform configurations.\n\n"
+            "If tools are available, you may use:\n"
+            "- run_kubelinter: Analyze Kubernetes YAML files for security issues\n"
+            "- run_semgrep: Scan Terraform and other files for security patterns\n"
+            "- run_opa: Evaluate configurations against Open Policy Agent security policies\n\n"
+            "For Kubernetes, check for violations like:\n"
+            "- kube-linter/run-as-non-root (containers running as root)\n"
+            "- kube-linter/latest-tag (using :latest image tags)\n"
+            "- kube-linter/no-read-only-root-fs (writable root filesystem)\n"
+            "- kube-linter/unset-cpu-requirements (missing CPU limits/requests)\n"
+            "- kube-linter/unset-memory-requirements (missing memory limits/requests)\n"
+            "- kube-linter/privilege-escalation-container (allowPrivilegeEscalation)\n"
+            "- kube-linter/non-existent-service-account (invalid service account)\n"
+            "- opa/GEN_001, opa/GEN_002 (OPA policy violations)\n\n"
+            "For Terraform, be conservative - only flag clear security issues.\n\n"
+            "Return a JSON object with exactly these fields:\n"
+            "- violations: array of objects, each with 'id' (string like 'tool/rule-id'), "
+            "'severity' ('low', 'med', or 'high')\n"
+            "- patch: string containing a unified diff (optional, can be empty string)\n"
+            "- confidence: float between 0 and 1\n\n"
+            "Example:\n"
+            "{\n"
+            '  "violations": [\n'
+            '    {"id": "kube-linter/run-as-non-root", "severity": "med"},\n'
+            '    {"id": "kube-linter/latest-tag", "severity": "med"},\n'
+            '    {"id": "opa/GEN_001", "severity": "med"}\n'
+            "  ],\n"
+            '  "patch": "",\n'
+            '  "confidence": 0.9\n'
+            "}"
         ),
     )
 
