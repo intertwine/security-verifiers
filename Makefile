@@ -71,7 +71,7 @@ venv:
 install: venv
 	@echo "$(YELLOW)Installing all environments...$(NC)"
 	@$(ACTIVATE) && \
-	for env in environments/*/; do \
+	for env in environments/sv-env-*/; do \
 		echo "Installing $${env}..."; \
 		cd "$${env}" && uv sync && cd ../..; \
 		uv pip install -e "$${env}"; \
@@ -134,7 +134,7 @@ check: lint format test
 build: venv
 	@echo "$(YELLOW)Building all environment wheels...$(NC)"
 	@$(ACTIVATE) && \
-	for env in environments/*/; do \
+	for env in environments/sv-env-*/; do \
 		echo "Building $${env}..."; \
 		cd "$${env}" && uv run python -m build --wheel && cd ../..; \
 	done
@@ -323,7 +323,7 @@ info:
 	@echo "Virtual Environment: $(VENV)"
 	@echo ""
 	@echo "Environments:"
-	@for env in environments/*/; do \
+	@for env in environments/sv-env-*/; do \
 		basename=$$(basename $$env); \
 		if [ -f "$$env/dist/*.whl" ] 2>/dev/null; then \
 			echo "  ✓ $$basename (built)"; \
