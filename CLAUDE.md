@@ -2,202 +2,121 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with the Open Security Verifiers repository.
 
-## Repository Overview
+## Project focus
 
-Open Security Verifiers is a composable suite of six security and alignment RL environments for Prime Intellect's Environments Hub. The project emphasizes verifiable, executable rewards for training and evaluating AI systems on critical security tasks.
+A composable suite of six security/alignment RL environments using Prime Intellect's Verifiers with executable, programmatic rewards. See EXECUTIVE_SUMMARY.md and PRD.md for specifications. Current status: E1 and E2 are production-ready; E3-E6 are WIP.
 
-**Vision**: Build environments where agents learn behaviors we can verify: policies satisfied, tests pass, safe refusals, calibrated abstention. See [EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md) and [PRD.md](PRD.md) for complete specifications.
-
-## Project Structure
-
-```markdown
-security-verifiers/
-├── environments/ # Six RL environment packages
-│ ├── sv-env-network-logs/ # E1: Network anomaly (prototype)
-│ ├── sv-env-phishing-detection/ # E4: Phishing + evidence
-│ ├── sv-env-config-verification/# E2: Tool-using config audit
-│ ├── sv-env-code-vulnerability/ # E3: Patch-and-test repair
-│ ├── sv-env-redteam-attack/ # E5: Attack simulator
-│ └── sv-env-redteam-defense/ # E6: Alignment defender
-├── sv_shared/ # Shared parsers, rewards, utilities
-├── docs/ # Research notes and application materials
-├── EXECUTIVE_SUMMARY.md # High-level vision
-├── PRD.md # Detailed specifications
-└── CONTRIBUTING.md # Contribution guidelines
-```
-
-## Development Commands
-
-### Quick Start with Makefile
-
-The project includes a comprehensive Makefile for common tasks:
+## Quick commands (Makefile-backed)
 
 ```bash
-# Complete setup (recommended)
+# One-time setup
 make setup
 source .venv/bin/activate
 
-# Daily workflow
-make check                     # Run all quality checks
-make test                      # Run all tests
-make test-env E=network-logs   # Test specific environment
-make format                    # Format code
-make lint-fix                  # Fix linting issues
+# Quality
+make check              # lint + format + tests
+make lint               # ruff check
+make format             # ruff format
 
-# Building and deployment
-make build-env E=network-logs  # Build environment wheel
-make deploy E=network-logs     # Deploy to Hub
-make eval E=network-logs       # Evaluate locally
+# Tests
+make test               # all tests
+make test-env E=name    # e.g., E=network-logs | config-verification | code-vulnerability | phishing-detection | redteam-attack | redteam-defense
+# Run a single test (example)
+uv run pytest environments/sv-env-network-logs/sv_env_network_logs_test.py::TestNetworkLogParser::test_extracts_label_and_confidence -q
 
-# Shortcuts for testing environments
-make e1  # Test network-logs
-make e2  # Test config-verification
-make e3  # Test code-vulnerability
-make e4  # Test phishing-detection
-make e5  # Test redteam-attack
-make e6  # Test redteam-defense
+# Build & deploy
+make build              # build wheels for all envs
+make build-env E=name   # build one env
+make deploy E=name      # build + push to Environments Hub (requires prime login)
+
+# Reproducible evaluations (artifacts go to outputs/evals/...)
+make eval-e1 MODELS="gpt-5-mini,gpt-4.1-mini" N=10
+make eval-e2 MODELS="gpt-5-mini,gpt-4.1-mini,gpt-4o-mini" N=2 INCLUDE_TOOLS=true
+
+# Shortcuts
+make e1  # test E1 (network-logs)
+make e2  # test E2 (config-verification)
+make e3  # test E3 (code-vulnerability)
+make e4  # test E4 (phishing-detection)
+make e5  # test E5 (redteam-attack)
+make e6  # test E6 (redteam-defense)
+
+# Utilities
+make pre-commit         # install + run hooks
+make info               # repo/environment status
+make clean              # build artifacts and caches
+make clean-outputs      # remove outputs/evals (keeps outputs/logs)
+make clean-logs         # remove outputs/logs only
+make clean-outputs-all  # clear outputs/ (keeps .gitkeep)
+# File watch (optional): requires entr; on macOS: brew install entr
+make watch
 ```
 
-### Manual Commands (when needed)
+### Manual equivalents (fallback)
 
 ```bash
-# Environment management
-uv venv --python=python3.12
-source .venv/bin/activate
-cd environments/sv-env-network-logs && uv sync && cd ../..
-uv pip install -e environments/sv-env-network-logs
-
-# Add new dependency
-cd environments/sv-env-network-logs && uv add package-name && cd ../..
-
-# Code quality (without make)
-uv run ruff check . --fix
-uv run ruff format .
-uv run pytest
-
-# Manual deployment
-cd environments/sv-env-network-logs
-uv run python -m build --wheel
-prime login
-prime env push -v PUBLIC
+# If not using make
+uv venv --python=python3.12 && source .venv/bin/activate
+uv run ruff check . --fix && uv run ruff format .
+uv run pytest -q
+uv run python -m build --wheel environments/sv-env-network-logs
 ```
 
-## Key Design Principles
+## Environment configuration
 
-### 1. Executable Verification First
+- Copy and load .env (for API keys/tokens) before evals:
+  - cp .env.example .env
+  - set -a && source .env && set +a
+- Common vars: OPENAI_API_KEY (required for OpenAI-compatible endpoints), HF_TOKEN (optional for datasets)
 
-- Use actual tools (OPA, KubeLinter, Semgrep, tests) as ground truth
-- Minimize reliance on LLM judges
-- Zero reward for malformed outputs
+## Big-picture architecture (be productive fast)
 
-### 2. Composable Components
+- Environment packages (environments/\*): Each env is an installable Python package with a pyproject entry point under [project.entry-points."verifiers.environments"]. All envs expose load_environment(...)-> Verifiers Env and declare a parser and a rubric with weighted reward components.
 
-- Shared schemas across environments
-- Common reward functions (calibration, abstention, costs)
-- Reusable tool wrappers
-- Standardized evaluation metrics
+  - E1 (sv-env-network-logs): SingleTurnEnv. Uses sv_shared.JsonClassificationParser and shared rewards: reward_accuracy, reward_calibration, reward_asymmetric_cost. Dataset: IoT-23 via datasets with a synthetic fallback. See environments/sv-env-network-logs/sv_env_network_logs.py and tests.
+  - E2 (sv-env-config-verification): ToolEnv. End-to-end, tool-grounded pipeline in sv_env_config_verification/e2_config_auditing/:
+    - adapters/{kubelinter_adapter.py, opa_adapter.py, semgrep_adapter.py} normalize tool outputs to ToolFinding
+    - mapping.py -> normalize_findings(...) → Violation + to_prd_schema(...)
+    - schema.py -> pydantic-validated model output (violations/patch/confidence)
+    - patching.py -> unified-diff/JSON-patch application and re-scan support
+    - reward.py -> severity-weighted detection (precision/recall/F1) + patch delta; exposed via reward_config_auditing
+    - **init**.py glues these into a Verifiers ToolEnv; tools=[run_kubelinter, run_semgrep] (toggle with include_tools)
+    - Tests pin behavior and check against golden oracles in e2_config_auditing/dataset/oracle; tool versions pinned in e2_config_auditing/ci/versions.txt
+  - E3-E6 (WIP): Skeletons provide dataset/parsers/rubrics and tool hooks; see each env's README.
 
-### 3. Operational Focus
+- Shared toolbox (sv_shared/): Common components used across envs
 
-- Calibration rewards for well-calibrated confidence
-- Abstention support ("I don't know" is valid)
-- Asymmetric costs (e.g., false negatives >> false positives)
-- Real-world datasets and benchmarks
+  - parsers.py: JsonClassificationParser for strict JSON outputs with confidence
+  - rewards.py: reward_accuracy, reward_calibration, reward_asymmetric_cost
+  - rollout_logging.py: RolloutLogger with optional Weave/W&B backends; enable via build_rollout_logger({...}) and pass logger=... to load_environment
 
-## Environment Implementation Guidelines
+- Reproducible evals & artifacts
 
-### Required Components
+  - scripts/eval_network_logs.py, scripts/eval_config_verification.py write run metadata + per-example results under outputs/evals/sv-env-{name}--{model}/{run_id}/{metadata.json,results.jsonl}
 
-Each environment must implement:
+- CI
+  - .github/workflows/ci.yml installs uv, pins kube-linter version (from E2 ci/versions.txt), runs ruff + pytest (+coverage), and builds wheels on tag/workflow-dispatch.
 
-1. **`load_environment()` function**: Entry point returning a Verifiers environment
-2. **Strict output schemas**: JSON with exact fields per PRD
-3. **Rubric-based rewards**: Multiple weighted reward components
-4. **Test coverage**: Unit and integration tests
+## Notes for Claude
 
-### Example Structure
+- Never run git commit/push from the terminal; the user handles Git operations.
+- Prefer Make targets over raw commands; check make help and make info.
+- Enforce strict JSON schemas; malformed outputs get zero reward.
+- Update environment READMEs when you change behavior; keep tests green.
 
-```python
-# sv_env_network_logs.py
-import verifiers as vf
+## Deployment checklist (concise)
 
-def r_label(*, completion, info, **_):
-    """Exact label match reward."""
-    # Implementation
+- [ ] make test-env E=name
+- [ ] make lint && make format
+- [ ] README updated; pyproject deps correct
+- [ ] make build-env E=name
+- [ ] make eval E=name (or eval-e1/eval-e2)
 
-def r_calibration(*, completion, info, **_):
-    """Calibration bonus for confidence scores."""
-    # Implementation
+## References
 
-RUBRIC = vf.Rubric(
-    funcs=[r_label, r_calibration],
-    weights=[1.0, 0.5]
-)
-
-def load_environment(split="train"):
-    dataset = load_dataset(split)
-    return vf.SingleTurnEnv(
-        dataset=dataset,
-        rubric=RUBRIC,
-        system_prompt="..."
-    )
-```
-
-## Current Status
-
-- **E1 (Network Logs)**: Baseline environment using shared `sv_shared` utilities, deployed to Hub
-- **E2 (Config Verification)**: Implements `e2_config_auditing` with OPA, KubeLinter, and Semgrep adapters plus patch-aware rewards
-- **E3-E6**: Specifications drafted; implementations ongoing
-
-## Important Notes for Claude
-
-### When Working on Environments
-
-1. **Check PRD.md first**: Each environment (E1-E6) has detailed specifications
-2. **Maintain composability**: Use shared toolbox components
-3. **Test locally**: Run `vf-eval` before pushing to Hub
-4. **Document changes**: Update environment READMEs
-
-### Code Standards
-
-- Use type hints for all function signatures
-- Normalize rewards to [0.0, 1.0]
-- Handle missing dependencies gracefully
-- Include docstrings for public functions
-- Follow existing parser patterns
-
-### Security Considerations
-
-- Never commit API keys or secrets
-- Hash/remove sensitive content from datasets
-- Sandbox code execution in E3
-- Use Llama Guard 3 for E5/E6 safety scoring
-
-### Deployment Checklist
-
-Before deploying an environment:
-
-- [ ] Tests pass (`make test-env E=name`)
-- [ ] Linting clean (`make lint`)
-- [ ] Code formatted (`make format`)
-- [ ] README updated with examples
-- [ ] Output schema matches PRD specification
-- [ ] Rewards properly normalized
-- [ ] Dependencies in pyproject.toml
-- [ ] Build successful (`make build-env E=name`)
-- [ ] Local evaluation works (`make eval E=name`)
-
-## Resources
-
-- [Verifiers Documentation](https://verifiers.readthedocs.io)
-- [Environments Hub](https://app.primeintellect.ai/dashboard/environments)
-- [Prime CLI](https://github.com/PrimeIntellect-ai/prime-cli)
-- [Project PRD](PRD.md) - Detailed specifications for each environment
-
-## Workflow Reminders
-
-- This is an open-source project - contributions welcome!
-- Focus on executable verification over subjective judgments
-- Test with multiple datasets for OOD evaluation
-- Document security considerations for each environment
-- Coordinate with other environments for shared components
+- README.md - repo overview and reproducible evals
+- PRD.md - environment specifications and reward contracts
+- EXECUTIVE_SUMMARY.md - suite-level intent and shared toolbox
+- CLAUDE.md - this file
+- WARP.md - Warp-specific commands (mirrors this guidance)
+- .github/workflows/ci.yml - CI steps
