@@ -50,7 +50,7 @@ make clean-outputs*     # clean outputs; variants documented in WARP.md
   - schema.py → pydantic-validated model output (violations/patch/confidence)
   - patching.py → unified-diff/JSON-patch application and re-scan support
   - reward.py → severity-weighted detection (precision/recall/F1) + patch delta; exposed via reward_config_auditing
-  - **init**.py wires ToolEnv; tools=[run_kubelinter, run_semgrep] (toggle with include_tools)
+  - **init**.py wires ToolEnv; tools=[run_kubelinter, run_semgrep, run_opa] (toggle with include_tools)
   - Golden oracles in e2_config_auditing/dataset/oracle; versions pinned in e2_config_auditing/ci/versions.txt
 - Shared toolbox (sv_shared/): parsers.py (JsonClassificationParser), rewards.py (accuracy, calibration, asymmetric cost), rollout_logging.py (RolloutLogger; enable with build_rollout_logger({...})).
 

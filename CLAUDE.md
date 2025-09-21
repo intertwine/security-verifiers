@@ -80,7 +80,7 @@ uv run python -m build --wheel environments/sv-env-network-logs
     - schema.py -> pydantic-validated model output (violations/patch/confidence)
     - patching.py -> unified-diff/JSON-patch application and re-scan support
     - reward.py -> severity-weighted detection (precision/recall/F1) + patch delta; exposed via reward_config_auditing
-    - **init**.py glues these into a Verifiers ToolEnv; tools=[run_kubelinter, run_semgrep] (toggle with include_tools)
+    - **init**.py glues these into a Verifiers ToolEnv; tools=[run_kubelinter, run_semgrep, run_opa] (toggle with include_tools)
     - Tests pin behavior and check against golden oracles in e2_config_auditing/dataset/oracle; tool versions pinned in e2_config_auditing/ci/versions.txt
   - E3-E6 (WIP): Skeletons provide dataset/parsers/rubrics and tool hooks; see each env's README.
 

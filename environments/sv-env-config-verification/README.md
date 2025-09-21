@@ -46,10 +46,11 @@ reproducible results.
 
 `sv_env_config_verification.reward_config_auditing` combines
 severity‑weighted F1 with credit for violations removed after applying a patch.
-The environment exposes two deterministic tool functions:
+The environment exposes three deterministic tool functions:
 
 - `run_kubelinter` – Kubernetes static analysis with file and line metadata
 - `run_semgrep` – Terraform or generic pattern scanning
+- `run_opa` – Policy-based security analysis for Kubernetes configurations using Open Policy Agent
 
 ## Installation & Testing
 
