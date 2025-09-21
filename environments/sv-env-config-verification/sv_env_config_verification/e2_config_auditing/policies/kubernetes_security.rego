@@ -3,7 +3,7 @@ package security
 import data.lib.kubernetes
 
 # Main deny rule that aggregates all security violations
-deny[msg] {
+deny[msg] if {
     input.kind == "Pod"
     kubernetes.has_insecure_capabilities(input)
     msg := {
@@ -15,7 +15,7 @@ deny[msg] {
     }
 }
 
-deny[msg] {
+deny[msg] if {
     input.kind == "Pod"
     kubernetes.has_privileged_container(input)
     msg := {
@@ -27,7 +27,7 @@ deny[msg] {
     }
 }
 
-deny[msg] {
+deny[msg] if {
     input.kind == "Pod"
     kubernetes.has_host_path_volume(input)
     msg := {
@@ -39,7 +39,7 @@ deny[msg] {
     }
 }
 
-deny[msg] {
+deny[msg] if {
     input.kind == "Service"
     kubernetes.exposes_sensitive_port(input)
     msg := {
@@ -51,7 +51,7 @@ deny[msg] {
     }
 }
 
-deny[msg] {
+deny[msg] if {
     input.kind == "ConfigMap"
     kubernetes.contains_sensitive_data(input)
     msg := {
@@ -64,7 +64,7 @@ deny[msg] {
 }
 
 # General security checks
-deny[msg] {
+deny[msg] if {
     input.apiVersion
     not kubernetes.has_resource_limits(input)
     msg := {
@@ -76,7 +76,7 @@ deny[msg] {
     }
 }
 
-deny[msg] {
+deny[msg] if {
     input.apiVersion
     kubernetes.has_default_namespace(input)
     msg := {

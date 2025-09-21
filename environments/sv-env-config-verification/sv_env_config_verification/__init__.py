@@ -14,9 +14,10 @@ import json
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Sequence
+from typing import Any, Dict, List, Literal, Optional
 
 import verifiers as vf
+import yaml  # noqa: F401 - used in run_opa function
 from datasets import Dataset
 from pydantic import BaseModel, ConfigDict
 
@@ -97,22 +98,51 @@ def run_semgrep(paths: List[str]) -> List[Dict[str, Any]]:
     return findings
 
 
-def run_opa(data: Dict[str, Any], policy_paths: Sequence[str]) -> List[Dict[str, Any]]:
-    """Expose ``opa_eval`` as a simple tool."""
+def run_opa(paths: List[str]) -> List[Dict[str, Any]]:
+    """Expose ``opa_eval`` as a simple tool for configuration files."""
 
     findings = []
-    for f in opa_eval(data, policy_paths):
-        # Create dict without extra field to avoid schema issues
-        finding_dict = {
-            "tool": f.tool,
-            "rule_id": f.rule_id,
-            "severity": f.severity,
-            "message": f.message,
-            "file": f.file,
-            "start_line": f.start_line,
-            "end_line": f.end_line,
-        }
-        findings.append(finding_dict)
+    policy_dir = Path(__file__).resolve().parent / "e2_config_auditing" / "policies"
+
+    for file_path in paths:
+        # Read the configuration file
+        try:
+            with open(file_path, "r") as f:
+                content = f.read()
+
+            # Determine file type and select appropriate policies
+            if file_path.endswith((".yaml", ".yml")):
+                # Kubernetes YAML - parse to JSON for OPA
+                import yaml
+
+                data = yaml.safe_load(content)
+                policy_paths = [str(policy_dir / "lib.rego"), str(policy_dir / "kubernetes_security.rego")]
+            elif file_path.endswith(".tf"):
+                # Terraform - would need HCL parser, skip for now
+                continue
+            else:
+                # Try as JSON
+                data = json.loads(content)
+                policy_paths = [str(policy_dir / "lib.rego"), str(policy_dir / "kubernetes_security.rego")]
+
+            # Run OPA evaluation
+            file_findings = opa_eval(data, policy_paths)
+            for f in file_findings:
+                # Create dict without extra field to avoid schema issues
+                finding_dict = {
+                    "tool": f.tool,
+                    "rule_id": f.rule_id,
+                    "severity": f.severity,
+                    "message": f.message,
+                    "file": f.file or file_path,
+                    "start_line": f.start_line,
+                    "end_line": f.end_line,
+                }
+                findings.append(finding_dict)
+        except Exception:
+            # Skip files that can't be parsed
+            continue
+
     return findings
 
 
@@ -259,7 +289,7 @@ def load_environment(
         parser=parser,
         rubric=rubric,
         # Expose only tools whose schemas convert cleanly to strict JSON schema for tool calling
-        tools=[run_kubelinter, run_semgrep] if include_tools else [],
+        tools=[run_kubelinter, run_semgrep, run_opa] if include_tools else [],
         system_prompt=(
             "You audit Kubernetes/Terraform configs. Return JSON with keys 'violations', 'patch', and 'confidence'."  # pylint: disable=line-too-long
         ),
