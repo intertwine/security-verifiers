@@ -20,11 +20,17 @@ import verifiers as vf
 from datasets import Dataset
 from pydantic import BaseModel, ConfigDict
 
+# Ensure repository root is on sys.path so `sv_shared` is importable when running from source
+# __file__ .../environments/sv-env-config-verification/sv_env_config_verification/__init__.py
+# parents[3] points to the repository root
+sys.path.append(str(Path(__file__).resolve().parents[3]))
+
 from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
     RolloutLogger,
     get_response_text,
 )
 
+# pylint: disable=wrong-import-position
 from .e2_config_auditing.adapters.kubelinter_adapter import kubelinter_lint
 from .e2_config_auditing.adapters.opa_adapter import opa_eval
 from .e2_config_auditing.adapters.semgrep_adapter import semgrep_scan
@@ -33,8 +39,6 @@ from .e2_config_auditing.mapping import normalize_findings
 from .e2_config_auditing.patching import try_apply_patch
 from .e2_config_auditing.reward import final_reward
 from .e2_config_auditing.schema import parse_model_output
-
-sys.path.append(str(Path(__file__).resolve().parents[3]))
 
 
 # Pydantic model for tool finding dictionaries
@@ -144,10 +148,14 @@ class ConfigVerificationParser(vf.Parser):
 # pylint: disable=unused-argument
 def reward_config_auditing(
     completion,
-    answer: Dict[str, Any] | None = None,
+    answer: Dict[str, Any] | str | None = None,
     **kwargs: Dict[str, Any],
 ) -> float:
-    """Reward combining detection accuracy and patch verification."""
+    """Reward combining detection accuracy and patch verification.
+
+    In recent verifiers releases, datasets often store `answer` as a string.
+    Accept both dict and JSON string forms for compatibility.
+    """
 
     text = get_response_text(completion)
     try:
@@ -156,13 +164,23 @@ def reward_config_auditing(
     except (json.JSONDecodeError, ValueError, KeyError):
         return 0.0
 
-    oracle_dicts = (answer or {}).get("oracle", [])
+    # Normalize answer to a dict
+    answer_obj: Dict[str, Any] = {}
+    if isinstance(answer, str):
+        try:
+            answer_obj = json.loads(answer)
+        except json.JSONDecodeError:
+            answer_obj = {}
+    elif isinstance(answer, dict):
+        answer_obj = answer
+
+    oracle_dicts = (answer_obj or {}).get("oracle", [])
     oracle = [Violation(id=v["id"], severity=v["severity"]) for v in oracle_dicts]
 
     post: List[Violation] | None = None
     if patch:
-        fixture_path = (answer or {}).get("fixture_path", "")
-        fixture_type = (answer or {}).get("fixture_type", "k8s")
+        fixture_path = (answer_obj or {}).get("fixture_path", "")
+        fixture_type = (answer_obj or {}).get("fixture_type", "k8s")
         applied, new_text = try_apply_patch(fixture_path, patch)
         if applied:
             with tempfile.NamedTemporaryFile("w", delete=False) as tmp:
@@ -195,12 +213,13 @@ def _load_examples(max_examples: int | None = None) -> List[Dict[str, Any]]:
     for item in fixtures[: max_examples if max_examples else None]:
         question = Path(item["path"]).read_text(encoding="utf-8")
         oracle = json.loads(Path(item["oracle"]).read_text(encoding="utf-8"))
-        answer = {
+        answer_obj = {
             "oracle": oracle,
             "fixture_path": str(item["path"]),
             "fixture_type": item["type"],
         }
-        items.append({"question": question, "answer": answer})
+        # Store answer as JSON string for compatibility with recent verifiers schemas
+        items.append({"question": question, "answer": json.dumps(answer_obj)})
     return items
 
 
@@ -239,7 +258,8 @@ def load_environment(
         dataset=dataset,
         parser=parser,
         rubric=rubric,
-        tools=[run_kubelinter, run_semgrep, run_opa] if include_tools else [],
+        # Expose only tools whose schemas convert cleanly to strict JSON schema for tool calling
+        tools=[run_kubelinter, run_semgrep] if include_tools else [],
         system_prompt=(
             "You audit Kubernetes/Terraform configs. Return JSON with keys 'violations', 'patch', and 'confidence'."  # pylint: disable=line-too-long
         ),

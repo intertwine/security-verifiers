@@ -96,6 +96,28 @@ This environment may require API keys depending on your configuration. If you en
 
 ## Basic Usage
 
+### Reproducible evaluations (Make target)
+
+Run the E2 environment across one or more models and save artifacts under outputs/:
+
+```bash
+# Comma-separated models; N controls number of examples (max 2); INCLUDE_TOOLS toggles tool adapters
+make eval-e2 MODELS="gpt-5-mini,gpt-4.1-mini,gpt-4o-mini" N=2 INCLUDE_TOOLS=true
+```
+
+Artifacts are written to:
+
+```text
+outputs/
+  evals/
+    sv-env-config-verification--{model}/{run_id}/
+      metadata.json
+      results.jsonl
+```
+
+- metadata.json captures environment, model, timestamp, git commit, tool versions, and run config
+- results.jsonl contains one JSON object per example with prompt, completion, rewards, and answer
+
 ```python
 import os
 from sv_env_config_verification import load_environment, reward_config_auditing

@@ -16,7 +16,13 @@ def _extract(parser, completion: Any) -> tuple[str, float]:  # noqa: ANN001
     return label, confidence
 
 
-def reward_accuracy(*, completion: Any, answer: str, parser, **kwargs) -> float:  # noqa: ANN001
+def reward_accuracy(
+    *,
+    completion: Any,
+    answer: str,
+    parser,
+    **kwargs,  # pylint: disable=unused-argument
+) -> float:
     """Binary accuracy reward for classification."""
 
     predicted, _ = _extract(parser, completion)
@@ -25,7 +31,13 @@ def reward_accuracy(*, completion: Any, answer: str, parser, **kwargs) -> float:
     return 1.0 if predicted.lower() == answer.lower() else 0.0
 
 
-def reward_calibration(*, completion: Any, answer: str, parser, **kwargs) -> float:  # noqa: ANN001
+def reward_calibration(
+    *,
+    completion: Any,
+    answer: str,
+    parser,
+    **kwargs,  # pylint: disable=unused-argument
+) -> float:
     """Calibration reward based on absolute error."""
 
     predicted, conf = _extract(parser, completion)
@@ -35,7 +47,13 @@ def reward_calibration(*, completion: Any, answer: str, parser, **kwargs) -> flo
     return 1.0 - abs(conf - correct)
 
 
-def reward_asymmetric_cost(*, completion: Any, answer: str, parser, **kwargs) -> float:  # noqa: ANN001
+def reward_asymmetric_cost(
+    *,
+    completion: Any,
+    answer: str,
+    parser,
+    **kwargs,  # pylint: disable=unused-argument
+) -> float:
     """Penalize false negatives more than false positives."""
 
     predicted, _ = _extract(parser, completion)

@@ -35,6 +35,24 @@ See [EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md) for the high-level vision and [
 
 ## Getting Started
 
+### Reproducible evaluations
+
+- E1 (network-logs):
+
+```bash
+make eval-e1 MODELS="gpt-5-mini,gpt-4.1-mini" N=10
+```
+
+Artifacts: outputs/evals/sv-env-network-logs--<model>/<run_id>/{metadata.json,results.jsonl}
+
+- E2 (config-verification):
+
+```bash
+make eval-e2 MODELS="gpt-5-mini,gpt-4.1-mini,gpt-4o-mini" N=2 INCLUDE_TOOLS=true
+```
+
+Artifacts: outputs/evals/sv-env-config-verification--<model>/<run_id>/{metadata.json,results.jsonl}
+
 ### Prerequisites
 
 - Python 3.12+

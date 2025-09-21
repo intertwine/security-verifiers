@@ -15,6 +15,21 @@ This will install all necessary dependencies for running the environment and its
 
 ## Local Testing
 
+### Reproducible E1 evaluations (recommended)
+
+Use the Make target to evaluate E1 across multiple models and capture artifacts under outputs/evals/:
+
+```bash
+make eval-e1 MODELS="gpt-5-mini,gpt-4.1-mini" N=10
+```
+
+This runs scripts/eval_network_logs.py which loads the environment via load_environment(max_examples=N), calls OpenAI chat completions for each example, computes reward_accuracy, reward_calibration, reward_asymmetric_cost, and format rewards, and saves:
+
+- outputs/evals/sv-env-network-logs--{model}/{run_id}/metadata.json
+- outputs/evals/sv-env-network-logs--{model}/{run_id}/results.jsonl
+
+run_id is an 8‑char UUID stub for easy tracking.
+
 To test the environment locally, you can use the `vf-eval` command from the `verifiers` library. This will load the environment and run a few examples using a specified model.
 
 ```bash

@@ -74,6 +74,10 @@ coverage.xml
 # Environment variables
 .env
 
+# Outputs (evaluation artifacts, logs, etc.)
+outputs/*
+!outputs/.gitkeep
+
 # Private Docs
 docs-internal/
 # Coverage reports

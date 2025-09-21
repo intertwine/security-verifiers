@@ -38,9 +38,14 @@ help:
 	@echo "$(YELLOW)Deployment:$(NC)"
 	@echo "  make deploy E=x     - Deploy environment to Hub (requires prime login)"
 	@echo "  make eval E=x       - Evaluate environment locally"
+	@echo "  make eval-e1 MODELS=... N=10                     - Reproducible E1 evals (network-logs)"
+	@echo "  make eval-e2 MODELS=... N=2 INCLUDE_TOOLS=true  - Reproducible E2 evals (config-verification)"
 	@echo ""
 	@echo "$(YELLOW)Utilities:$(NC)"
 	@echo "  make clean          - Remove build artifacts and caches"
+	@echo "  make clean-outputs  - Remove outputs/evals artifacts (preserve outputs/logs)"
+	@echo "  make clean-logs     - Remove outputs/logs artifacts only"
+	@echo "  make clean-outputs-all - Remove all outputs (evals + logs), keep outputs/.gitkeep"
 	@echo "  make docs           - Serve documentation locally"
 	@echo "  make pre-commit     - Install and run pre-commit hooks"
 	@echo ""
@@ -192,6 +197,30 @@ clean:
 	@find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
 	@echo "$(GREEN)✓ Build artifacts cleaned$(NC)"
 
+# Clean evaluation artifacts while keeping logs
+clean-outputs:
+	@echo "$(YELLOW)Cleaning outputs/evals (preserving outputs/logs)...$(NC)"
+	@mkdir -p outputs
+	@touch outputs/.gitkeep
+	@rm -rf outputs/evals/* 2>/dev/null || true
+	@echo "$(GREEN)✓ outputs/evals cleaned$(NC)"
+
+# Clean only logs
+clean-logs:
+	@echo "$(YELLOW)Cleaning outputs/logs...$(NC)"
+	@mkdir -p outputs/logs
+	@rm -rf outputs/logs/* 2>/dev/null || true
+	@touch outputs/.gitkeep
+	@echo "$(GREEN)✓ outputs/logs cleaned$(NC)"
+
+# Clean everything under outputs/ while preserving the placeholder
+clean-outputs-all:
+	@echo "$(YELLOW)Cleaning all outputs (evals + logs)...$(NC)"
+	@mkdir -p outputs
+	@rm -rf outputs/* 2>/dev/null || true
+	@touch outputs/.gitkeep
+	@echo "$(GREEN)✓ outputs cleared (kept .gitkeep)$(NC)"
+
 # Deep clean (including venv)
 clean-all: clean
 	@echo "$(YELLOW)Removing virtual environment...$(NC)"
@@ -212,6 +241,18 @@ docs: venv
 
 e1:
 	@$(MAKE) test-env E=network-logs
+
+eval-e1: venv
+	@if [ -z "$(MODELS)" ]; then \
+		echo "$(RED)Error: Provide MODELS=\"gpt-5-mini,gpt-4.1-mini\"$(NC)"; \
+		exit 1; \
+	fi
+	@N=$${N:-10}; \
+	echo "$(YELLOW)Evaluating E1 (network-logs) for models: $(MODELS) (N=$$N)$(NC)"; \
+	$(ACTIVATE) && set -a && source .env && set +a && \
+	python scripts/eval_network_logs.py \
+		--models "$(MODELS)" \
+		--num-examples $$N
 
 e2:
 	@$(MAKE) test-env E=config-verification
@@ -298,7 +339,7 @@ info:
 	fi
 
 # E2 convenience targets
-.PHONY: e2-setup-tools e2-test e2-baseline-tools
+.PHONY: e1 eval-e1 e2-setup-tools e2-test e2-baseline-tools eval-e2
 
 e2-setup-tools:
 	@echo "No external tools installation in this lightweight example"
@@ -308,3 +349,16 @@ e2-test: venv
 
 e2-baseline-tools: venv
 	@$(ACTIVATE) && python -c "import json,os;from sv_env_config_verification.e2_config_auditing.baselines.tools_only import emit_oracle_as_prediction as e;f=os.environ.get('FIXTURE','environments/sv-env-config-verification/sv_env_config_verification/e2_config_auditing/dataset/fixtures/k8s/bad_pod.yaml');t=os.environ.get('TYPE','k8s');print(json.dumps(e(f,t), indent=2))"
+
+eval-e2: venv
+	@if [ -z "$(MODELS)" ]; then \
+		echo "$(RED)Error: Provide MODELS=\"gpt-5-mini,gpt-4.1-mini\"$(NC)"; \
+		exit 1; \
+	fi
+	@N=$${N:-2}; INCLUDE_TOOLS=$${INCLUDE_TOOLS:-true}; \
+	echo "$(YELLOW)Evaluating E2 (config-verification) for models: $(MODELS) (N=$$N, INCLUDE_TOOLS=$$INCLUDE_TOOLS)$(NC)"; \
+	$(ACTIVATE) && set -a && source .env && set +a && \
+	python scripts/eval_config_verification.py \
+		--models "$(MODELS)" \
+		--num-examples $$N \
+		--include-tools $$INCLUDE_TOOLS
