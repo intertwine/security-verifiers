@@ -1,364 +1,345 @@
 # Makefile for Open Security Verifiers
 # A composable suite of security and alignment RL environments
 
-.PHONY: help setup venv install install-dev install-all test lint format check build deploy clean docs
+SHELL := /bin/bash
+
+.PHONY: help setup venv install install-dev install-all test lint format check build deploy clean docs \
+        test-cov lint-fix pre-commit clean-outputs clean-logs clean-outputs-all clean-all \
+        e1 e2 e3 e4 e5 e6 eval eval-e1 eval-e2 quick-test quick-fix quick-check ci cd dev watch info
 
 # Default Python version
 PYTHON := python3.12
 VENV := .venv
-ACTIVATE := source $(VENV)/bin/activate
+ACTIVATE := . $(VENV)/bin/activate
 
-# Color output
-RED := \033[0;31m
-GREEN := \033[0;32m
-YELLOW := \033[1;33m
-NC := \033[0m # No Color
+# ---------- Colors (portable) ----------
+# Use NO_COLOR=1 to disable
+ifdef NO_COLOR
+RED :=
+GREEN :=
+YELLOW :=
+NC :=
+else
+ESC := $(shell printf '\033')
+RED := $(ESC)[0;31m
+GREEN := $(ESC)[0;32m
+YELLOW := $(ESC)[1;33m
+NC := $(ESC)[0m
+endif
+ECHO = printf "%b\n"
 
 # Default target
 help:
-	@echo "$(GREEN)Open Security Verifiers - Development Commands$(NC)"
-	@echo ""
-	@echo "$(YELLOW)Setup:$(NC)"
-	@echo "  make setup          - Complete setup (venv + all deps)"
-	@echo "  make venv           - Create Python virtual environment"
-	@echo "  make install        - Install all environments in editable mode"
-	@echo "  make install-dev    - Install development tools"
-	@echo ""
-	@echo "$(YELLOW)Quality:$(NC)"
-	@echo "  make test           - Run all tests"
-	@echo "  make test-env E=x   - Test specific environment (e.g., E=network-logs)"
-	@echo "  make lint           - Run linter checks"
-	@echo "  make format         - Auto-format code"
-	@echo "  make check          - Run all quality checks (lint + test)"
-	@echo ""
-	@echo "$(YELLOW)Building:$(NC)"
-	@echo "  make build          - Build all environment wheels"
-	@echo "  make build-env E=x  - Build specific environment wheel"
-	@echo ""
-	@echo "$(YELLOW)Deployment:$(NC)"
-	@echo "  make deploy E=x     - Deploy environment to Hub (requires prime login)"
-	@echo "  make eval E=x       - Evaluate environment locally"
-	@echo "  make eval-e1 MODELS=... N=10                     - Reproducible E1 evals (network-logs)"
-	@echo "  make eval-e2 MODELS=... N=2 INCLUDE_TOOLS=true  - Reproducible E2 evals (config-verification)"
-	@echo ""
-	@echo "$(YELLOW)Utilities:$(NC)"
-	@echo "  make clean          - Remove build artifacts and caches"
-	@echo "  make clean-outputs  - Remove outputs/evals artifacts (preserve outputs/logs)"
-	@echo "  make clean-logs     - Remove outputs/logs artifacts only"
-	@echo "  make clean-outputs-all - Remove all outputs (evals + logs), keep outputs/.gitkeep"
-	@echo "  make docs           - Serve documentation locally"
-	@echo "  make pre-commit     - Install and run pre-commit hooks"
-	@echo ""
-	@echo "$(YELLOW)Environment Variables:$(NC)"
-	@echo "  E=network-logs      - Target specific environment"
-	@echo "  MODEL=gpt-4o-mini   - Model for evaluation"
-	@echo "  N=10                - Number of examples for eval"
+	@$(ECHO) "$(GREEN)Open Security Verifiers - Development Commands$(NC)"
+	@$(ECHO) ""
+	@$(ECHO) "$(YELLOW)Setup:$(NC)"
+	@$(ECHO) "  make setup          - Complete setup (venv + all deps)"
+	@$(ECHO) "  make venv           - Create Python virtual environment"
+	@$(ECHO) "  make install        - Install all environments in editable mode"
+	@$(ECHO) "  make install-dev    - Install development tools"
+	@$(ECHO) ""
+	@$(ECHO) "$(YELLOW)Quality:$(NC)"
+	@$(ECHO) "  make test           - Run all tests"
+	@$(ECHO) "  make test-env E=x   - Test specific environment (e.g., E=network-logs)"
+	@$(ECHO) "  make lint           - Run linter checks"
+	@$(ECHO) "  make format         - Auto-format code"
+	@$(ECHO) "  make check          - Run all quality checks (lint + test)"
+	@$(ECHO) ""
+	@$(ECHO) "$(YELLOW)Building:$(NC)"
+	@$(ECHO) "  make build          - Build all environment wheels"
+	@$(ECHO) "  make build-env E=x  - Build specific environment wheel"
+	@$(ECHO) ""
+	@$(ECHO) "$(YELLOW)Deployment:$(NC)"
+	@$(ECHO) "  make deploy E=x     - Deploy environment to Hub (requires prime login)"
+	@$(ECHO) "  make eval E=x       - Evaluate environment locally"
+	@$(ECHO) "  make eval-e1 MODELS=... N=10                     - Reproducible E1 evals (network-logs)"
+	@$(ECHO) "  make eval-e2 MODELS=... N=2 INCLUDE_TOOLS=true  - Reproducible E2 evals (config-verification)"
+	@$(ECHO) ""
+	@$(ECHO) "$(YELLOW)Utilities:$(NC)"
+	@$(ECHO) "  make clean          - Remove build artifacts and caches"
+	@$(ECHO) "  make clean-outputs  - Remove outputs/evals artifacts (preserve outputs/logs)"
+	@$(ECHO) "  make clean-logs     - Remove outputs/logs artifacts only"
+	@$(ECHO) "  make clean-outputs-all - Remove all outputs (evals + logs), keep outputs/.gitkeep"
+	@$(ECHO) "  make docs           - Serve documentation locally"
+	@$(ECHO) "  make pre-commit     - Install and run pre-commit hooks"
+	@$(ECHO) ""
+	@$(ECHO) "$(YELLOW)Environment Variables:$(NC)"
+	@$(ECHO) "  E=network-logs      - Target specific environment"
+	@$(ECHO) "  MODEL=gpt-4o-mini   - Model for evaluation"
+	@$(ECHO) "  N=10                - Number of examples for eval"
 
 # Complete setup
 setup: venv install install-dev
-	@echo "$(GREEN)✓ Setup complete! Activate with: source $(VENV)/bin/activate$(NC)"
+	@$(ECHO) "$(GREEN)✓ Setup complete! Activate with: source $(VENV)/bin/activate$(NC)"
 
 # Create virtual environment
 venv:
 	@if [ ! -d "$(VENV)" ]; then \
-		echo "$(YELLOW)Creating virtual environment...$(NC)"; \
+		$(ECHO) "$(YELLOW)Creating virtual environment...$(NC)"; \
 		uv venv --python=$(PYTHON); \
 	else \
-		echo "$(GREEN)✓ Virtual environment already exists$(NC)"; \
+		$(ECHO) "$(GREEN)✓ Virtual environment already exists$(NC)"; \
 	fi
 
-# Install all environments in editable mode
+# Install all environments in editable mode (Ubuntu/macOS safe)
 install: venv
-	@echo "$(YELLOW)Installing all environments...$(NC)"
+	@$(ECHO) "$(YELLOW)Installing all environments...$(NC)"
 	@$(ACTIVATE) && \
 	for env in environments/sv-env-*/; do \
-		echo "Installing $${env}..."; \
-		cd "$${env}" && uv sync && cd ../..; \
-		uv pip install -e "$${env}"; \
+		$(ECHO) "Installing $$env..."; \
+		( cd "$$env" && uv sync ); \
+		uv pip install -e "$$env"; \
 	done
-	@echo "$(GREEN)✓ All environments installed$(NC)"
+	@$(ECHO) "$(GREEN)✓ All environments installed$(NC)"
 
 # Install development tools
 install-dev: venv
-	@echo "$(YELLOW)Installing development tools...$(NC)"
+	@$(ECHO) "$(YELLOW)Installing development tools...$(NC)"
 	@$(ACTIVATE) && uv pip install pytest pytest-cov ruff build pre-commit verifiers prime
-	@echo "$(GREEN)✓ Development tools installed$(NC)"
+	@$(ECHO) "$(GREEN)✓ Development tools installed$(NC)"
 
 # Install everything (alias)
 install-all: setup
 
 # Run all tests
 test: venv
-	@echo "$(YELLOW)Running all tests...$(NC)"
+	@$(ECHO) "$(YELLOW)Running all tests...$(NC)"
 	@$(ACTIVATE) && uv run pytest -q
-	@echo "$(GREEN)✓ All tests passed$(NC)"
+	@$(ECHO) "$(GREEN)✓ All tests passed$(NC)"
 
 # Test specific environment
 test-env: venv
 	@if [ -z "$(E)" ]; then \
-		echo "$(RED)Error: Specify environment with E=name$(NC)"; \
-		echo "Example: make test-env E=network-logs"; \
+		$(ECHO) "$(RED)Error: Specify environment with E=name$(NC)"; \
+		$(ECHO) "Example: make test-env E=network-logs"; \
 		exit 1; \
 	fi
-	@echo "$(YELLOW)Testing sv-env-$(E)...$(NC)"
+	@$(ECHO) "$(YELLOW)Testing sv-env-$(E)...$(NC)"
 	@$(ACTIVATE) && uv run pytest environments/sv-env-$(E)/ -q
-	@echo "$(GREEN)✓ Tests passed for sv-env-$(E)$(NC)"
+	@$(ECHO) "$(GREEN)✓ Tests passed for sv-env-$(E)$(NC)"
 
 # Test with coverage
 test-cov: venv
-	@echo "$(YELLOW)Running tests with coverage...$(NC)"
+	@$(ECHO) "$(YELLOW)Running tests with coverage...$(NC)"
 	@$(ACTIVATE) && uv run pytest --cov=environments --cov-report=term-missing
 
 # Run linter
 lint: venv
-	@echo "$(YELLOW)Running linter...$(NC)"
+	@$(ECHO) "$(YELLOW)Running linter...$(NC)"
 	@$(ACTIVATE) && uv run ruff check .
 
 # Fix linting issues
 lint-fix: venv
-	@echo "$(YELLOW)Fixing linting issues...$(NC)"
+	@$(ECHO) "$(YELLOW)Fixing linting issues...$(NC)"
 	@$(ACTIVATE) && uv run ruff check . --fix
-	@echo "$(GREEN)✓ Linting issues fixed$(NC)"
+	@$(ECHO) "$(GREEN)✓ Linting issues fixed$(NC)"
 
 # Format code
 format: venv
-	@echo "$(YELLOW)Formatting code...$(NC)"
+	@$(ECHO) "$(YELLOW)Formatting code...$(NC)"
 	@$(ACTIVATE) && uv run ruff format .
-	@echo "$(GREEN)✓ Code formatted$(NC)"
+	@$(ECHO) "$(GREEN)✓ Code formatted$(NC)"
 
 # Run all quality checks
 check: lint format test
-	@echo "$(GREEN)✓ All quality checks passed$(NC)"
+	@$(ECHO) "$(GREEN)✓ All quality checks passed$(NC)"
 
 # Build all environment wheels
 build: venv
-	@echo "$(YELLOW)Building all environment wheels...$(NC)"
+	@$(ECHO) "$(YELLOW)Building all environment wheels...$(NC)"
 	@$(ACTIVATE) && \
 	for env in environments/sv-env-*/; do \
-		echo "Building $${env}..."; \
-		cd "$${env}" && uv run python -m build --wheel && cd ../..; \
+		$(ECHO) "Building $$env..."; \
+		( cd "$$env" && uv run python -m build --wheel ); \
 	done
-	@echo "$(GREEN)✓ All wheels built$(NC)"
+	@$(ECHO) "$(GREEN)✓ All wheels built$(NC)"
 
 # Build specific environment wheel
 build-env: venv
 	@if [ -z "$(E)" ]; then \
-		echo "$(RED)Error: Specify environment with E=name$(NC)"; \
-		echo "Example: make build-env E=network-logs"; \
+		$(ECHO) "$(RED)Error: Specify environment with E=name$(NC)"; \
+		$(ECHO) "Example: make build-env E=network-logs"; \
 		exit 1; \
 	fi
-	@echo "$(YELLOW)Building sv-env-$(E) wheel...$(NC)"
-	@$(ACTIVATE) && cd environments/sv-env-$(E) && uv run python -m build --wheel
-	@echo "$(GREEN)✓ Wheel built for sv-env-$(E)$(NC)"
+	@$(ECHO) "$(YELLOW)Building sv-env-$(E) wheel...$(NC)"
+	@$(ACTIVATE) && ( cd environments/sv-env-$(E) && uv run python -m build --wheel )
+	@$(ECHO) "$(GREEN)✓ Wheel built for sv-env-$(E)$(NC)"
 
 # Deploy environment to Hub
 deploy: venv
 	@if [ -z "$(E)" ]; then \
-		echo "$(RED)Error: Specify environment with E=name$(NC)"; \
-		echo "Example: make deploy E=network-logs"; \
+		$(ECHO) "$(RED)Error: Specify environment with E=name$(NC)"; \
+		$(ECHO) "Example: make deploy E=network-logs"; \
 		exit 1; \
 	fi
-	@echo "$(YELLOW)Deploying sv-env-$(E) to Environments Hub...$(NC)"
-	@$(ACTIVATE) && cd environments/sv-env-$(E) && \
+	@$(ECHO) "$(YELLOW)Deploying sv-env-$(E) to Environments Hub...$(NC)"
+	@$(ACTIVATE) && ( cd environments/sv-env-$(E) && \
 		uv run python -m build --wheel && \
 		prime login && \
-		prime env push -v PUBLIC
-	@echo "$(GREEN)✓ sv-env-$(E) deployed to Hub$(NC)"
+		prime env push -v PUBLIC )
+	@$(ECHO) "$(GREEN)✓ sv-env-$(E) deployed to Hub$(NC)"
 
 # Evaluate environment locally
 eval: venv
 	@if [ -z "$(E)" ]; then \
-		echo "$(RED)Error: Specify environment with E=name$(NC)"; \
-		echo "Example: make eval E=network-logs MODEL=gpt-4o-mini N=10"; \
+		$(ECHO) "$(RED)Error: Specify environment with E=name$(NC)"; \
+		$(ECHO) "Example: make eval E=network-logs MODEL=gpt-4o-mini N=10"; \
 		exit 1; \
 	fi
 	@MODEL=$${MODEL:-gpt-4o-mini}; \
 	N=$${N:-10}; \
-	echo "$(YELLOW)Evaluating sv-env-$(E) with $$MODEL ($$N examples)...$(NC)"; \
-	$(ACTIVATE) && vf-eval intertwine/sv-env-$(E) \
-		--model $$MODEL \
-		--num-examples $$N
+	$(ECHO) "$(YELLOW)Evaluating sv-env-$(E) with $$MODEL ($$N examples)...$(NC)"; \
+	$(ACTIVATE) && vf-eval intertwine/sv-env-$(E) --model $$MODEL --num-examples $$N
 
 # Install and run pre-commit hooks
 pre-commit: venv
-	@echo "$(YELLOW)Setting up pre-commit hooks...$(NC)"
+	@$(ECHO) "$(YELLOW)Setting up pre-commit hooks...$(NC)"
 	@$(ACTIVATE) && uv run pre-commit install
 	@$(ACTIVATE) && uv run pre-commit run --all-files
-	@echo "$(GREEN)✓ Pre-commit hooks installed and run$(NC)"
+	@$(ECHO) "$(GREEN)✓ Pre-commit hooks installed and run$(NC)"
 
 # Clean build artifacts and caches
 clean:
-	@echo "$(YELLOW)Cleaning build artifacts...$(NC)"
-	@rm -rf environments/*/dist/
-	@rm -rf environments/*/build/
-	@rm -rf environments/*/*.egg-info/
+	@$(ECHO) "$(YELLOW)Cleaning build artifacts...$(NC)"
+	@rm -rf environments/*/dist/ environments/*/build/ environments/*/*.egg-info/
 	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	@find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
 	@find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
-	@echo "$(GREEN)✓ Build artifacts cleaned$(NC)"
+	@$(ECHO) "$(GREEN)✓ Build artifacts cleaned$(NC)"
 
 # Clean evaluation artifacts while keeping logs
 clean-outputs:
-	@echo "$(YELLOW)Cleaning outputs/evals (preserving outputs/logs)...$(NC)"
+	@$(ECHO) "$(YELLOW)Cleaning outputs/evals (preserving outputs/logs)...$(NC)"
 	@mkdir -p outputs
 	@touch outputs/.gitkeep
 	@rm -rf outputs/evals/* 2>/dev/null || true
-	@echo "$(GREEN)✓ outputs/evals cleaned$(NC)"
+	@$(ECHO) "$(GREEN)✓ outputs/evals cleaned$(NC)"
 
 # Clean only logs
 clean-logs:
-	@echo "$(YELLOW)Cleaning outputs/logs...$(NC)"
+	@$(ECHO) "$(YELLOW)Cleaning outputs/logs...$(NC)"
 	@mkdir -p outputs/logs
 	@rm -rf outputs/logs/* 2>/dev/null || true
 	@touch outputs/.gitkeep
-	@echo "$(GREEN)✓ outputs/logs cleaned$(NC)"
+	@$(ECHO) "$(GREEN)✓ outputs/logs cleaned$(NC)"
 
 # Clean everything under outputs/ while preserving the placeholder
 clean-outputs-all:
-	@echo "$(YELLOW)Cleaning all outputs (evals + logs)...$(NC)"
+	@$(ECHO) "$(YELLOW)Cleaning all outputs (evals + logs)...$(NC)"
 	@mkdir -p outputs
 	@rm -rf outputs/* 2>/dev/null || true
 	@touch outputs/.gitkeep
-	@echo "$(GREEN)✓ outputs cleared (kept .gitkeep)$(NC)"
+	@$(ECHO) "$(GREEN)✓ outputs cleared (kept .gitkeep)$(NC)"
 
 # Deep clean (including venv)
 clean-all: clean
-	@echo "$(YELLOW)Removing virtual environment...$(NC)"
+	@$(ECHO) "$(YELLOW)Removing virtual environment...$(NC)"
 	@rm -rf $(VENV)
-	@echo "$(GREEN)✓ Deep clean complete$(NC)"
+	@$(ECHO) "$(GREEN)✓ Deep clean complete$(NC)"
 
 # Serve documentation
 docs: venv
-	@echo "$(YELLOW)Starting documentation server...$(NC)"
-	@echo "$(RED)Note: Documentation server not yet configured$(NC)"
-	@echo "View project docs at:"
-	@echo "  - EXECUTIVE_SUMMARY.md"
-	@echo "  - PRD.md"
-	@echo "  - CONTRIBUTING.md"
+	@$(ECHO) "$(YELLOW)Starting documentation server...$(NC)"
+	@$(ECHO) "$(RED)Note: Documentation server not yet configured$(NC)"
+	@$(ECHO) "View project docs at:"
+	@$(ECHO) "  - EXECUTIVE_SUMMARY.md"
+	@$(ECHO) "  - PRD.md"
+	@$(ECHO) "  - CONTRIBUTING.md"
 
 # Environment-specific shortcuts
-.PHONY: e1 e2 e3 e4 e5 e6
-
 e1:
 	@$(MAKE) test-env E=network-logs
-
-eval-e1: venv
-	@if [ -z "$(MODELS)" ]; then \
-		echo "$(RED)Error: Provide MODELS=\"gpt-5-mini,gpt-4.1-mini\"$(NC)"; \
-		exit 1; \
-	fi
-	@N=$${N:-10}; \
-	echo "$(YELLOW)Evaluating E1 (network-logs) for models: $(MODELS) (N=$$N)$(NC)"; \
-	$(ACTIVATE) && set -a && source .env && set +a && \
-	python scripts/eval_network_logs.py \
-		--models "$(MODELS)" \
-		--num-examples $$N
-
 e2:
 	@$(MAKE) test-env E=config-verification
-
 e3:
 	@$(MAKE) test-env E=code-vulnerability
-
 e4:
 	@$(MAKE) test-env E=phishing-detection
-
 e5:
 	@$(MAKE) test-env E=redteam-attack
-
 e6:
 	@$(MAKE) test-env E=redteam-defense
 
-# Quick commands for common workflows
-.PHONY: quick-test quick-fix quick-check
+# E1/E2 eval helpers
+eval-e1: venv
+	@if [ -z "$(MODELS)" ]; then \
+		$(ECHO) "$(RED)Error: Provide MODELS=\"gpt-5-mini,gpt-4.1-mini\"$(NC)"; \
+		exit 1; \
+	fi
+	@N=$${N:-10}; \
+	$(ECHO) "$(YELLOW)Evaluating E1 (network-logs) for models: $(MODELS) (N=$$N)$(NC)"; \
+	$(ACTIVATE) && set -a && source .env && set +a && \
+	python scripts/eval_network_logs.py --models "$(MODELS)" --num-examples $$N
 
+eval-e2: venv
+	@if [ -z "$(MODELS)" ]; then \
+		$(ECHO) "$(RED)Error: Provide MODELS=\"gpt-5-mini,gpt-4.1-mini\"$(NC)"; \
+		exit 1; \
+	fi
+	@N=$${N:-2}; INCLUDE_TOOLS=$${INCLUDE_TOOLS:-true}; \
+	$(ECHO) "$(YELLOW)Evaluating E2 (config-verification) for models: $(MODELS) (N=$$N, INCLUDE_TOOLS=$$INCLUDE_TOOLS)$(NC)"; \
+	$(ACTIVATE) && set -a && source .env && set +a && \
+	python scripts/eval_config_verification.py --models "$(MODELS)" --num-examples $$N --include-tools $$INCLUDE_TOOLS
+
+# Quick commands
 quick-test:
 	@$(MAKE) test
-
 quick-fix:
 	@$(MAKE) lint-fix format
-
 quick-check:
 	@$(MAKE) check
 
 # CI/CD targets
-.PHONY: ci cd
-
 ci: venv
-	@echo "$(YELLOW)Running CI checks...$(NC)"
+	@$(ECHO) "$(YELLOW)Running CI checks...$(NC)"
 	@$(ACTIVATE) && uv run ruff check . --exit-non-zero-on-fix
 	@$(ACTIVATE) && uv run pytest -q --tb=short
-	@echo "$(GREEN)✓ CI checks passed$(NC)"
+	@$(ECHO) "$(GREEN)✓ CI checks passed$(NC)"
 
 cd: ci build
-	@echo "$(GREEN)✓ Ready for deployment$(NC)"
+	@$(ECHO) "$(GREEN)✓ Ready for deployment$(NC)"
 
 # Development workflow helpers
-.PHONY: dev watch
-
 dev: venv
-	@echo "$(YELLOW)Starting development mode...$(NC)"
-	@echo "Virtual environment: $(VENV)"
-	@echo "Run 'source $(VENV)/bin/activate' to activate"
-	@echo ""
-	@echo "Quick commands:"
-	@echo "  make test       - Run tests"
-	@echo "  make lint-fix   - Fix linting issues"
-	@echo "  make format     - Format code"
-	@echo "  make check      - Run all checks"
+	@$(ECHO) "$(YELLOW)Starting development mode...$(NC)"
+	@$(ECHO) "Virtual environment: $(VENV)"
+	@$(ECHO) "Run 'source $(VENV)/bin/activate' to activate"
+	@$(ECHO) ""
+	@$(ECHO) "Quick commands:"
+	@$(ECHO) "  make test       - Run tests"
+	@$(ECHO) "  make lint-fix   - Fix linting issues"
+	@$(ECHO) "  make format     - Format code"
+	@$(ECHO) "  make check      - Run all checks"
 
 # Watch for changes (requires entr)
 watch:
-	@command -v entr >/dev/null 2>&1 || { echo "$(RED)entr not installed. Install with: brew install entr$(NC)"; exit 1; }
-	@echo "$(YELLOW)Watching for changes...$(NC)"
+	@command -v entr >/dev/null 2>&1 || { \
+		$(ECHO) "$(RED)entr not installed.$(NC)"; \
+		$(ECHO) "Install with:  $(YELLOW)brew install entr$(NC)  (macOS)  or  $(YELLOW)sudo apt-get install entr$(NC)  (Ubuntu)"; \
+		exit 1; \
+	}
+	@$(ECHO) "$(YELLOW)Watching for changes...$(NC)"
 	@find . -name "*.py" | entr -c make test
 
 # Print environment info
-.PHONY: info
-
 info:
-	@echo "$(GREEN)Open Security Verifiers - Environment Info$(NC)"
-	@echo ""
-	@echo "Python: $(PYTHON)"
-	@echo "Virtual Environment: $(VENV)"
-	@echo ""
-	@echo "Environments:"
+	@$(ECHO) "$(GREEN)Open Security Verifiers - Environment Info$(NC)"
+	@$(ECHO) ""
+	@$(ECHO) "Python: $(PYTHON)"
+	@$(ECHO) "Virtual Environment: $(VENV)"
+	@$(ECHO) ""
+	@$(ECHO) "Environments:"
 	@for env in environments/sv-env-*/; do \
 		basename=$$(basename $$env); \
-		if [ -f "$$env/dist/*.whl" ] 2>/dev/null; then \
-			echo "  ✓ $$basename (built)"; \
+		if compgen -G "$$env/dist/*.whl" >/dev/null; then \
+			$(ECHO) "  ✓ $$basename (built)"; \
 		else \
-			echo "  ○ $$basename"; \
+			$(ECHO) "  ○ $$basename"; \
 		fi; \
 	done
-	@echo ""
+	@$(ECHO) ""
 	@if [ -d "$(VENV)" ]; then \
-		echo "Status: $(GREEN)Ready$(NC)"; \
+		$(ECHO) "Status: $(GREEN)Ready$(NC)"; \
 	else \
-		echo "Status: $(YELLOW)Run 'make setup' to get started$(NC)"; \
+		$(ECHO) "Status: $(YELLOW)Run 'make setup' to get started$(NC)"; \
 	fi
-
-# E2 convenience targets
-.PHONY: e1 eval-e1 e2-setup-tools e2-test e2-baseline-tools eval-e2
-
-e2-setup-tools:
-	@echo "No external tools installation in this lightweight example"
-
-e2-test: venv
-	@$(ACTIVATE) && uv run pytest environments/sv-env-config-verification/sv_env_config_verification/e2_config_auditing/tests -q
-
-e2-baseline-tools: venv
-	@$(ACTIVATE) && python -c "import json,os;from sv_env_config_verification.e2_config_auditing.baselines.tools_only import emit_oracle_as_prediction as e;f=os.environ.get('FIXTURE','environments/sv-env-config-verification/sv_env_config_verification/e2_config_auditing/dataset/fixtures/k8s/bad_pod.yaml');t=os.environ.get('TYPE','k8s');print(json.dumps(e(f,t), indent=2))"
-
-eval-e2: venv
-	@if [ -z "$(MODELS)" ]; then \
-		echo "$(RED)Error: Provide MODELS=\"gpt-5-mini,gpt-4.1-mini\"$(NC)"; \
-		exit 1; \
-	fi
-	@N=$${N:-2}; INCLUDE_TOOLS=$${INCLUDE_TOOLS:-true}; \
-	echo "$(YELLOW)Evaluating E2 (config-verification) for models: $(MODELS) (N=$$N, INCLUDE_TOOLS=$$INCLUDE_TOOLS)$(NC)"; \
-	$(ACTIVATE) && set -a && source .env && set +a && \
-	python scripts/eval_config_verification.py \
-		--models "$(MODELS)" \
-		--num-examples $$N \
-		--include-tools $$INCLUDE_TOOLS
