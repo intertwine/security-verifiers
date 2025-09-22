@@ -16,7 +16,7 @@ tags = [
 ]
 version = "0.1.2"
 requires-python = ">=3.12"
-dependencies = ["verifiers>=0.1.2", "datasets>=2.0.0", "pandas>=2.0.0"]
+dependencies = ["verifiers>=0.1.4", "datasets>=2.0.0", "pandas>=2.0.0"]
 
 [project.entry-points."verifiers.environments"]
 sv-env-network-logs = "sv_env_network_logs:load_environment"
