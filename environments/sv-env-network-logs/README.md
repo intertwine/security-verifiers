@@ -188,7 +188,7 @@ The environment uses the [IoT-23 dataset](https://huggingface.co/datasets/19kmun
 ## Requirements
 
 - Python 3.12+
-- `verifiers>=0.1.2`
+- `verifiers>=0.1.4`
 - API key for model inference (e.g., OpenAI API key)
 - HuggingFace token for dataset access (optional but recommended)
 
