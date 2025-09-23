@@ -3,9 +3,17 @@
 
 SHELL := /bin/bash
 
-.PHONY: help setup venv install install-dev install-all test lint format check build deploy clean docs \
-        test-cov lint-fix pre-commit clean-outputs clean-logs clean-outputs-all clean-all \
-        e1 e2 e3 e4 e5 e6 eval eval-e1 eval-e2 quick-test quick-fix quick-check ci cd dev watch info
+# Phony targets
+.PHONY: \
+help setup venv install install-dev install-all install-linux check-tools \
+\
+test test-env test-cov lint lint-fix format check quick-test quick-fix quick-check \
+\
+build build-env deploy ci cd \
+\
+eval eval-e1 eval-e2 e1 e2 e3 e4 e5 e6 \
+\
+pre-commit clean clean-outputs clean-logs clean-outputs-all clean-all docs info dev watch
 
 # Default Python version
 PYTHON := python3.12
@@ -37,6 +45,9 @@ help:
 	@$(ECHO) "  make venv           - Create Python virtual environment"
 	@$(ECHO) "  make install        - Install all environments in editable mode"
 	@$(ECHO) "  make install-dev    - Install development tools"
+	@$(ECHO) "  make install-all    - Install everything (alias)"
+	@$(ECHO) "  make install-linux  - Install pinned security tools (Ubuntu 24)"
+	@$(ECHO) "  make check-tools    - Check if app tools match pinned versions"
 	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)Quality:$(NC)"
 	@$(ECHO) "  make test           - Run all tests"
@@ -100,6 +111,56 @@ install-dev: venv
 
 # Install everything (alias)
 install-all: setup
+
+# Install for linux systems (pipx kubelinter opa semgrep)
+install-linux:
+	@$(ECHO) "$(YELLOW)Installing pinned security tools (Ubuntu 24)...$(NC)"
+	@set -e; \
+	VFILE="environments/sv-env-config-verification/sv_env_config_verification/e2_config_auditing/ci/versions.txt"; \
+	OPA_VER=$$(grep '^OPA_VERSION=' $$VFILE | cut -d= -f2); \
+	KL_VER=$$(grep '^KUBELINTER_VERSION=' $$VFILE | cut -d= -f2); \
+	SG_VER=$$(grep '^SEMGREP_VERSION=' $$VFILE | cut -d= -f2); \
+	\
+	echo "Checking pipx..."; \
+	if ! command -v pipx >/dev/null 2>&1; then \
+		sudo apt-get update && sudo apt-get install -y pipx; \
+		pipx ensurepath; \
+	fi; \
+	\
+	echo "Installing kube-linter v$$KL_VER..."; \
+	curl -sSL https://github.com/stackrox/kube-linter/releases/download/v$$KL_VER/kube-linter-linux.tar.gz \
+		| sudo tar -xz -C /usr/local/bin kube-linter; \
+	\
+	echo "Installing opa v$$OPA_VER..."; \
+	curl -sSL -o /tmp/opa https://openpolicyagent.org/downloads/v$$OPA_VER/opa_linux_amd64_static; \
+	sudo mv /tmp/opa /usr/local/bin/opa; \
+	sudo chmod +x /usr/local/bin/opa; \
+	\
+	echo "Installing semgrep v$$SG_VER..."; \
+	pipx install "semgrep==$$SG_VER" --force; \
+	\
+	$(MAKE) check-tools
+
+# Check if app tools match the pinned version in versions.txt
+check-tools:
+	@set -e; \
+	VFILE="environments/sv-env-config-verification/sv_env_config_verification/e2_config_auditing/ci/versions.txt"; \
+	OPA_VER=$$(grep '^OPA_VERSION=' $$VFILE | cut -d= -f2); \
+	KL_VER=$$(grep '^KUBELINTER_VERSION=' $$VFILE | cut -d= -f2); \
+	SG_VER=$$(grep '^SEMGREP_VERSION=' $$VFILE | cut -d= -f2); \
+	\
+	OPA_ACTUAL=$$(opa version | grep -oE 'Version: *[0-9]+\.[0-9]+\.[0-9]+' | awk '{print $$2}'); \
+	KL_ACTUAL=$$(kube-linter version --format plain | awk '{print $$2}'); \
+	SG_ACTUAL=$$(semgrep --version); \
+	echo "OPA: expected $$OPA_VER, got $$OPA_ACTUAL"; \
+	echo "kube-linter: expected $$KL_VER, got $$KL_ACTUAL"; \
+	echo "semgrep: expected $$SG_VER, got $$SG_ACTUAL"; \
+	if [ "$$OPA_VER" != "$$OPA_ACTUAL" ] || [ "v$$KL_VER" != "$$KL_ACTUAL" ] || [ "$$SG_VER" != "$$SG_ACTUAL" ]; then \
+		echo "$(RED)✗ Version mismatch detected$(NC)"; exit 1; \
+	else \
+		$(ECHO) "$(GREEN)✓ All security tools match pinned versions$(NC)"; \
+	fi
+
 
 # Run all tests
 test: venv
