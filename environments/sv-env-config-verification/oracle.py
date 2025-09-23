@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, Sequence
 
-from .adapters.kubelinter_adapter import kubelinter_lint
-from .adapters.opa_adapter import opa_eval
-from .adapters.semgrep_adapter import semgrep_scan
-from .mapping import normalize_findings, to_prd_schema
+from adapters.kubelinter_adapter import kubelinter_lint
+from adapters.opa_adapter import opa_eval
+from adapters.semgrep_adapter import semgrep_scan
+from mapping import normalize_findings, to_prd_schema
 
 
 def build_oracle_for_k8s(paths: Sequence[str]) -> list[dict]:
@@ -31,8 +31,20 @@ def build_oracle_with_opa(input_data: str | Dict[str, Any], policy_paths: Sequen
     return to_prd_schema(normalize_findings(findings))
 
 
+def load_golden_oracle(path: str) -> list:
+    """Load golden oracle violations from a JSON file."""
+    import json
+    from adapters.types import Violation
+
+    with open(path, "r") as f:
+        data = json.load(f)
+
+    return [Violation(id=v["id"], severity=v["severity"]) for v in data]
+
+
 __all__ = [
     "build_oracle_for_k8s",
     "build_oracle_for_tf",
     "build_oracle_with_opa",
+    "load_golden_oracle",
 ]

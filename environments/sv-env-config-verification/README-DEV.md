@@ -72,7 +72,7 @@ You can also run the broader test suite:
 # Environment-specific tests
 make test-env E=config-verification
 
-# Full e2_config_auditing test suite
+# Full test suite
 make e2-test
 ```
 
@@ -106,25 +106,25 @@ This will create a wheel file in the `dist/` directory.
 
 ## Project Structure
 
-- `sv_env_config_verification/__init__.py`: Contains the main environment implementation with:
+- `sv_env_config_verification.py`: Contains the main environment implementation with:
   - `ConfigVerificationParser`: Validates and parses JSON responses from models
   - `reward_config_auditing`: Computes rewards based on detection accuracy and patch effectiveness
   - `run_kubelinter`: Wrapper for Kubernetes static analysis
   - `run_semgrep`: Wrapper for Terraform/generic pattern scanning
   - `load_environment`: Entry point that creates the ToolEnv with security tools
-- `sv_env_config_verification/e2_config_auditing/`: Core auditing library
+- Core auditing modules at root level:
   - `adapters/`: Tool wrappers (KubeLinter, Semgrep, OPA)
   - `baselines/`: Example tool baselines and ground truth
   - `ci/`: Version pinning for reproducible builds
   - `dataset/`: Test fixtures and oracle labels
   - `docker/`: Containerization support
+  - `policies/`: OPA policy definitions
   - `env.py`: Environment configuration
   - `mapping.py`: Finding normalization and deduplication
   - `oracle.py`: Ground truth generation
   - `patching.py`: Patch application and validation
   - `reward.py`: Reward computation with severity weighting
   - `schema.py`: Input/output validation schemas
-  - `tests/`: Unit tests for all components
 - `sv_env_config_verification_test.py`: Integration tests for the environment
 - `pyproject.toml`: Project configuration with dependencies and build settings
 - `README.md`: User-facing documentation for the Environments Hub
@@ -161,7 +161,7 @@ When making changes:
 
 When updating security tools (KubeLinter, Semgrep, OPA):
 
-1. Update versions in `e2_config_auditing/ci/versions.txt`
+1. Update versions in `ci/versions.txt`
 2. Test tool compatibility with existing fixtures
 3. Update baseline outputs if tool behavior changes
 4. Run full test suite to ensure reward computation remains stable
@@ -170,8 +170,8 @@ When updating security tools (KubeLinter, Semgrep, OPA):
 
 To add new test fixtures:
 
-1. Add configuration files to `e2_config_auditing/dataset/fixtures/{k8s,tf}/`
-2. Generate oracle labels and save to `e2_config_auditing/dataset/oracle/`
-3. Update the fixture loading in `sv_env_config_verification/__init__.py`
+1. Add configuration files to `dataset/fixtures/{k8s,tf}/`
+2. Generate oracle labels and save to `dataset/oracle/`
+3. Update the fixture loading in `sv_env_config_verification.py`
 4. Test that tools correctly identify violations
 5. Run reward computation tests to verify scoring

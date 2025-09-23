@@ -1,9 +1,9 @@
 """Tool-grounded configuration auditing environment (E2).
 
-This package wraps the :mod:`e2_config_auditing` module and exposes it as a
-`verifiers` environment. Models receive raw Kubernetes or Terraform
-configuration files, optionally call analysis tools, and must return a JSON
-object with violations, an optional patch, and a confidence score.
+This module provides a `verifiers` environment for security configuration auditing.
+Models receive raw Kubernetes or Terraform configuration files, optionally call
+analysis tools (KubeLinter, Semgrep, OPA), and must return a JSON object with
+violations, an optional patch, and a confidence score.
 """
 
 from __future__ import annotations
@@ -22,9 +22,9 @@ from datasets import Dataset
 from pydantic import BaseModel, ConfigDict
 
 # Ensure repository root is on sys.path so `sv_shared` is importable when running from source
-# __file__ .../environments/sv-env-config-verification/sv_env_config_verification/__init__.py
-# parents[3] points to the repository root
-sys.path.append(str(Path(__file__).resolve().parents[3]))
+# __file__ .../environments/sv-env-config-verification/sv_env_config_verification.py
+# parents[2] points to the repository root
+sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
     RolloutLogger,
@@ -32,14 +32,14 @@ from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
 )
 
 # pylint: disable=wrong-import-position
-from .e2_config_auditing.adapters.kubelinter_adapter import kubelinter_lint
-from .e2_config_auditing.adapters.opa_adapter import opa_eval
-from .e2_config_auditing.adapters.semgrep_adapter import semgrep_scan
-from .e2_config_auditing.adapters.types import Violation
-from .e2_config_auditing.mapping import normalize_findings
-from .e2_config_auditing.patching import try_apply_patch
-from .e2_config_auditing.reward import final_reward
-from .e2_config_auditing.schema import parse_model_output
+from adapters.kubelinter_adapter import kubelinter_lint
+from adapters.opa_adapter import opa_eval
+from adapters.semgrep_adapter import semgrep_scan
+from adapters.types import Violation
+from mapping import normalize_findings
+from patching import try_apply_patch
+from reward import final_reward
+from schema import parse_model_output
 
 
 # Pydantic model for tool finding dictionaries
@@ -57,7 +57,7 @@ class ToolFindingModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-DATASET_ROOT = Path(__file__).resolve().parent / "e2_config_auditing" / "dataset"
+DATASET_ROOT = Path(__file__).resolve().parent / "dataset"
 
 
 def run_kubelinter(paths: List[str]) -> List[Dict[str, Any]]:
@@ -102,7 +102,7 @@ def run_opa(paths: List[str]) -> List[Dict[str, Any]]:
     """Expose ``opa_eval`` as a simple tool for configuration files."""
 
     findings = []
-    policy_dir = Path(__file__).resolve().parent / "e2_config_auditing" / "policies"
+    policy_dir = Path(__file__).resolve().parent / "policies"
 
     for file_path in paths:
         # Read the configuration file

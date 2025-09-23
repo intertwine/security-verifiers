@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import Literal
 
-from ..oracle import build_oracle_for_k8s, build_oracle_for_tf
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
+from oracle import build_oracle_for_k8s, build_oracle_for_tf
 
 
 def emit_oracle_as_prediction(fixture_path: str, type_: Literal["k8s", "tf"]) -> dict:

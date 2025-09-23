@@ -116,7 +116,7 @@ install-all: setup
 install-linux:
 	@$(ECHO) "$(YELLOW)Installing pinned security tools (Ubuntu 24)...$(NC)"
 	@set -e; \
-	VFILE="environments/sv-env-config-verification/sv_env_config_verification/e2_config_auditing/ci/versions.txt"; \
+	VFILE="environments/sv-env-config-verification/ci/versions.txt"; \
 	OPA_VER=$$(grep '^OPA_VERSION=' $$VFILE | cut -d= -f2); \
 	KL_VER=$$(grep '^KUBELINTER_VERSION=' $$VFILE | cut -d= -f2); \
 	SG_VER=$$(grep '^SEMGREP_VERSION=' $$VFILE | cut -d= -f2); \
@@ -144,7 +144,7 @@ install-linux:
 # Check if app tools match the pinned version in versions.txt
 check-tools:
 	@set -e; \
-	VFILE="environments/sv-env-config-verification/sv_env_config_verification/e2_config_auditing/ci/versions.txt"; \
+	VFILE="environments/sv-env-config-verification/ci/versions.txt"; \
 	OPA_VER=$$(grep '^OPA_VERSION=' $$VFILE | cut -d= -f2); \
 	KL_VER=$$(grep '^KUBELINTER_VERSION=' $$VFILE | cut -d= -f2); \
 	SG_VER=$$(grep '^SEMGREP_VERSION=' $$VFILE | cut -d= -f2); \
@@ -223,7 +223,7 @@ build-env: venv
 		exit 1; \
 	fi
 	@$(ECHO) "$(YELLOW)Building sv-env-$(E) wheel...$(NC)"
-	@$(ACTIVATE) && ( cd environments/sv-env-$(E) && uv run python -m build --wheel )
+	@$(ACTIVATE) && ( cd environments/sv-env-$(E) && python -m build --wheel )
 	@$(ECHO) "$(GREEN)✓ Wheel built for sv-env-$(E)$(NC)"
 
 # Deploy environment to Hub

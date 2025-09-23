@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import List, Tuple
 
-from .adapters.types import Violation
+from adapters.types import Violation
 
 SEV_WEIGHT = {"low": 0.3, "med": 0.6, "high": 1.0}
 

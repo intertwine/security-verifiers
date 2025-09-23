@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Tuple, cast
 
 from pydantic import BaseModel, Field
 
-from .adapters.types import E2Severity, Violation
+from adapters.types import E2Severity, Violation
 
 
 class ViolationModel(BaseModel):

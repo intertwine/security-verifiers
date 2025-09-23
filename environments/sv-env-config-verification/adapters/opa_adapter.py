@@ -65,8 +65,25 @@ def opa_eval(
         if results and "expressions" in results[0]:
             value = results[0]["expressions"][0]["value"]
 
+            # Check if the value contains violations key (test format)
+            if isinstance(value, dict) and "violations" in value:
+                # Handle test format with violations array
+                for item in value["violations"]:
+                    if isinstance(item, dict):
+                        findings.append(
+                            ToolFinding(
+                                tool="opa",
+                                rule_id=str(item.get("rule_id", "")),
+                                severity=str(item.get("severity", "")),
+                                message=str(item.get("message", "")),
+                                file=item.get("file"),
+                                start_line=item.get("line"),
+                                end_line=item.get("end_line"),
+                                extra=item,
+                            )
+                        )
             # If value is a dict (set representation), get its values
-            if isinstance(value, dict):
+            elif isinstance(value, dict):
                 # For sets, OPA returns the messages as keys
                 # We need to query with [x] to get actual values
                 # Re-run query to get actual messages

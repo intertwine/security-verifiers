@@ -7,14 +7,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List
 
-from .adapters.kubelinter_adapter import kubelinter_lint
-from .adapters.semgrep_adapter import semgrep_scan
-from .adapters.types import Violation
-from .mapping import normalize_findings
-from .oracle import build_oracle_for_k8s, build_oracle_for_tf
-from .patching import try_apply_patch
-from .reward import final_reward
-from .schema import parse_model_output
+from adapters.kubelinter_adapter import kubelinter_lint
+from adapters.semgrep_adapter import semgrep_scan
+from adapters.types import Violation
+from mapping import normalize_findings
+from oracle import build_oracle_for_k8s, build_oracle_for_tf
+from patching import try_apply_patch
+from reward import final_reward
+from schema import parse_model_output
 
 
 @dataclass

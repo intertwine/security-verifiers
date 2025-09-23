@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import List
 
-from .adapters.types import E2Severity, ToolFinding, Violation
+from adapters.types import E2Severity, ToolFinding, Violation
 
 TOOL_SEV_TO_E2: dict[str, dict[str, E2Severity]] = {
     "semgrep": {"INFO": "low", "WARNING": "med", "ERROR": "high"},

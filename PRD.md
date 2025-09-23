@@ -71,7 +71,7 @@ Each environment lists: Inputs, Output Schema, Reward, Datasets/Tools, Baselines
 ```
 
 - **Reward:** severity‑weighted precision/recall against tool‑derived oracle plus bonus for violations removed after re‑scanning patched configs.
-- **Tools:** OPA/Rego, KubeLinter, Semgrep (versions pinned in `e2_config_auditing/ci/versions.txt`).
+- **Tools:** OPA/Rego, KubeLinter, Semgrep (versions pinned in `ci/versions.txt`).
 - **Baselines/Ablations:** tools‑only; LLM‑explainer (no RL); RLFT with tool‑use.
 - **Risks:** flaky rules—pin rule versions; add unit tests for rule packs; verify oracle drift in CI.
 

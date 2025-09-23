@@ -77,12 +77,12 @@ jobs:
           echo "OPA policies validated successfully"
 
       - name: Run unit tests
-        run: uv run pytest tests/ -v
+        run: uv run pytest sv_env_config_verification_test.py -v
 
       - name: Generate oracle files
         run: |
           uv run python -c "
-          from sv_env_config_verification.e2_config_auditing.oracle import build_oracle_for_k8s, build_oracle_for_tf
+          from oracle import build_oracle_for_k8s, build_oracle_for_tf
           import json
           import os
 
@@ -120,7 +120,7 @@ jobs:
           echo "✅ All oracle files match golden files"
 
       - name: Run integration tests
-        run: uv run pytest tests/ -v --tb=short
+        run: uv run pytest sv_env_config_verification_test.py -v --tb=short
 
       - name: Clean up generated files
         run: rm -f dataset/oracle/bad_*_new.json
