@@ -72,14 +72,14 @@ uv run python -m build --wheel environments/sv-env-network-logs
 - Environment packages (environments/\*): Each env is an installable Python package with a pyproject entry point under [project.entry-points."verifiers.environments"]. All envs expose load_environment(...)-> Verifiers Env and declare a parser and a rubric with weighted reward components.
 
   - E1 (sv-env-network-logs): SingleTurnEnv. Uses sv_shared.JsonClassificationParser and shared rewards: reward_accuracy, reward_calibration, reward_asymmetric_cost. Dataset: IoT-23 via datasets with a synthetic fallback. See environments/sv-env-network-logs/sv_env_network_logs.py and tests.
-  - E2 (sv-env-config-verification): ToolEnv. End-to-end, tool-grounded pipeline in sv_env_config_verification/e2_config_auditing/:
+  - E2 (sv-env-config-verification): ToolEnv. End-to-end, tool-grounded pipeline with:
     - adapters/{kubelinter_adapter.py, opa_adapter.py, semgrep_adapter.py} normalize tool outputs to ToolFinding
     - mapping.py -> normalize_findings(...) → Violation + to_prd_schema(...)
     - schema.py -> pydantic-validated model output (violations/patch/confidence)
     - patching.py -> unified-diff/JSON-patch application and re-scan support
     - reward.py -> severity-weighted detection (precision/recall/F1) + patch delta; exposed via reward_config_auditing
-    - **init**.py glues these into a Verifiers ToolEnv; tools=[run_kubelinter, run_semgrep, run_opa] (toggle with include_tools)
-    - Tests pin behavior and check against golden oracles in e2_config_auditing/dataset/oracle; tool versions pinned in e2_config_auditing/ci/versions.txt
+    - sv_env_config_verification.py glues these into a Verifiers ToolEnv; tools=[run_kubelinter, run_semgrep, run_opa] (toggle with include_tools)
+    - Tests pin behavior and check against golden oracles in dataset/oracle; tool versions pinned in ci/versions.txt
     - Multi-turn evaluation script supports up to 5 turns of tool interactions, creates temp files for analysis
   - E3-E6 (WIP): Skeletons provide dataset/parsers/rubrics and tool hooks; see each env's README.
 

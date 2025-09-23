@@ -44,14 +44,14 @@ make clean-outputs*     # clean outputs; variants documented in WARP.md
 ## Architecture highlights (be productive fast)
 
 - Environments are installable packages under environments/\* with pyproject entry points under [project.entry-points."verifiers.environments"]. Each exports load_environment(...), a parser, and a rubric with weighted rewards.
-- E2 (sv-env-config-verification) pipeline (sv_env_config_verification/e2_config_auditing/):
+- E2 (sv-env-config-verification) pipeline:
   - adapters/{kubelinter_adapter.py, opa_adapter.py, semgrep_adapter.py} → ToolFinding
   - mapping.py → normalize_findings(...) → Violation → to_prd_schema(...)
   - schema.py → pydantic-validated model output (violations/patch/confidence)
   - patching.py → unified-diff/JSON-patch application and re-scan support
   - reward.py → severity-weighted detection (precision/recall/F1) + patch delta; exposed via reward_config_auditing
-  - **init__.py wires ToolEnv; tools=[run_kubelinter, run_semgrep, run_opa] (toggle with include_tools)
-  - Golden oracles in e2_config_auditing/dataset/oracle; versions pinned in e2_config_auditing/ci/versions.txt
+  - sv_env_config_verification.py wires ToolEnv; tools=[run_kubelinter, run_semgrep, run_opa] (toggle with include_tools)
+  - Golden oracles in dataset/oracle; versions pinned in ci/versions.txt
   - Multi-turn eval: Models achieve ~0.93 reward with tools vs ~0.62 without
 - Shared toolbox (sv_shared/): parsers.py (JsonClassificationParser), rewards.py (accuracy, calibration, asymmetric cost), rollout_logging.py (RolloutLogger; enable with build_rollout_logger({...})).
 

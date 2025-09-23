@@ -22,7 +22,7 @@ jobs:
 
       - name: Install security tools (kube-linter, OPA, Semgrep)
         run: |
-          source environments/sv-env-config-verification/sv_env_config_verification/e2_config_auditing/ci/versions.txt
+          source environments/sv-env-config-verification/ci/versions.txt
 
           # Install kube-linter
           echo "Installing kube-linter v${KUBELINTER_VERSION}..."

@@ -41,7 +41,7 @@ Library functions for Terraform-specific checks and validations.
 To use these policies with the OPA adapter:
 
 ```python
-from sv_env_config_verification.e2_config_auditing.adapters.opa_adapter import opa_eval
+from adapters.opa_adapter import opa_eval
 
 # For Kubernetes YAML
 findings = opa_eval(

@@ -50,15 +50,18 @@ def kubelinter_lint(
     findings: List[ToolFinding] = []
     for item in findings_json:
         diagnostic = item.get("Diagnostic", {})
+        metadata = item.get("Object", {}).get("Metadata", {})
+        line_info = metadata.get("LineInfo", {})
+
         findings.append(
             ToolFinding(
                 tool="kube-linter",
                 rule_id=str(item.get("Check", "")),
                 severity="",  # kube-linter doesn't provide severity in this format
                 message=str(diagnostic.get("Message", "")),
-                file=item.get("Object", {}).get("Metadata", {}).get("FilePath"),
-                start_line=None,  # Not provided in this format
-                end_line=None,  # Not provided in this format
+                file=metadata.get("FilePath"),
+                start_line=line_info.get("Line") if line_info else None,
+                end_line=None,  # kube-linter doesn't provide end line
                 extra=item,
             )
         )
