@@ -150,7 +150,7 @@ check-tools:
 	SG_VER=$$(grep '^SEMGREP_VERSION=' $$VFILE | cut -d= -f2); \
 	\
 	OPA_ACTUAL=$$(opa version | grep -oE 'Version: *[0-9]+\.[0-9]+\.[0-9]+' | awk '{print $$2}'); \
-	KL_ACTUAL=$$(kube-linter version --format plain | awk '{print $$2}'); \
+	KL_ACTUAL=$$(kube-linter version | awk '{print $$2}'); \
 	SG_ACTUAL=$$(semgrep --version); \
 	echo "OPA: expected $$OPA_VER, got $$OPA_ACTUAL"; \
 	echo "kube-linter: expected $$KL_VER, got $$KL_ACTUAL"; \
