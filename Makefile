@@ -150,12 +150,12 @@ check-tools:
 	SG_VER=$$(grep '^SEMGREP_VERSION=' $$VFILE | cut -d= -f2); \
 	\
 	OPA_ACTUAL=$$(opa version | grep -oE 'Version: *[0-9]+\.[0-9]+\.[0-9]+' | awk '{print $$2}'); \
-	KL_ACTUAL=$$(kube-linter version | awk '{print $$2}'); \
+	KL_ACTUAL=$$(kube-linter version); \
 	SG_ACTUAL=$$(semgrep --version); \
 	echo "OPA: expected $$OPA_VER, got $$OPA_ACTUAL"; \
 	echo "kube-linter: expected $$KL_VER, got $$KL_ACTUAL"; \
 	echo "semgrep: expected $$SG_VER, got $$SG_ACTUAL"; \
-	if [ "$$OPA_VER" != "$$OPA_ACTUAL" ] || [ "v$$KL_VER" != "$$KL_ACTUAL" ] || [ "$$SG_VER" != "$$SG_ACTUAL" ]; then \
+	if [ "$$OPA_VER" != "$$OPA_ACTUAL" ] || [ "$$KL_VER" != "$$KL_ACTUAL" ] || [ "$$SG_VER" != "$$SG_ACTUAL" ]; then \
 		echo "$(RED)✗ Version mismatch detected$(NC)"; exit 1; \
 	else \
 		$(ECHO) "$(GREEN)✓ All security tools match pinned versions$(NC)"; \
