@@ -1,159 +1,238 @@
-"""sv_env_phishing_detection: Security Verifiers environment for Phishing Email Detection.
-
-This package implements PRD Environment #4: A SingleTurnEnv where models classify
-emails as phishing attempts or legitimate emails. The environment provides email text
-as prompts and expects classification labels as outputs.
-"""
+"""Phishing detection environment with abstention, calibration, and evidence rewards."""
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
+import re
 import sys
-
-sys.path.append(str(Path(__file__).resolve().parents[2]))
+from typing import Any
 
 import verifiers as vf
 from datasets import Dataset, load_dataset
 
-from sv_shared import RolloutLogger  # type: ignore  # pylint: disable=wrong-import-position
+# Enable importing shared components when running from source.
+sys.path.append(str(Path(__file__).resolve().parents[2]))
+
+from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
+    JsonClassificationParser,
+    RolloutLogger,
+)
+from sv_shared.rewards import reward_accuracy, reward_calibration  # type: ignore  # pylint: disable=wrong-import-position
 
 
-class PhishingEmailParser(vf.Parser):
-    """Parser to extract classification label from model responses."""
+def _get_url_pattern():
+    """
+    Return a compiled regex pattern for detecting URLs in text.
 
-    def parse_answer(self, completion: str) -> str:
-        """Extract 'Phishing' or 'Legitimate' from the response.
+    The pattern matches:
+        - URLs starting with http:// or https://
+        - Followed by one or more non-whitespace, non-delimiter characters
+        - Optionally, a parenthesized section (e.g., for URLs with parentheses)
+        - Excludes trailing punctuation and whitespace
 
-        Args:
-            completion: The raw model completion/response.
+    Regex breakdown:
+        - Match 'http://' or 'https://'
+        - One or more characters that are not whitespace or common delimiters
+        - Optionally, a parenthesized section (e.g., for URLs with parentheses)
+        - Optionally, more non-delimiter characters, excluding trailing punctuation
+    """
+    return re.compile(
+        r"https?://[^\s<>\"'()[\]{}]+(?:\([^\s<>\"'()[\]{}]*\))?[^\s<>\"'()[\]{}.,;:!?]*",
+        re.IGNORECASE,
+    )
 
-        Returns:
-            The extracted classification label in standard format.
-        """
-        # Clean and normalize the response
-        cleaned = completion.strip().lower()
 
-        # Look for the classification labels
-        # Check for "not phishing" before "phishing"
-        if "not phishing" in cleaned:
-            return "Legitimate"
+_URL_PATTERN = _get_url_pattern()
 
-        if "phishing" in cleaned:
-            return "Phishing"
+# Reward constants for asymmetric cost function
+REWARD_TRUE_POSITIVE = 1.0  # Correctly identifying phishing/legitimate
+HEAVY_PENALTY_FALSE_NEGATIVE = -1.0  # Missing phishing (worst case)
+PARTIAL_REWARD_ABSTAIN_ON_PHISHING = 0.3  # Being cautious on phishing
+PENALTY_FALSE_POSITIVE = -0.2  # False alarm on legitimate
+PARTIAL_REWARD_ABSTAIN_ON_LEGITIMATE = 0.5  # Being cautious on legitimate
 
-        if "legitimate" in cleaned or "safe" in cleaned:
-            return "Legitimate"
+_SUSPICIOUS_SENDER_CHARACTER_HINTS = frozenset({"0", "1", "-"})
+_SUSPICIOUS_SENDER_TOKENS = (
+    "amaz0n",
+    "paypai",
+    "support",
+    "alert",
+)
+_SUSPICIOUS_KEYWORDS = {
+    "verify",
+    "reset",
+    "urgent",
+    "credentials",
+    "bank",
+    "login",
+    "password",
+    "account",
+    "invoice",
+    "refund",
+    "wire",
+    "bitcoin",
+}
 
-        # Return original if no clear label found
-        return completion.strip()
 
-    def get_format_reward_func(self):
-        """Return a format reward function that checks for proper classification format."""
+def _is_suspicious_sender(
+    sender: str,
+    *,
+    character_hints: Iterable[str] = _SUSPICIOUS_SENDER_CHARACTER_HINTS,
+    tokens: Iterable[str] = _SUSPICIOUS_SENDER_TOKENS,
+) -> bool:
+    """Return True when the sender string matches phishing-style patterns."""
 
-        def format_reward(
-            completion,
-            answer="",  # pylint: disable=unused-argument
-            **kwargs,  # pylint: disable=unused-argument
-        ):
-            """Reward proper classification format (single word: Phishing or Legitimate)."""
-            # Extract response text from completion
-            if isinstance(completion, list):
-                response = completion[-1]["content"] if completion else ""
-            else:
-                response = str(completion)
+    lowered = sender.lower()
+    if not any(hint in lowered for hint in character_hints):
+        return False
+    return any(token in lowered for token in tokens)
 
-            # Check if response is a single classification word
-            cleaned = response.strip().lower()
 
-            # Perfect format: exactly "phishing" or "legitimate" (case insensitive)
-            if cleaned in ["phishing", "legitimate"]:
-                return 1.0
+class PhishingEmailParser(JsonClassificationParser):
+    """Parse JSON phishing classifications with evidence lists."""
 
-            # Good format: contains the word but has extra text
-            if "phishing" in cleaned or "legitimate" in cleaned:
-                return 0.5
+    def __init__(self) -> None:
+        super().__init__(allowed_labels=["Phishing", "Legitimate", "Abstain"])
+        self._label_lookup = {label.lower(): label for label in self.allowed_labels}
 
-            # Poor format: doesn't contain expected classification
-            return 0.0
+    def parse_answer(self, completion: Any) -> str:  # type: ignore[override]
+        data = self._parse_json(completion)
+        label = data.get("label")
+        if isinstance(label, str):
+            canonical = self._label_lookup.get(label.strip().lower())
+            if canonical:
+                return canonical
+        return ""
+
+    def parse_evidence(self, completion: Any) -> list[str]:  # noqa: D401
+        """Return evidence strings if provided."""
+
+        data = self._parse_json(completion)
+        evidence = data.get("evidence")
+        if evidence is None:
+            return []
+        if isinstance(evidence, Iterable) and not isinstance(evidence, (str, bytes)):
+            items: list[str] = []
+            for item in evidence:
+                if isinstance(item, str) and item.strip():
+                    items.append(item.strip())
+            return items
+        return []
+
+    def get_format_reward_func(self):  # type: ignore[override]
+        parser = self
+
+        def format_reward(completion: Any, **kwargs: Any) -> float:  # noqa: ANN401
+            data = parser._parse_json(completion)
+            if not data:
+                return 0.0
+
+            label = parser.parse_answer(completion)
+            if not label:
+                return 0.0
+
+            if "confidence" not in data:
+                return 0.0
+            try:
+                confidence_value = float(data["confidence"])
+            except (TypeError, ValueError):
+                return 0.0
+            if not 0.0 <= confidence_value <= 1.0:
+                return 0.0
+
+            if "evidence" in data:
+                evidence = parser.parse_evidence(completion)
+                if data["evidence"] not in ([], None) and not evidence:
+                    return 0.0
+
+            return 1.0
 
         return format_reward
 
 
-def reward_correct_classification(
-    completion,
-    answer: str = "",
-    parser: vf.Parser | None = None,
-    **kwargs,  # pylint: disable=unused-argument
-) -> float:
-    """Reward function that checks if the parsed classification matches the expected label.
+def _extract_email_text(example: dict[str, Any]) -> str:
+    return example.get("text") or example.get("email") or example.get("body") or example.get("content") or ""
 
-    Args:
-        completion: The model's response (predicted classification).
-        answer: The ground truth answer from the dataset.
-        parser: The parser instance to extract the classification.
-        **kwargs: Additional arguments (prompt, state, etc).
 
-    Returns:
-        1.0 if the prediction matches the ground truth, 0.0 otherwise.
-    """
-    # Extract the response text from completion
-    if isinstance(completion, list):
-        response = completion[-1]["content"] if completion else ""
-    else:
-        response = str(completion)
+def _normalize_label(raw_label: Any) -> str:
+    if isinstance(raw_label, int):
+        return "Phishing" if raw_label == 1 else "Legitimate"
+    if isinstance(raw_label, str):
+        lowered = raw_label.strip().lower()
+        if lowered in {"phishing", "spam", "malicious", "fraud"}:
+            return "Phishing"
+        if lowered == "abstain":
+            return "Abstain"
+    return "Legitimate"
 
-    # Use parser to extract classification if available
-    if parser:
-        predicted = parser.parse_answer(response)
-    else:
-        predicted = response.strip()
 
-    # Case-insensitive comparison
-    if not predicted or not answer:
-        return 0.0
-    return 1.0 if predicted.lower() == answer.strip().lower() else 0.0
+def _extract_phishing_indicators(
+    *,
+    email_text: str,
+    subject: str,
+    sender: str,
+) -> list[str]:
+    indicators: list[str] = []
+    lowered = email_text.lower()
+
+    indicators.extend(_URL_PATTERN.findall(email_text))
+
+    for keyword in _SUSPICIOUS_KEYWORDS:
+        if keyword in lowered:
+            indicators.append(keyword)
+
+    if sender and _is_suspicious_sender(sender):
+        indicators.append(sender)
+
+    if subject and any(term in subject.lower() for term in {"urgent", "action required", "verify"}):
+        indicators.append(subject)
+
+    # Deduplicate while preserving order.
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for item in indicators:
+        normalized = item.lower()
+        if normalized not in seen:
+            seen.add(normalized)
+            deduped.append(item)
+    return deduped
 
 
 def transform_dataset(raw_dataset: Dataset, max_examples: int | None) -> Dataset:
-    """Transform raw dataset to SingleTurnEnv format."""
+    """Transform raw phishing datasets into SingleTurnEnv format."""
 
-    def transform_example(example):
-        # Transform the phishing dataset into prompt format
-        # Expecting columns like 'text' or 'email' and 'label'
-        email_text = example.get("text") or example.get("email") or example.get("body", "")
+    def transform_example(example: dict[str, Any]) -> dict[str, Any]:
+        email_text = _extract_email_text(example)
         subject = example.get("subject", "")
         sender = example.get("sender", "")
 
-        # Construct the email prompt
-        if subject or sender:
-            prompt_parts = []
-            if sender:
-                prompt_parts.append(f"From: {sender}")
-            if subject:
-                prompt_parts.append(f"Subject: {subject}")
-            prompt_parts.append(f"\n{email_text}")
-            prompt_text = "\n".join(prompt_parts)
+        prompt_lines: list[str] = []
+        if sender:
+            prompt_lines.append(f"From: {sender}")
+        if subject:
+            prompt_lines.append(f"Subject: {subject}")
+        if prompt_lines:
+            prompt_lines.append("")
+            prompt_lines.append(email_text)
         else:
-            prompt_text = f"Email: {email_text}"
+            prompt_lines.append(f"Email: {email_text}")
+        prompt_text = "\n".join(prompt_lines)
 
-        # Map labels to standard format
-        label = example.get("label", "")
-        if isinstance(label, int):
-            # Binary classification: 0=legitimate, 1=phishing
-            label = "Phishing" if label == 1 else "Legitimate"
-        elif isinstance(label, str):
-            label_lower = label.lower()
-            if "phish" in label_lower or "spam" in label_lower or "malicious" in label_lower:
-                label = "Phishing"
-            else:
-                label = "Legitimate"
+        label = _normalize_label(example.get("label"))
+        indicators = _extract_phishing_indicators(
+            email_text=email_text,
+            subject=subject,
+            sender=sender,
+        )
 
         return {
-            "question": prompt_text,
+            "question": prompt_text.strip(),
             "answer": label,
+            "metadata": {"phishing_indicators": indicators},
         }
 
-    transformed = raw_dataset.map(transform_example)
+    transformed = raw_dataset.map(transform_example, remove_columns=raw_dataset.column_names)
 
     if max_examples and len(transformed) > max_examples:
         transformed = transformed.select(range(max_examples))
@@ -161,26 +240,102 @@ def transform_dataset(raw_dataset: Dataset, max_examples: int | None) -> Dataset
     return transformed
 
 
+def reward_phishing_asymmetric_cost(
+    *,
+    completion: Any,
+    answer: str,
+    parser: PhishingEmailParser,
+    **kwargs: Any,
+) -> float:
+    """Penalize missed phishing more than cautious behaviour."""
+
+    prediction = parser.parse_answer(completion)
+    if not prediction or not answer:
+        return 0.0
+
+    predicted = prediction.lower()
+    actual = answer.lower()
+
+    if predicted == actual:
+        return 1.0
+
+    if actual == "phishing":
+        if predicted == "legitimate":
+            return -1.0
+        if predicted == "abstain":
+            return 0.3
+        return -0.5
+
+    if actual == "legitimate":
+        if predicted == "phishing":
+            return -0.2
+        if predicted == "abstain":
+            return 0.5
+
+    if actual == "abstain":
+        if predicted == "phishing":
+            return 0.3
+        if predicted == "legitimate":
+            return 0.3
+
+    return 0.0
+
+
+def reward_evidence_alignment(
+    *,
+    completion: Any,
+    answer: str,
+    parser: PhishingEmailParser,
+    state: dict[str, Any] | None = None,
+    prompt: str | None = None,
+    **kwargs: Any,
+) -> float:
+    """Reward evidence that matches known phishing indicators."""
+
+    if answer.lower() != "phishing":
+        return 0.0
+
+    evidence = parser.parse_evidence(completion)
+    if not evidence:
+        return 0.0
+
+    indicators: list[str] = []
+    if state and isinstance(state, dict):
+        metadata = state.get("metadata")
+        if isinstance(metadata, dict):
+            raw_indicators = metadata.get("phishing_indicators", [])
+            if isinstance(raw_indicators, list):
+                indicators = [str(item).strip() for item in raw_indicators if str(item).strip()]
+
+    prompt_text = prompt or (state.get("question") if state else "") or ""
+    prompt_lower = prompt_text.lower()
+    indicator_lowers = [indicator.lower() for indicator in indicators]
+
+    matches = 0.0
+    for item in evidence:
+        normalized = item.strip()
+        lowered = normalized.lower()
+        if not lowered:
+            continue
+        for indicator_lower in indicator_lowers:
+            if lowered == indicator_lower or indicator_lower in lowered or lowered in indicator_lower:
+                matches += 1.0
+                break
+        else:
+            if lowered in prompt_lower:
+                matches += 0.5
+
+    return min(1.0, matches / len(evidence))
+
+
 def load_environment(
     dataset_name: str = "zefang-liu/phishing-email-dataset",
     max_examples: int = 1000,
     logger: RolloutLogger | None = None,
 ) -> vf.SingleTurnEnv:
-    """Load the Phishing Email Detection environment.
+    """Load the Phishing Email Detection environment."""
 
-    This environment is a single-turn classification task where the model
-    inspects an email and determines whether it is a phishing attempt or legitimate.
-
-    Args:
-        dataset_name: HuggingFace dataset name for phishing emails.
-        max_examples: Maximum number of examples to use from the dataset.
-        logger: Optional rollout logger for environment lifecycle events.
-
-    Returns:
-        A Verifiers SingleTurnEnv configured for the task.
-    """
     try:
-        # Load the dataset from HuggingFace
         dataset = load_dataset(dataset_name, split="train")
         assert isinstance(dataset, Dataset), "Loaded dataset is not of type Dataset"
         dataset = transform_dataset(dataset, max_examples)
@@ -190,29 +345,30 @@ def load_environment(
         ValueError,
         ImportError,
         AssertionError,
-    ) as e:
-        print(f"Failed to load dataset '{dataset_name}': {e}")
+    ) as exc:  # pragma: no cover - exercised via tests with monkeypatch
+        print(f"Failed to load dataset '{dataset_name}': {exc}")
         print("Falling back to a synthetic dataset.")
 
-        def _create_synthetic_dataset():
-            """Create a synthetic dataset for testing purposes."""
-            examples = []
-
-            # Generate synthetic phishing and legitimate emails
-            # pylint: disable=line-too-long
-            email_patterns = [
-                # Phishing examples
+        dataset = Dataset.from_list(
+            [
                 {
                     "question": (
                         "From: security@amaz0n-account.com\n"
                         "Subject: Urgent: Your Account Will Be Suspended!\n\n"
                         "Dear Customer,\n\n"
-                        "We detected suspicious activity on your account. Click here immediately to "
-                        "verify your identity: http://bit.ly/verify-acc0unt\n\n"
+                        "We detected suspicious activity on your account. Click here immediately to verify your identity: "
+                        "http://bit.ly/verify-acc0unt\n\n"
                         "If you don't act within 24 hours, your account will be permanently suspended.\n\n"
                         "Amazon Security Team"
                     ),
                     "answer": "Phishing",
+                    "metadata": {
+                        "phishing_indicators": [
+                            "security@amaz0n-account.com",
+                            "urgent",
+                            "http://bit.ly/verify-acc0unt",
+                        ]
+                    },
                 },
                 {
                     "question": (
@@ -222,6 +378,13 @@ def load_environment(
                         "Reply immediately or lose this opportunity!"
                     ),
                     "answer": "Phishing",
+                    "metadata": {
+                        "phishing_indicators": [
+                            "You've Won $1,000,000!!!",
+                            "Social Security Number",
+                            "bank account",
+                        ]
+                    },
                 },
                 {
                     "question": (
@@ -232,6 +395,13 @@ def load_environment(
                         "Failure to update will result in account lockout."
                     ),
                     "answer": "Phishing",
+                    "metadata": {
+                        "phishing_indicators": [
+                            "Password Expiration Notice",
+                            "http://suspicious-site.ru/password-reset",
+                            "account lockout",
+                        ]
+                    },
                 },
                 {
                     "question": (
@@ -242,17 +412,39 @@ def load_environment(
                         "Act fast to protect your funds!"
                     ),
                     "answer": "Phishing",
+                    "metadata": {
+                        "phishing_indicators": [
+                            "noreply@paypaI.com",
+                            "Suspicious Transaction Alert",
+                            "www.paypaI-security.tk/dispute",
+                        ]
+                    },
                 },
                 {
                     "question": (
                         "Subject: IRS Tax Refund - Action Required\n\n"
-                        "You have a pending tax refund of $3,458.00. To receive your refund, verify "
-                        "your information at: irs-refunds.website/claim\n\n"
+                        "You have a pending tax refund of $3,458.00. To receive your refund, verify your information at: "
+                        "irs-refunds.website/claim\n\n"
                         "This offer expires in 48 hours."
                     ),
                     "answer": "Phishing",
+                    "metadata": {
+                        "phishing_indicators": [
+                            "IRS Tax Refund - Action Required",
+                            "irs-refunds.website/claim",
+                            "expires in 48 hours",
+                        ]
+                    },
                 },
-                # Legitimate examples
+                {
+                    "question": (
+                        "From: threat-hunter@corpsec.io\n"
+                        "Subject: Credential harvesting simulation\n\n"
+                        "Security exercise: please forward any suspicious emails to phishing@corpsec.io."
+                    ),
+                    "answer": "Legitimate",
+                    "metadata": {"phishing_indicators": []},
+                },
                 {
                     "question": (
                         "From: notifications@github.com\n"
@@ -262,6 +454,7 @@ def load_environment(
                         "Happy coding!\nThe GitHub Team"
                     ),
                     "answer": "Legitimate",
+                    "metadata": {"phishing_indicators": []},
                 },
                 {
                     "question": (
@@ -272,6 +465,7 @@ def load_environment(
                         "Time: 2:00 PM - 3:00 PM EST"
                     ),
                     "answer": "Legitimate",
+                    "metadata": {"phishing_indicators": []},
                 },
                 {
                     "question": (
@@ -283,6 +477,7 @@ def load_environment(
                         "LinkedIn Corporation"
                     ),
                     "answer": "Legitimate",
+                    "metadata": {"phishing_indicators": []},
                 },
                 {
                     "question": (
@@ -294,6 +489,7 @@ def load_environment(
                         "Thank you for riding with Uber!"
                     ),
                     "answer": "Legitimate",
+                    "metadata": {"phishing_indicators": []},
                 },
                 {
                     "question": (
@@ -304,24 +500,33 @@ def load_environment(
                         "Questions? Contact your workspace admin."
                     ),
                     "answer": "Legitimate",
+                    "metadata": {"phishing_indicators": []},
+                },
+                {
+                    "question": (
+                        "From: peopleops@company.com\n"
+                        "Subject: Benefits enrollment window\n\n"
+                        "Reminder: benefits enrollment is open until Friday. Visit the HR portal to review your selections."
+                    ),
+                    "answer": "Legitimate",
+                    "metadata": {"phishing_indicators": []},
                 },
             ]
-            # pylint: enable=line-too-long
-
-            examples.extend(email_patterns)
-            return Dataset.from_list(examples)
-
-        dataset = _create_synthetic_dataset()
+        )
         dataset_name = f"synthetic::{dataset_name}"
 
     parser = PhishingEmailParser()
 
     rubric = vf.Rubric(
         funcs=[
-            reward_correct_classification,
+            reward_accuracy,
             parser.get_format_reward_func(),
+            reward_calibration,
+            reward_phishing_asymmetric_cost,
+            reward_evidence_alignment,
         ],
-        weights=[1.0, 0.2],  # Classification accuracy is primary, format is secondary
+        weights=[1.0, 0.2, 0.2, 0.4, 0.2],
+        parser=parser,
     )
 
     if logger and logger.enabled:
@@ -334,13 +539,13 @@ def load_environment(
 
     return vf.SingleTurnEnv(
         name="sv-env-phishing-detection",
-        description="Classify emails as 'Phishing' or 'Legitimate'.",
+        description="Detect phishing emails with calibrated confidence and supporting evidence.",
         dataset=dataset,
         parser=parser,
         rubric=rubric,
         system_prompt=(
-            "You are an email security analyst. Analyze the provided email and classify it as either "
-            "'Phishing' or 'Legitimate'. Look for signs of deception, suspicious URLs, urgent language, "
-            "and requests for sensitive information. Respond with only the classification label."
+            "You are an email security analyst. Review the message and respond with a JSON object containing a "
+            "'label' (Phishing, Legitimate, or Abstain), a 'confidence' value between 0 and 1, and optional "
+            "'evidence' strings referencing indicators in the email."
         ),
     )

@@ -18,14 +18,11 @@ See [EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md) for the high-level vision and [
 - **`sv-env-network-logs`**: Network log anomaly detection with calibration and abstention using shared parsers and reward helpers
 - **`sv-env-config-verification`**: Tool-grounded configuration auditing using OPA/Rego, KubeLinter, and Semgrep with patch-aware rewards
 
-### In Development (Work in Progress)
+### Alpha / Preview Releases
 
 - **`sv-env-phishing-detection`**: Phishing detection with evidence-seeking and calibrated abstention
 - **`sv-env-code-vulnerability`**: Vulnerability repair with patch-and-test loops
 - **`sv-env-redteam-attack`**: Red-team attack simulator for eliciting unsafe outputs
-
-### Alpha / Preview Releases
-
 - **`sv-env-redteam-defense`**: Adversarial alignment defender balancing helpfulness and harmlessness ([docs](docs/sv-env-redteam-defense.md))
 
 ## Repository Structure
@@ -46,7 +43,7 @@ See [EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md) for the high-level vision and [
 make eval-e1 MODELS="gpt-5-mini,gpt-4.1-mini" N=10
 ```
 
-Artifacts: outputs/evals/sv-env-network-logs--<model>/<run_id>/{metadata.json,results.jsonl}
+Artifacts: outputs/evals/sv-env-network-logs--{model}/<run_id>/{metadata.json,results.jsonl}
 
 - E2 (config-verification):
 
@@ -54,7 +51,7 @@ Artifacts: outputs/evals/sv-env-network-logs--<model>/<run_id>/{metadata.json,re
 make eval-e2 MODELS="gpt-5-mini,gpt-4.1-mini,gpt-4o-mini" N=2 INCLUDE_TOOLS=true
 ```
 
-Artifacts: outputs/evals/sv-env-config-verification--<model>/<run_id>/{metadata.json,results.jsonl}
+Artifacts: outputs/evals/sv-env-config-verification--{model}/<run_id>/{metadata.json,results.jsonl}
 
 ### Prerequisites
 
