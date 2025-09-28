@@ -481,7 +481,14 @@ class RedTeamAttackEnv(vf.MultiTurnEnv):
             key = self._prompt_key(prompt)
             if key in self._prompt_lookup:
                 return self._prompt_lookup[key]
-        raise KeyError("Unable to resolve scenario for state")
+        raise KeyError(
+            f"Unable to resolve scenario for state. "
+            f"State: {state!r}, Example: {example!r}. "
+            f"Expected one of: "
+            f"example as Scenario, example as dict with 'id', "
+            f"state with 'scenario_id' in {list(self._scenario_by_id.keys())}, "
+            f"or state with a 'prompt' matching known prompts."
+        )
 
     @staticmethod
     def _novelty_delta(
