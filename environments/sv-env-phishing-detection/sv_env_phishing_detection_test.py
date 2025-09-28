@@ -19,11 +19,13 @@ from sv_shared.rewards import reward_accuracy, reward_calibration
 
 
 # Reward constants for asymmetric cost function
-HEAVY_PENALTY_FALSE_NEGATIVE = -1.0  # Predicting "Legitimate" when answer is "Phishing"
-REWARD_TRUE_POSITIVE = 1.0  # Correctly predicting "Phishing"
-PARTIAL_REWARD_ABSTAIN_ON_PHISHING = 0.3  # Abstaining when answer is "Phishing"
-PENALTY_FALSE_POSITIVE = -0.2  # Predicting "Phishing" when answer is "Legitimate"
-PARTIAL_REWARD_ABSTAIN_ON_LEGITIMATE = 0.5  # Abstaining when answer is "Legitimate"
+from sv_env_phishing_detection import (
+    HEAVY_PENALTY_FALSE_NEGATIVE,
+    REWARD_TRUE_POSITIVE,
+    PARTIAL_REWARD_ABSTAIN_ON_PHISHING,
+    PENALTY_FALSE_POSITIVE,
+    PARTIAL_REWARD_ABSTAIN_ON_LEGITIMATE,
+)
 
 
 class TestPhishingEmailParser:
