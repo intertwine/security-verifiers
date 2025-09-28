@@ -23,7 +23,10 @@ See [EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md) for the high-level vision and [
 - **`sv-env-phishing-detection`**: Phishing detection with evidence-seeking and calibrated abstention
 - **`sv-env-code-vulnerability`**: Vulnerability repair with patch-and-test loops
 - **`sv-env-redteam-attack`**: Red-team attack simulator for eliciting unsafe outputs
-- **`sv-env-redteam-defense`**: Adversarial alignment defender balancing helpfulness and harmlessness
+
+### Alpha / Preview Releases
+
+- **`sv-env-redteam-defense`**: Adversarial alignment defender balancing helpfulness and harmlessness ([docs](docs/sv-env-redteam-defense.md))
 
 ## Repository Structure
 
@@ -158,7 +161,7 @@ uv run pre-commit run --all-files
 | `sv-env-config-verification` | ToolEnv       | Machine-verified fixes with patch verification | OPA/Rego/KubeLinter/Semgrep ground truth  |
 | `sv-env-code-vulnerability`  | MultiTurnEnv  | Test-passing, minimal diffs                    | Executable verification loop              |
 | `sv-env-redteam-attack`      | MultiTurnEnv  | Unsafe elicitation success                     | Llama Guard 3 safety scoring              |
-| `sv-env-redteam-defense`     | MultiTurnEnv  | Helpful/harmless balance                       | Co-training with attacker agent           |
+| `sv-env-redteam-defense`     | SingleTurnEnv (alpha) | Helpful/harmless balance                       | Co-training with attacker agent           |
 
 ## Shared Toolbox
 
