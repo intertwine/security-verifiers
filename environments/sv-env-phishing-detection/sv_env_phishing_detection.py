@@ -20,8 +20,17 @@ from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
 )
 from sv_shared.rewards import reward_accuracy, reward_calibration  # type: ignore  # pylint: disable=wrong-import-position
 
-
-_URL_PATTERN = re.compile(r"https?://[^\s>]+", re.IGNORECASE)
+_URL_PATTERN = re.compile(
+    r"https?://[^\s<>\"'()[\]{}]+(?:\([^\s<>\"'()[\]{}]*\))?[^\s<>\"'()[\]{}.,;:!?]*",
+    re.IGNORECASE,
+)
+_SUSPICIOUS_SENDER_CHARACTER_HINTS = frozenset({"0", "1", "-"})
+_SUSPICIOUS_SENDER_TOKENS = (
+    "amaz0n",
+    "paypai",
+    "support",
+    "alert",
+)
 _SUSPICIOUS_KEYWORDS = {
     "verify",
     "reset",
@@ -36,6 +45,20 @@ _SUSPICIOUS_KEYWORDS = {
     "wire",
     "bitcoin",
 }
+
+
+def _is_suspicious_sender(
+    sender: str,
+    *,
+    character_hints: Iterable[str] = _SUSPICIOUS_SENDER_CHARACTER_HINTS,
+    tokens: Iterable[str] = _SUSPICIOUS_SENDER_TOKENS,
+) -> bool:
+    """Return True when the sender string matches phishing-style patterns."""
+
+    lowered = sender.lower()
+    if not any(hint in lowered for hint in character_hints):
+        return False
+    return any(token in lowered for token in tokens)
 
 
 class PhishingEmailParser(JsonClassificationParser):
@@ -131,10 +154,8 @@ def _extract_phishing_indicators(
         if keyword in lowered:
             indicators.append(keyword)
 
-    if sender and any(char in sender for char in {"0", "1", "-", "@"}):
-        suspicious_sender = sender.lower()
-        if any(token in suspicious_sender for token in {"amaz0n", "paypai", "support", "alert"}):
-            indicators.append(sender)
+    if sender and _is_suspicious_sender(sender):
+        indicators.append(sender)
 
     if subject and any(term in subject.lower() for term in {"urgent", "action required", "verify"}):
         indicators.append(subject)
@@ -260,20 +281,21 @@ def reward_evidence_alignment(
 
     prompt_text = prompt or (state.get("question") if state else "") or ""
     prompt_lower = prompt_text.lower()
+    indicator_lowers = [indicator.lower() for indicator in indicators]
 
     matches = 0.0
     for item in evidence:
-        normalized = item.strip().lower()
-        if not normalized:
+        normalized = item.strip()
+        lowered = normalized.lower()
+        if not lowered:
             continue
-        if any(
-            normalized == indicator.lower() or indicator.lower() in normalized or normalized in indicator.lower()
-            for indicator in indicators
-        ):
-            matches += 1.0
-            continue
-        if normalized in prompt_lower:
-            matches += 0.5
+        for indicator_lower in indicator_lowers:
+            if lowered == indicator_lower or indicator_lower in lowered or lowered in indicator_lower:
+                matches += 1.0
+                break
+        else:
+            if lowered in prompt_lower:
+                matches += 0.5
 
     return min(1.0, matches / len(evidence))
 

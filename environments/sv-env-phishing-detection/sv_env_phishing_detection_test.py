@@ -18,6 +18,14 @@ from sv_env_phishing_detection import (
 from sv_shared.rewards import reward_accuracy, reward_calibration
 
 
+# Reward constants for asymmetric cost function
+HEAVY_PENALTY_FALSE_NEGATIVE = -1.0  # Predicting "Legitimate" when answer is "Phishing"
+REWARD_TRUE_POSITIVE = 1.0  # Correctly predicting "Phishing"
+PARTIAL_REWARD_ABSTAIN_ON_PHISHING = 0.3  # Abstaining when answer is "Phishing"
+PENALTY_FALSE_POSITIVE = -0.2  # Predicting "Phishing" when answer is "Legitimate"
+PARTIAL_REWARD_ABSTAIN_ON_LEGITIMATE = 0.5  # Abstaining when answer is "Legitimate"
+
+
 class TestPhishingEmailParser:
     """Test cases for the JSON phishing parser."""
 
@@ -97,11 +105,11 @@ def test_reward_calibration(completion: str, answer: str, expected: float) -> No
 @pytest.mark.parametrize(
     "completion, answer, expected",
     [
-        ('{"label": "Legitimate", "confidence": 0.4}', "Phishing", -1.0),
-        ('{"label": "Phishing", "confidence": 0.6}', "Phishing", 1.0),
-        ('{"label": "Abstain", "confidence": 0.4}', "Phishing", 0.3),
-        ('{"label": "Phishing", "confidence": 0.9}', "Legitimate", -0.2),
-        ('{"label": "Abstain", "confidence": 0.5}', "Legitimate", 0.5),
+        ('{"label": "Legitimate", "confidence": 0.4}', "Phishing", HEAVY_PENALTY_FALSE_NEGATIVE),
+        ('{"label": "Phishing", "confidence": 0.6}', "Phishing", REWARD_TRUE_POSITIVE),
+        ('{"label": "Abstain", "confidence": 0.4}', "Phishing", PARTIAL_REWARD_ABSTAIN_ON_PHISHING),
+        ('{"label": "Phishing", "confidence": 0.9}', "Legitimate", PENALTY_FALSE_POSITIVE),
+        ('{"label": "Abstain", "confidence": 0.5}', "Legitimate", PARTIAL_REWARD_ABSTAIN_ON_LEGITIMATE),
     ],
 )
 def test_reward_asymmetric_cost(completion: str, answer: str, expected: float) -> None:
