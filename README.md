@@ -22,7 +22,7 @@ See [EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md) for the high-level vision and [
 
 - **`sv-env-phishing-detection`**: Phishing detection with evidence-seeking and calibrated abstention
 - **`sv-env-code-vulnerability`**: Vulnerability repair with patch-and-test loops
-- **`sv-env-redteam-attack`**: Red-team attack simulator for eliciting unsafe outputs
+- **`sv-env-redteam-attack`**: Multi-turn jailbreak simulator with heuristic guardrail modelling
 - **`sv-env-redteam-defense`**: Adversarial alignment defender balancing helpfulness and harmlessness
 
 ## Repository Structure
