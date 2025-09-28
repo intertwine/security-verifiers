@@ -1,255 +1,282 @@
 """Tests for the phishing detection environment."""
 
+from __future__ import annotations
+
 from unittest.mock import patch
 
 import pytest
 import verifiers as vf
 from datasets import Dataset
+
 from sv_env_phishing_detection import (
     PhishingEmailParser,
     load_environment,
-    reward_correct_classification,
+    reward_evidence_alignment,
+    reward_phishing_asymmetric_cost,
     transform_dataset,
 )
+from sv_shared.rewards import reward_accuracy, reward_calibration
 
 
-@pytest.mark.parametrize(
-    "completion, answer, expected_reward",
-    [
-        ("Phishing", "Phishing", 1.0),
-        ("Legitimate", "Legitimate", 1.0),
-        ("Phishing", "Legitimate", 0.0),
-        ("Legitimate", "Phishing", 0.0),
-        ("  phishing  ", "Phishing", 1.0),
-        ("legitimate\n", "Legitimate", 1.0),
-    ],
+# Reward constants for asymmetric cost function
+from sv_env_phishing_detection import (
+    HEAVY_PENALTY_FALSE_NEGATIVE,
+    REWARD_TRUE_POSITIVE,
+    PARTIAL_REWARD_ABSTAIN_ON_PHISHING,
+    PENALTY_FALSE_POSITIVE,
+    PARTIAL_REWARD_ABSTAIN_ON_LEGITIMATE,
 )
-def test_correct_classification(completion, answer, expected_reward):
-    """Test the reward function for exact label matching."""
-    parser = PhishingEmailParser()
-    reward = reward_correct_classification(completion, answer, parser=parser)
-    assert reward == expected_reward
 
 
 class TestPhishingEmailParser:
-    """Test cases for PhishingEmailParser class."""
+    """Test cases for the JSON phishing parser."""
 
-    def test_parse_answer_phishing(self):
-        """Test parsing phishing responses."""
+    def test_parse_answer_and_confidence(self) -> None:
+        """Parser should normalize labels and extract confidence."""
         parser = PhishingEmailParser()
-        assert parser.parse_answer("Phishing") == "Phishing"
-        assert parser.parse_answer("phishing") == "Phishing"
-        assert parser.parse_answer("  PHISHING  ") == "Phishing"
-        assert parser.parse_answer("This is a phishing email") == "Phishing"
+        completion = '{"label": "phishing", "confidence": 0.87}'
+        assert parser.parse_answer(completion) == "Phishing"
+        assert parser.parse_confidence(completion) == pytest.approx(0.87)
 
-    def test_parse_answer_legitimate(self):
-        """Test parsing legitimate responses."""
+    def test_parse_evidence(self) -> None:
+        """Evidence should be extracted as a list of strings."""
         parser = PhishingEmailParser()
-        assert parser.parse_answer("Legitimate") == "Legitimate"
-        assert parser.parse_answer("legitimate") == "Legitimate"
-        assert parser.parse_answer("  LEGITIMATE  ") == "Legitimate"
-        assert parser.parse_answer("This looks legitimate to me") == "Legitimate"
-        assert parser.parse_answer("It's safe") == "Legitimate"
-        assert parser.parse_answer("not phishing") == "Legitimate"
+        completion = '{"label": "Legitimate", "confidence": 0.55, "evidence": ["trusted-sender.com", "dkim-pass"]}'
+        assert parser.parse_evidence(completion) == ["trusted-sender.com", "dkim-pass"]
 
-    def test_parse_answer_unknown(self):
-        """Test parsing unknown responses."""
+    def test_parse_invalid_payload(self) -> None:
+        """Invalid payloads should return empty values."""
         parser = PhishingEmailParser()
-        assert parser.parse_answer("Unknown") == "Unknown"
-        assert parser.parse_answer("  Unclear  ") == "Unclear"
-        assert parser.parse_answer("") == ""
+        assert parser.parse_answer("not json") == ""
+        assert parser.parse_confidence("not json") == 0.0
+        assert parser.parse_evidence("not json") == []
 
-    def test_format_reward_perfect(self):
-        """Test format reward for perfect responses."""
+    def test_format_reward(self) -> None:
+        """Well-formed JSON outputs receive format credit."""
         parser = PhishingEmailParser()
         format_func = parser.get_format_reward_func()
 
-        assert format_func("Phishing") == 1.0
-        assert format_func("Legitimate") == 1.0
-        assert format_func("phishing") == 1.0
-        assert format_func("legitimate") == 1.0
+        assert format_func('{"label": "Phishing", "confidence": 1.0}') == 1.0
+        assert (
+            format_func(
+                [
+                    {
+                        "role": "assistant",
+                        "content": '{"label": "Abstain", "confidence": 0.4, "evidence": ["needs-manual-review"]}',
+                    }
+                ]
+            )
+            == 1.0
+        )
 
-    def test_format_reward_partial(self):
-        """Test format reward for partial responses."""
-        parser = PhishingEmailParser()
-        format_func = parser.get_format_reward_func()
-
-        assert format_func("This is phishing") == 0.5
-        assert format_func("Looks legitimate to me") == 0.5
-        assert format_func("I think it's a phishing attempt") == 0.5
-
-    def test_format_reward_poor(self):
-        """Test format reward for poor responses."""
-        parser = PhishingEmailParser()
-        format_func = parser.get_format_reward_func()
-
-        assert format_func("Unknown") == 0.0
-        assert format_func("I don't know") == 0.0
-        assert format_func("") == 0.0
-        assert format_func("Suspicious") == 0.0
-
-    def test_format_reward_list_completion(self):
-        """Test format reward with list-style completion."""
-        parser = PhishingEmailParser()
-        format_func = parser.get_format_reward_func()
-
-        completion = [{"role": "assistant", "content": "Phishing"}]
-        assert format_func(completion) == 1.0
-
-        completion = [{"role": "assistant", "content": "This is phishing"}]
-        assert format_func(completion) == 0.5
+        # Missing or malformed fields earn no reward
+        assert format_func('{"label": "Unknown"}') == 0.0
+        assert format_func('{"label": "Phishing", "confidence": 2}') == 0.0
+        assert format_func('{"label": "Legitimate", "confidence": 0.3, "evidence": "string"}') == 0.0
 
 
-def test_reward_correct_classification_edge_cases():
-    """Test reward function edge cases."""
+@pytest.mark.parametrize(
+    "completion, answer, expected",
+    [
+        ('{"label": "Phishing", "confidence": 0.9}', "Phishing", 1.0),
+        ('{"label": "Legitimate", "confidence": 0.7}', "Phishing", 0.0),
+        ('{"label": "Abstain", "confidence": 0.2}', "Legitimate", 0.0),
+    ],
+)
+def test_reward_accuracy(completion: str, answer: str, expected: float) -> None:
+    """Classification reward uses parsed labels."""
     parser = PhishingEmailParser()
-
-    # Test with no parser
-    assert reward_correct_classification("Phishing", "Phishing") == 1.0
-    assert reward_correct_classification("Legitimate", "Phishing") == 0.0
-
-    # Test with empty inputs
-    assert reward_correct_classification("", "Phishing", parser=parser) == 0.0
-    assert reward_correct_classification("Phishing", "", parser=parser) == 0.0
-
-    # Test with list completion
-    completion = [{"role": "assistant", "content": "Phishing"}]
-    assert reward_correct_classification(completion, "Phishing", parser=parser) == 1.0
-
-    # Test with empty list
-    assert reward_correct_classification([], "Phishing", parser=parser) == 0.0
+    assert reward_accuracy(completion=completion, answer=answer, parser=parser) == expected
 
 
-def test_transform_dataset():
-    """Test the dataset transformation logic."""
-    # Test with integer labels
-    raw_data_int = [
-        {
-            "text": "Click here to verify your account: http://phishing-site.com",
-            "subject": "Account Verification Required",
-            "sender": "security@fake-bank.com",
-            "label": 1,  # Binary: 1 = phishing
-        },
-        {
-            "text": "Meeting scheduled for tomorrow at 2 PM.",
-            "subject": "Meeting Reminder",
-            "sender": "boss@company.com",
-            "label": 0,  # Binary: 0 = legitimate
-        },
-    ]
-    raw_dataset_int = Dataset.from_list(raw_data_int)
-    transformed_int = transform_dataset(raw_dataset_int, max_examples=None)
-
-    # Test with string labels
-    raw_data_str = [
-        {
-            "email": "Your package has been delivered.",
-            "label": "legitimate",  # String label
-        },
-        {
-            "body": "Win $1000000 now! Click here!",
-            "label": "spam",  # String label mapped to phishing
-        },
-    ]
-    raw_dataset_str = Dataset.from_list(raw_data_str)
-    transformed_str = transform_dataset(raw_dataset_str, max_examples=None)
-
-    # Test integer labels
-    assert len(transformed_int) == 2
-    assert "question" in transformed_int.column_names
-    assert "answer" in transformed_int.column_names
-    assert transformed_int[0]["answer"] == "Phishing"
-    assert transformed_int[1]["answer"] == "Legitimate"
-    assert "From: security@fake-bank.com" in transformed_int[0]["question"]
-    assert "Subject: Account Verification Required" in transformed_int[0]["question"]
-
-    # Test string labels
-    assert len(transformed_str) == 2
-    assert transformed_str[0]["answer"] == "Legitimate"
-    assert transformed_str[1]["answer"] == "Phishing"
+@pytest.mark.parametrize(
+    "completion, answer, expected",
+    [
+        ('{"label": "Phishing", "confidence": 0.95}', "Phishing", pytest.approx(0.95)),
+        ('{"label": "Phishing", "confidence": 0.1}', "Phishing", pytest.approx(0.1)),
+        ('{"label": "Legitimate", "confidence": 0.8}', "Phishing", pytest.approx(0.2)),
+        ('{"label": "Abstain", "confidence": 0.3}', "Legitimate", pytest.approx(0.7)),
+    ],
+)
+def test_reward_calibration(completion: str, answer: str, expected: float) -> None:
+    """Calibration reward reflects probability error."""
+    parser = PhishingEmailParser()
+    assert reward_calibration(completion=completion, answer=answer, parser=parser) == expected
 
 
-def test_transform_dataset_with_max_examples():
-    """Test dataset transformation with max_examples limit."""
-    raw_data = [
-        {"text": "Email 1", "label": 0},
-        {"text": "Email 2", "label": 1},
-        {"text": "Email 3", "label": 0},
-    ]
-    raw_dataset = Dataset.from_list(raw_data)
+@pytest.mark.parametrize(
+    "completion, answer, expected",
+    [
+        ('{"label": "Legitimate", "confidence": 0.4}', "Phishing", HEAVY_PENALTY_FALSE_NEGATIVE),
+        ('{"label": "Phishing", "confidence": 0.6}', "Phishing", REWARD_TRUE_POSITIVE),
+        ('{"label": "Abstain", "confidence": 0.4}', "Phishing", PARTIAL_REWARD_ABSTAIN_ON_PHISHING),
+        ('{"label": "Phishing", "confidence": 0.9}', "Legitimate", PENALTY_FALSE_POSITIVE),
+        ('{"label": "Abstain", "confidence": 0.5}', "Legitimate", PARTIAL_REWARD_ABSTAIN_ON_LEGITIMATE),
+    ],
+)
+def test_reward_asymmetric_cost(completion: str, answer: str, expected: float) -> None:
+    """False negatives are heavily penalized."""
+    parser = PhishingEmailParser()
+    assert reward_phishing_asymmetric_cost(completion=completion, answer=answer, parser=parser) == expected
 
-    transformed = transform_dataset(raw_dataset, max_examples=2)
 
-    assert len(transformed) == 2
-    assert transformed[0]["answer"] == "Legitimate"
-    assert transformed[1]["answer"] == "Phishing"
+def test_reward_evidence_alignment() -> None:
+    """Evidence reward matches indicators in state metadata or prompt text."""
+    parser = PhishingEmailParser()
+    completion = '{"label": "Phishing", "confidence": 0.8, "evidence": ["http://bad.example", "credential-request"]}'
+    state = {
+        "metadata": {"phishing_indicators": ["http://bad.example", "credential-request", "spoofed-domain"]},
+        "question": "From: attacker@example.com\n\nVisit http://bad.example and provide credentials.",
+    }
+
+    score = reward_evidence_alignment(
+        completion=completion,
+        answer="Phishing",
+        parser=parser,
+        state=state,
+        prompt=state["question"],
+    )
+
+    assert score == pytest.approx(1.0)
+
+    # When evidence does not match the indicators, the reward collapses
+    bad_completion = '{"label": "Phishing", "confidence": 0.8, "evidence": ["generic"]}'
+    assert (
+        reward_evidence_alignment(
+            completion=bad_completion,
+            answer="Phishing",
+            parser=parser,
+            state=state,
+            prompt=state["question"],
+        )
+        == 0.0
+    )
+
+
+def test_transform_dataset_builds_metadata() -> None:
+    """Dataset transformation constructs prompts and phishing indicators."""
+    raw_dataset = Dataset.from_list(
+        [
+            {
+                "text": "Click here to reset your password: http://evil.example/reset",
+                "subject": "Reset Required",
+                "sender": "it-support@example.com",
+                "label": 1,
+            },
+            {
+                "body": "Lunch menu attached.",
+                "subject": "Lunch",
+                "sender": "cafeteria@corp.com",
+                "label": 0,
+            },
+        ]
+    )
+
+    transformed = transform_dataset(raw_dataset, max_examples=None)
+
+    assert transformed.column_names == ["question", "answer", "metadata"]
+    phishing_entry = transformed[0]
+    assert phishing_entry["answer"] == "Phishing"
+    assert "From: it-support@example.com" in phishing_entry["question"]
+    assert "Subject: Reset Required" in phishing_entry["question"]
+    assert "http://evil.example/reset" in phishing_entry["question"]
+    assert "phishing_indicators" in phishing_entry["metadata"]
+    assert "http://evil.example/reset" in phishing_entry["metadata"]["phishing_indicators"]
+
+    legitimate_entry = transformed[1]
+    assert legitimate_entry["answer"] == "Legitimate"
+    assert legitimate_entry["metadata"]["phishing_indicators"] == []
+
+
+def test_transform_dataset_respects_max_examples() -> None:
+    """The transformation honors the provided max_examples limit."""
+    raw_dataset = Dataset.from_list([{"text": f"Email {idx}", "label": idx % 2} for idx in range(5)])
+
+    transformed = transform_dataset(raw_dataset, max_examples=3)
+
+    assert len(transformed) == 3
 
 
 @patch("sv_env_phishing_detection.load_dataset")
-def test_load_environment_successful_download(mock_load_dataset):
-    """Test loading the environment with a mocked successful dataset download."""
-    # Mock the dataset returned by load_dataset
-    mock_data = [
-        {
-            "text": "Verify your account now!",
-            "label": 1,
-        }
-    ]
-    mock_dataset = Dataset.from_list(mock_data)
+def test_load_environment_successful_download(mock_load_dataset) -> None:
+    """When the dataset loads, the environment keeps the first N examples."""
+
+    mock_dataset = Dataset.from_list(
+        [
+            {"text": "Suspicious link http://phish.local", "label": 1},
+            {"text": "Quarterly update", "label": 0},
+        ]
+    )
     mock_load_dataset.return_value = mock_dataset
 
-    env = load_environment()
+    env = load_environment(max_examples=1)
 
     assert isinstance(env, vf.SingleTurnEnv)
     assert env.dataset is not None
     assert len(env.dataset) == 1
     mock_load_dataset.assert_called_once_with("zefang-liu/phishing-email-dataset", split="train")
+    assert env.dataset[0]["answer"] in {"Phishing", "Legitimate"}
 
 
 @patch("sv_env_phishing_detection.load_dataset")
-def test_load_environment_download_fails(mock_load_dataset):
-    """Test loading the environment when the dataset download fails."""
-    # Configure the mock to raise an exception
-    mock_load_dataset.side_effect = ConnectionError("Download failed")
+def test_load_environment_fallback(mock_load_dataset) -> None:
+    """Dataset failures produce the deterministic synthetic corpus."""
 
+    mock_load_dataset.side_effect = ConnectionError("boom")
     env = load_environment()
 
     assert isinstance(env, vf.SingleTurnEnv)
     assert env.dataset is not None
-    # Check that it falls back to the synthetic dataset
-    assert len(env.dataset) == 10
-    # The synthetic dataset has 5 phishing, then 5 legitimate examples
-    assert env.dataset[0]["answer"] == "Phishing"
-    assert env.dataset[5]["answer"] == "Legitimate"
+    assert len(env.dataset) == 12
+    assert env.dataset[0]["metadata"]["phishing_indicators"]
+    assert env.dataset[-1]["answer"] == "Legitimate"
 
 
 @patch("sv_env_phishing_detection.load_dataset")
-def test_load_environment_various_exceptions(mock_load_dataset):
-    """Test loading environment with different exception types."""
-    # Test with different exception types that should trigger fallback
-    exceptions = [
-        FileNotFoundError("File not found"),
-        ValueError("Invalid value"),
-        ImportError("Import failed"),
-        AssertionError("Assertion failed"),
-    ]
+def test_load_environment_various_exceptions(mock_load_dataset) -> None:
+    """Different failure modes also use the synthetic dataset."""
 
-    for exception in exceptions:
-        mock_load_dataset.side_effect = exception
+    for exc in (
+        FileNotFoundError("missing"),
+        ValueError("bad"),
+        ImportError("import"),
+        AssertionError("assert"),
+    ):
+        mock_load_dataset.side_effect = exc
         env = load_environment()
         assert isinstance(env, vf.SingleTurnEnv)
-        assert env.dataset is not None and len(env.dataset) == 10  # Synthetic dataset
+        assert env.dataset is not None
+        assert len(env.dataset) == 12
 
 
-def test_load_environment_custom_parameters():
-    """Test load_environment with custom parameters."""
+def test_load_environment_custom_dataset() -> None:
+    """Custom parameters are forwarded to the dataset loader."""
+
     with patch("sv_env_phishing_detection.load_dataset") as mock_load_dataset:
-        mock_data = [{"text": "test email", "label": 1}] * 5
-        mock_dataset = Dataset.from_list(mock_data)
+        mock_dataset = Dataset.from_list(
+            [
+                {"text": "Please review the invoice", "label": 0},
+                {"text": "Suspicious login", "label": 1},
+            ]
+        )
         mock_load_dataset.return_value = mock_dataset
 
-        env = load_environment(dataset_name="custom/dataset", max_examples=3)
+        env = load_environment(dataset_name="custom/dataset", max_examples=2)
 
         assert isinstance(env, vf.SingleTurnEnv)
-        assert env.dataset is not None and len(env.dataset) == 3  # Limited by max_examples
+        assert env.dataset is not None
+        assert len(env.dataset) == 2
         mock_load_dataset.assert_called_once_with("custom/dataset", split="train")
+
+
+def test_environment_rubric_configuration() -> None:
+    """The rubric combines accuracy, format, calibration, cost, and evidence rewards."""
+    with patch("sv_env_phishing_detection.load_dataset") as mock_load_dataset:
+        mock_dataset = Dataset.from_list([{"text": "hi", "label": 0}])
+        mock_load_dataset.return_value = mock_dataset
+
+        env = load_environment(max_examples=1)
+
+    assert env.rubric is not None
+    assert len(env.rubric.reward_funcs) == 5
+    assert env.rubric.reward_weights == [1.0, 0.2, 0.2, 0.4, 0.2]
