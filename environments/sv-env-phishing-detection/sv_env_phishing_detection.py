@@ -20,10 +20,28 @@ from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
 )
 from sv_shared.rewards import reward_accuracy, reward_calibration  # type: ignore  # pylint: disable=wrong-import-position
 
-_URL_PATTERN = re.compile(
-    r"https?://[^\s<>\"'()[\]{}]+(?:\([^\s<>\"'()[\]{}]*\))?[^\s<>\"'()[\]{}.,;:!?]*",
-    re.IGNORECASE,
-)
+def _get_url_pattern():
+    """
+    Return a compiled regex pattern for detecting URLs in text.
+
+    The pattern matches:
+        - URLs starting with http:// or https://
+        - Followed by one or more non-whitespace, non-delimiter characters
+        - Optionally, a parenthesized section (e.g., for URLs with parentheses)
+        - Excludes trailing punctuation and whitespace
+
+    Regex breakdown:
+        r"https?://"                # Match 'http://' or 'https://'
+        r"[^\s<>\"'()[\]{}]+"       # One or more characters that are not whitespace or common delimiters
+        r"(?:\([^\s<>\"'()[\]{}]*\))?" # Optionally, a parenthesized section (e.g., for URLs with parentheses)
+        r"[^\s<>\"'()[\]{}.,;:!?]*" # Optionally, more non-delimiter characters, excluding trailing punctuation
+    """
+    return re.compile(
+        r"https?://[^\s<>\"'()[\]{}]+(?:\([^\s<>\"'()[\]{}]*\))?[^\s<>\"'()[\]{}.,;:!?]*",
+        re.IGNORECASE,
+    )
+
+_URL_PATTERN = _get_url_pattern()
 _SUSPICIOUS_SENDER_CHARACTER_HINTS = frozenset({"0", "1", "-"})
 _SUSPICIOUS_SENDER_TOKENS = (
     "amaz0n",
