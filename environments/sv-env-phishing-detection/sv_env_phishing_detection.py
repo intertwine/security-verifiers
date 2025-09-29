@@ -8,11 +8,14 @@ import re
 import sys
 from typing import Any
 
-import verifiers as vf
-from datasets import Dataset, load_dataset
-
 # Enable importing shared components when running from source.
 sys.path.append(str(Path(__file__).resolve().parents[2]))
+
+# Initialize Weave before importing verifiers for automatic tracing
+from sv_shared import weave_init  # type: ignore  # noqa: F401, E402
+
+import verifiers as vf
+from datasets import Dataset, load_dataset
 
 from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
     JsonClassificationParser,

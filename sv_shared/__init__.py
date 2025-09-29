@@ -14,6 +14,7 @@ from .rollout_logging import (
     build_rollout_logger,
 )
 from .utils import get_response_text
+from .weave_init import initialize_weave_if_enabled
 
 __all__ = [
     "JsonClassificationParser",
@@ -26,4 +27,5 @@ __all__ = [
     "RolloutLoggingState",
     "DEFAULT_ROLLOUT_LOGGING_CONFIG",
     "build_rollout_logger",
+    "initialize_weave_if_enabled",
 ]

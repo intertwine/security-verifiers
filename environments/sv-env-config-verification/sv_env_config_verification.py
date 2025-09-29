@@ -16,15 +16,18 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
-import verifiers as vf
-import yaml  # noqa: F401 - used in run_opa function
-from datasets import Dataset
-from pydantic import BaseModel, ConfigDict
-
 # Ensure repository root is on sys.path so `sv_shared` is importable when running from source
 # __file__ .../environments/sv-env-config-verification/sv_env_config_verification.py
 # parents[2] points to the repository root
 sys.path.append(str(Path(__file__).resolve().parents[2]))
+
+# Initialize Weave before importing verifiers for automatic tracing
+from sv_shared import weave_init  # type: ignore  # noqa: F401, E402
+
+import verifiers as vf
+import yaml  # noqa: F401 - used in run_opa function
+from datasets import Dataset
+from pydantic import BaseModel, ConfigDict
 
 from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
     RolloutLogger,

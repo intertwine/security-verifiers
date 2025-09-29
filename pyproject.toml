@@ -30,5 +30,10 @@ testpaths = ["environments"]
 python_files = ["*_test.py"]
 addopts = "-q"
 filterwarnings = [
-    "ignore:ast.Str is deprecated:DeprecationWarning"
+    "ignore:ast.Str is deprecated:DeprecationWarning",
+    # Suppress warnings from Weave's dependencies
+    "ignore:.*sentry_sdk.Hub.*is deprecated:DeprecationWarning",
+    "ignore:.*Scope.user.*setter is deprecated:DeprecationWarning",
+    "ignore:.*variable_values and operation_name arguments.*:DeprecationWarning",
+    "ignore:.*Accessing the 'model_fields' attribute on the instance is deprecated:DeprecationWarning"
 ]

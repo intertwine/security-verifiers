@@ -90,8 +90,16 @@ Before using any of the security verification environments, you need to set up y
    # Required: OpenAI API Key (for model inference)
    OPENAI_API_KEY=your-openai-api-key-here
 
+   # Required for logging: Weights & Biases API Key
+   # Sign up free at: https://wandb.ai
+   # Get your key at: https://wandb.ai/authorize
+   WANDB_API_KEY=your-wandb-api-key-here
+
    # Optional: HuggingFace Token (for dataset access)
    HF_TOKEN=your-huggingface-token-here
+
+   # Optional: Disable Weave if you don't want logging
+   # WEAVE_DISABLED=true
    ```
 
 3. **Load environment variables before running commands**:
@@ -173,35 +181,62 @@ All environments leverage a common set of components for consistency and composa
 
 ## Rollout Logging & Telemetry
 
-Security Verifiers ships with a central rollout logging utility that can stream
-environment metadata and RL interaction traces to both [Weave](https://docs.wandb.com/weave/)
-and [Weights & Biases](https://docs.wandb.ai/).
+Security Verifiers uses a dual-mode logging system with both automatic and manual options:
 
-- The `sv_shared.rollout_logging.RolloutLogger` class lazily initialises
-  both backends and keeps a local buffer so you can query for reward dips or other
-  security insights (`logger.find_reward_dips(0.2)`).
-- Default configuration lives in `sv_shared/rollout_logging.py` as
-  `DEFAULT_ROLLOUT_LOGGING_CONFIG`. Enable logging by cloning the default settings:
+### Primary: Weave Auto-tracing (Recommended)
 
-  ```python
-  from sv_shared import build_rollout_logger
-  from environments.sv-env-network-logs.sv_env_network_logs import load_environment
+[Weave](https://weave-docs.wandb.ai/guides/integrations/verifiers) automatically traces all Verifiers operations when enabled. This provides comprehensive logging with zero code changes:
 
-  logger = build_rollout_logger({
-      "enabled": True,
-      "wandb_project": "security-verifiers-rl",
-      "weave_project": "security-verifiers",
-  })
-  env = load_environment(logger=logger)
-  ```
+```python
+# Weave is automatically initialized when environments are imported
+# Configure via environment variables:
+export WEAVE_AUTO_INIT=true  # Enable auto-tracing (default: true)
+export WEAVE_PROJECT=security-verifiers  # Set project name
 
-- All environment loaders accept an optional `logger` argument and will emit dataset
-  metadata when present. Training loops can then call `logger.log_step` and
-  `logger.log_episode_summary` to stream detailed rollout metrics.
-- Install the optional telemetry dependencies with `uv pip install -r requirements.txt`.
-- Learn more about the logging backends via the official docs:
-  [Weave Tracing](https://docs.wandb.com/weave/tracing) •
-  [WandB Logging](https://docs.wandb.ai/guides/track/log).
+# Then just use environments normally - all operations are traced!
+from sv_env_network_logs import load_environment
+env = load_environment()
+```
+
+**Configuration Options:**
+- `WEAVE_AUTO_INIT`: Enable/disable automatic initialization (default: `true`)
+- `WEAVE_PROJECT`: Weave project name (default: `security-verifiers`)
+- `WEAVE_DISABLED`: Completely disable Weave (overrides other settings)
+
+### Supplementary: RolloutLogger (Optional)
+
+For custom logging needs beyond automatic tracing, use the `RolloutLogger`:
+
+```python
+from sv_shared import build_rollout_logger
+from sv_env_network_logs import load_environment
+
+# Create a logger with custom configuration
+logger = build_rollout_logger({
+    "enabled": True,
+    "wandb_project": "security-verifiers-rl",
+    "weave_project": "security-verifiers",
+    "step_filter": lambda event: event.reward < 0.5,  # Only log low rewards
+})
+
+# Pass logger to environment
+env = load_environment(logger=logger)
+
+# Query logged events locally
+reward_dips = logger.find_reward_dips(threshold=0.2)
+```
+
+**Features:**
+- Custom event filtering and transformation
+- Local event buffering for offline analysis
+- Query capabilities (e.g., `find_reward_dips()`)
+- Integration with both Weave and Weights & Biases
+
+**Learn More:**
+- 📖 **[Comprehensive Logging Guide](docs/logging-guide.md)** - Detailed configuration, examples, and best practices
+- [Weave Verifiers Integration](https://weave-docs.wandb.ai/guides/integrations/verifiers)
+- [Weave Tracing](https://docs.wandb.com/weave/tracing)
+- [W&B Logging](https://docs.wandb.ai/guides/track/log)
 
 ## Contributing
 

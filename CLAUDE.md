@@ -69,6 +69,23 @@ uv run python -m build --wheel environments/sv-env-network-logs
   - set -a && source .env && set +a
 - Common vars: OPENAI_API_KEY (required for OpenAI-compatible endpoints), HF_TOKEN (optional for datasets)
 
+## Logging Architecture
+
+Security Verifiers uses a dual-mode logging system:
+
+1. **Primary: Weave Auto-tracing** (enabled by default)
+   - Automatically traces all Verifiers operations when `weave_init` is imported before `verifiers`
+   - Provides comprehensive tracing with zero code changes
+   - Configure via environment variables:
+     - `WEAVE_AUTO_INIT=true/false` - Enable/disable auto-initialization (default: true)
+     - `WEAVE_PROJECT=<name>` - Set project name (default: security-verifiers)
+     - `WEAVE_DISABLED=true/false` - Completely disable Weave
+
+2. **Supplementary: RolloutLogger** (optional)
+   - Use for custom logging needs beyond automatic tracing
+   - Features: event filtering, local buffering, custom metrics
+   - Pass `logger=build_rollout_logger(...)` to `load_environment()`
+
 ## Big-picture architecture (be productive fast)
 
 - Environment packages (environments/\*): Each env is an installable Python package with a pyproject entry point under [project.entry-points."verifiers.environments"]. All envs expose load_environment(...)-> Verifiers Env and declare a parser and a rubric with weighted reward components.
@@ -117,6 +134,7 @@ uv run python -m build --wheel environments/sv-env-network-logs
 - README.md - repo overview and reproducible evals
 - PRD.md - environment specifications and reward contracts
 - EXECUTIVE_SUMMARY.md - suite-level intent and shared toolbox
+- docs/logging-guide.md - comprehensive logging documentation with examples
 - CLAUDE.md - this file
 - WARP.md - Warp-specific commands (mirrors this guidance)
 - .github/workflows/ci.yml - CI steps

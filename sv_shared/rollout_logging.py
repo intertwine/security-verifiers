@@ -1,4 +1,25 @@
-"""Central rollout logging utilities shared across Security Verifiers."""
+"""Central rollout logging utilities shared across Security Verifiers.
+
+IMPORTANT: This module provides supplementary logging capabilities for Security
+Verifiers environments. The primary logging mechanism is Weave's automatic
+tracing, which is enabled by importing `sv_shared.weave_init` before importing
+the `verifiers` library.
+
+The RolloutLogger class in this module offers additional custom logging features:
+- Fine-grained control over what gets logged
+- Local event buffering for analysis
+- Custom filters and metrics
+- Integration with both Weave and Weights & Biases
+
+Use RolloutLogger when you need:
+- Custom event filtering
+- Local event storage and querying
+- Additional metrics beyond Weave's automatic tracing
+- Manual control over logging granularity
+
+For most use cases, Weave's automatic tracing (via weave_init) is sufficient
+and preferred for its simplicity and comprehensive coverage.
+"""
 
 from __future__ import annotations
 
@@ -69,12 +90,25 @@ class RolloutLoggingState:
 
 
 class RolloutLogger:
-    """Utility responsible for coordinating rollout logging backends.
+    """Supplementary logging utility for custom rollout tracking.
+
+    IMPORTANT: This is a supplementary logging mechanism. The primary logging
+    for Security Verifiers environments is handled by Weave's automatic tracing,
+    which is enabled by importing `sv_shared.weave_init` before importing verifiers.
+
+    This class provides additional features beyond automatic tracing:
+    - Custom event filtering and transformation
+    - Local event buffering for offline analysis
+    - Query capabilities for finding specific events (e.g., reward dips)
+    - Fine-grained control over what gets sent to remote backends
 
     The class lazily imports both Weave and Weights & Biases to avoid introducing
     heavy dependencies when logging is disabled. All logging calls are threadsafe
     and store a local buffer so downstream applications can query for key events
     such as reward dips or policy regressions.
+
+    Use this logger when you need custom logging logic that goes beyond
+    what Weave's automatic tracing provides.
     """
 
     def __init__(self, config: RolloutLoggingConfig | None = None) -> None:

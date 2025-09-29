@@ -32,11 +32,13 @@ from typing import Any, Dict, List, Optional, cast
 REPO_ROOT = Path(__file__).resolve().parents[1]
 os.environ.setdefault("PYTHONPATH", str(REPO_ROOT))
 
+# Initialize Weave before importing environments for automatic tracing
 # pylint: disable=wrong-import-position
 from sv_env_config_verification import (  # type: ignore[import]  # noqa: E402
     load_environment,
     reward_config_auditing,
 )
+from sv_shared import weave_init  # type: ignore  # noqa: F401, E402
 
 try:
     from openai import OpenAI

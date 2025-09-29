@@ -28,6 +28,10 @@ from typing import Any, Dict, List, cast
 REPO_ROOT = Path(__file__).resolve().parents[1]
 os.environ.setdefault("PYTHONPATH", str(REPO_ROOT))
 
+# Initialize Weave before importing environments for automatic tracing
+# Note: weave_init is imported but its initialization happens automatically
+from sv_shared import weave_init  # type: ignore  # noqa: F401, E402
+
 # Import E1 environment, falling back to source path when not installed as a package
 try:
     from sv_env_network_logs import load_environment  # type: ignore
