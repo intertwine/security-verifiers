@@ -1,24 +1,25 @@
 # Network Log Anomaly Detection
 
-This environment implements the full E1 specification from the [PRD](../../PRD.md). Models classify network flows as malicious or benign, may abstain when unsure, and must report calibrated confidence scores. It now leverages the shared `sv_shared` package for parsers, reward helpers, and utilities used across environments.
+A security-focused RL environment for training and evaluating models on network intrusion detection. Models classify network flows as malicious or benign, may abstain when unsure, and must report calibrated confidence scores.
 
 ## Overview
 
-The environment showcases calibrated classification with abstention support and asymmetric costs, enabling realistic evaluation of network intrusion detection agents.
+This environment implements calibrated classification with abstention support and asymmetric costs, enabling realistic evaluation of network intrusion detection agents.
 
 **Environment Type**: `SingleTurnEnv` - One prompt, one response per example
 **Task**: Ternary classification of network logs (Malicious / Benign / Abstain)
 **Reward Structure**: Accuracy, JSON format compliance, calibration, and cost-sensitive penalties
+**Dataset**: IoT-23 network traffic with labeled malicious/benign connections
 
 ## Installation
 
 Install the environment using the Prime CLI:
 
 ```bash
-prime env install sv-env-network-logs
+prime env install intertwine/sv-env-network-logs
 ```
 
-Or using pip/uv directly:
+Or using pip directly:
 
 ```bash
 pip install sv-env-network-logs
@@ -30,42 +31,27 @@ pip install sv-env-network-logs
 
 Before using this environment, you need to configure API keys for model inference and dataset access:
 
-1. **Copy the example environment file**:
-
-   ```bash
-   cp ../../../.env.example ../../../.env
-   ```
-
-2. **Add your API keys to the `.env` file**:
+1. **Set your API keys as environment variables**:
 
    ```bash
    # OpenAI API Key (required for OpenAI models)
-   OPENAI_API_KEY="your-openai-api-key"
-   ```
+   export OPENAI_API_KEY="your-openai-api-key"
 
-   ```bash
    # HuggingFace Token (optional, for IoT-23 dataset access)
-   HF_TOKEN="your-huggingface-token"
+   export HF_TOKEN="your-huggingface-token"
    ```
 
    Get your HuggingFace token from [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens)
 
-**Security Note**: The `.env` file is already included in `.gitignore` to prevent accidentally committing your API keys. Never commit actual API keys to version control.
-
 **Note**: Without the HF_TOKEN, the environment will fall back to using a synthetic dataset with limited examples.
 
-**Note**: The examples in this README use `gpt-5-mini` as a model name. Make sure to use actual model names that are available in your setup.
+2. **For persistent configuration, add to your shell profile**:
 
-### Loading Environment Variables
-
-Before running any evaluation commands, load the API keys from the `.env` file:
-
-```bash
-# Load environment variables from .env file
-set -a && source .env && set +a
-```
-
-This will export the `OPENAI_API_KEY` and `HF_TOKEN` variables needed for the environment to work.
+   ```bash
+   echo 'export OPENAI_API_KEY="your-key"' >> ~/.bashrc
+   echo 'export HF_TOKEN="your-token"' >> ~/.bashrc
+   source ~/.bashrc
+   ```
 
 ## Usage
 
@@ -192,27 +178,83 @@ The environment uses the [IoT-23 dataset](https://huggingface.co/datasets/19kmun
 - API key for model inference (e.g., OpenAI API key)
 - HuggingFace token for dataset access (optional but recommended)
 
-## About Open Security Verifiers
+## Weights & Biases Logging
 
-This environment is part of the Open Security Verifiers project - a composable suite of six security and alignment RL environments using Prime Intellect's Verifiers framework. The full suite implements executable, programmatic rewards and shared tooling for:
+This environment supports automatic Weave tracing for comprehensive experiment tracking:
 
-- Network anomaly detection with calibration and abstention
-- Tool-using security configuration auditing
-- Vulnerability repair with patch-and-test loops
-- Phishing detection with evidence-seeking
-- Red-team attack simulation
-- Adversarial alignment defense
+```python
+import wandb
+import weave
+import verifiers as vf
 
-See [EXECUTIVE_SUMMARY.md](../../EXECUTIVE_SUMMARY.md) and [PRD.md](../../PRD.md) for the complete vision and specifications.
+# Initialize Weave (auto-traces all Verifiers operations)
+weave.init(project="network-logs-security")
+
+# Load and evaluate
+env = vf.load_environment("intertwine/sv-env-network-logs")
+results = env.evaluate(
+    client=vf.OpenAIClient(),
+    model="gpt-4o-mini",
+    num_examples=100
+)
+
+# Results are automatically traced to W&B
+```
+
+Configure Weave via environment variables:
+- `WEAVE_PROJECT`: Set project name (default: security-verifiers)
+- `WEAVE_DISABLED`: Set to 'true' to disable logging
+- `WANDB_API_KEY`: Your W&B API key for cloud logging
+
+## Evaluation Approach
+
+### Metrics Tracked
+- **Accuracy**: Correct classification rate (Malicious/Benign/Abstain)
+- **Format Compliance**: Valid JSON output adherence
+- **Calibration Score**: Confidence alignment with actual accuracy
+- **Asymmetric Cost**: False negative penalty (missing attacks is worse than false alarms)
+- **Overall Reward**: Weighted combination of all metrics
+
+### Example Evaluation Script
+
+```python
+import verifiers as vf
+import weave
+
+# Initialize tracking
+weave.init(project="security-eval")
+
+env = vf.load_environment("intertwine/sv-env-network-logs")
+
+# Run evaluation
+results = env.evaluate(
+    client=vf.OpenAIClient(),
+    model="gpt-4o-mini",
+    num_examples=500,
+    seed=42
+)
+
+print(f"Mean Reward: {results.stats['mean_reward']:.2%}")
+print(f"Accuracy: {results.stats.get('accuracy', 0):.2%}")
+print(f"Calibration: {results.stats.get('calibration', 0):.2%}")
+```
+
+## Future Improvements
+
+- **Enhanced Dataset**: Expand beyond IoT-23 to include enterprise network traffic patterns
+- **Multi-turn Interaction**: Support for requesting additional context or log entries
+- **Explainability**: Require detailed rationale for high-stakes classifications
+- **Active Learning**: Dynamic example selection based on model uncertainty
+- **Temporal Analysis**: Support for analyzing sequences of related network events
+- **Cost Customization**: Allow environment users to specify their own false positive/negative costs
+
+## About
+
+This environment is part of the Open Security Verifiers suite - a collection of security and alignment RL environments using Prime Intellect's Verifiers framework. Each environment provides executable, programmatic rewards for training robust security-aware AI systems.
 
 ## Support
 
-For issues or questions about this environment:
-
-- Check the [Security Verifiers repository](https://github.com/intertwine/security-verifiers)
+For issues or questions:
+- Report issues on the [Prime Intellect Environments Hub](https://app.primeintellect.ai/dashboard/environments)
+- Check the [Security Verifiers GitHub repository](https://github.com/intertwine/security-verifiers)
 - Contact the Intertwine team
-- Report issues on the Environments Hub
-
-## License
-
-Part of the Security Verifiers open-source project. See repository for license details.
