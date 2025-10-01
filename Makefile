@@ -206,17 +206,17 @@ check: lint format test
 	@$(ECHO) "$(GREEN)✓ All quality checks passed$(NC)"
 
 # Build all environment wheels
-build: venv
+build: venv install-dev
 	@$(ECHO) "$(YELLOW)Building all environment wheels...$(NC)"
 	@$(ACTIVATE) && \
 	for env in environments/sv-env-*/; do \
 		$(ECHO) "Building $$env..."; \
-		( cd "$$env" && uv run python -m build --wheel ); \
+		( cd "$$env" && python -m build --wheel ); \
 	done
 	@$(ECHO) "$(GREEN)✓ All wheels built$(NC)"
 
 # Build specific environment wheel
-build-env: venv
+build-env: venv install-dev
 	@if [ -z "$(E)" ]; then \
 		$(ECHO) "$(RED)Error: Specify environment with E=name$(NC)"; \
 		$(ECHO) "Example: make build-env E=network-logs"; \
@@ -227,7 +227,7 @@ build-env: venv
 	@$(ECHO) "$(GREEN)✓ Wheel built for sv-env-$(E)$(NC)"
 
 # Deploy environment to Hub
-deploy: venv
+deploy: venv install-dev
 	@if [ -z "$(E)" ]; then \
 		$(ECHO) "$(RED)Error: Specify environment with E=name$(NC)"; \
 		$(ECHO) "Example: make deploy E=network-logs"; \
@@ -235,7 +235,7 @@ deploy: venv
 	fi
 	@$(ECHO) "$(YELLOW)Deploying sv-env-$(E) to Environments Hub...$(NC)"
 	@$(ACTIVATE) && ( cd environments/sv-env-$(E) && \
-		uv run python -m build --wheel && \
+		python -m build --wheel && \
 		prime login && \
 		prime env push -v PUBLIC )
 	@$(ECHO) "$(GREEN)✓ sv-env-$(E) deployed to Hub$(NC)"
