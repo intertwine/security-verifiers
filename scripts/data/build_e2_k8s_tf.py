@@ -29,10 +29,27 @@ def run(cmd: List[str]) -> Tuple[int, str, str]:
     return p.returncode, out, err
 
 
-def get_version(binary: str) -> str:
-    rc, out, _ = run([binary, "version"])
+def get_version(binary: str, flag: str = "version") -> str:
+    """Get version string for a binary.
+
+    Args:
+        binary: Path to the binary
+        flag: Version flag or subcommand (default: "version")
+
+    Returns:
+        Version string or "unknown" if detection fails
+    """
+    rc, out, _ = run([binary, flag])
     if rc == 0:
-        return out.strip().splitlines()[0]
+        lines = [line.strip() for line in out.strip().splitlines() if line.strip()]
+        if not lines:
+            return "unknown"
+        # For semgrep (--version flag), version is on last line after warnings
+        # For others (version subcommand), version is on first line
+        if flag.startswith("--"):
+            return lines[-1]
+        else:
+            return lines[0]
     return "unknown"
 
 
@@ -217,7 +234,7 @@ def main():
     # Tool versions record
     versions = {
         "kube-linter": get_version(KUBELINTER),
-        "semgrep": get_version(SEMGREP),
+        "semgrep": get_version(SEMGREP, "--version"),
         "opa": get_version(OPA),
     }
     (args.outdir / "tools-versions.json").write_text(json.dumps(versions, indent=2))

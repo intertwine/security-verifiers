@@ -221,6 +221,8 @@ class TestUploadToHuggingface:
         """Test successful upload to HuggingFace"""
         # Mock API
         mock_api = Mock()
+        # Mock repo_info to simulate existing repo
+        mock_api.repo_info.return_value = {"id": "test-org/test-dataset"}
         mock_hf_api.return_value = mock_api
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -237,9 +239,8 @@ class TestUploadToHuggingface:
                 token="fake-token",
             )
 
-            # Verify repo creation
-            mock_create_repo.assert_called_once()
-            assert "test-org/test-dataset" in mock_create_repo.call_args[1]["repo_id"]
+            # Verify repo_info was called to check if repo exists
+            mock_api.repo_info.assert_called_once()
 
             # Verify file upload
             assert mock_api.upload_file.call_count == 2  # data file + README
@@ -252,6 +253,8 @@ class TestUploadToHuggingface:
     def test_handles_missing_files(self, mock_create_repo, mock_hf_api):
         """Test that upload handles missing files gracefully"""
         mock_api = Mock()
+        # Mock repo_info to simulate existing repo
+        mock_api.repo_info.return_value = {"id": "test-org/test-dataset"}
         mock_hf_api.return_value = mock_api
 
         files = {"missing": Path("/nonexistent/file.jsonl")}
@@ -264,17 +267,46 @@ class TestUploadToHuggingface:
             token="fake-token",
         )
 
-        # Should still create repo
-        mock_create_repo.assert_called_once()
+        # Verify repo_info was called to check if repo exists
+        mock_api.repo_info.assert_called_once()
 
         # Should only upload README (not missing file)
         assert mock_api.upload_file.call_count == 1
 
     @patch("upload_to_hf.HfApi")
     @patch("upload_to_hf.create_repo")
+    def test_handles_permission_error(self, mock_create_repo, mock_hf_api):
+        """Test that upload handles permission errors gracefully"""
+        mock_api = Mock()
+        # Mock repo_info to raise exception (repo doesn't exist)
+        mock_api.repo_info.side_effect = Exception("Not found")
+        # Mock create_repo to raise 403 error
+        mock_create_repo.side_effect = Exception(
+            "403 Forbidden: You don't have the rights to create a dataset"
+        )
+        # Mock whoami for username suggestion
+        mock_api.whoami.return_value = {"name": "test-user"}
+        mock_hf_api.return_value = mock_api
+
+        files = {"test": Path("/fake/file.jsonl")}
+
+        # Should raise RuntimeError with helpful message
+        with pytest.raises(RuntimeError, match="permission denied"):
+            upload_to_huggingface(
+                dataset_name="test-dataset",
+                hf_org="test-org",
+                files=files,
+                description="Test dataset",
+                token="fake-token",
+            )
+
+    @patch("upload_to_hf.HfApi")
+    @patch("upload_to_hf.create_repo")
     def test_handles_upload_errors(self, mock_create_repo, mock_hf_api):
         """Test that upload handles errors gracefully"""
         mock_api = Mock()
+        # Mock repo_info to simulate existing repo
+        mock_api.repo_info.return_value = {"id": "test-org/test-dataset"}
         mock_api.upload_file.side_effect = Exception("Upload failed")
         mock_hf_api.return_value = mock_api
 

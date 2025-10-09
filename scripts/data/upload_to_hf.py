@@ -172,11 +172,46 @@ def upload_to_huggingface(
 
     # Create or get repo
     api = HfApi(token=token)
+
+    # Check if repo exists first
+    repo_exists = False
     try:
-        create_repo(repo_id=repo_id, token=token, repo_type="dataset", private=True, exist_ok=True)
-        print(f"Created/found repo: {repo_id}")
-    except Exception as e:
-        print(f"Warning: Could not create repo: {e}")
+        api.repo_info(repo_id=repo_id, repo_type="dataset", token=token)
+        print(f"✓ Found existing repo: {repo_id}")
+        repo_exists = True
+    except Exception:
+        # Repo doesn't exist, try to create it
+        try:
+            create_repo(repo_id=repo_id, token=token, repo_type="dataset", private=True, exist_ok=True)
+            print(f"✓ Created new repo: {repo_id}")
+            repo_exists = True
+        except Exception as e:
+            error_msg = str(e)
+            if "403" in error_msg or "don't have the rights" in error_msg.lower():
+                # Try to get username for helpful suggestion
+                username = None
+                try:
+                    user_info = api.whoami(token=token)
+                    username = user_info.get("name")
+                except Exception:
+                    pass
+
+                print(f"\n❌ ERROR: Permission denied to create repo under '{hf_org}'")
+                print(f"   You don't have write access to the '{hf_org}' organization.")
+                print("\nOptions:")
+                print(f"   1. Ask an admin of '{hf_org}' to add you as a member")
+                print("   2. Create the repo manually at: https://huggingface.co/new-dataset")
+                if username:
+                    print(f"   3. Use your personal account: --hf-org {username}")
+                else:
+                    print("   3. Use your personal account: --hf-org <your-username>")
+                raise RuntimeError(f"Cannot create repo under '{hf_org}' - permission denied")
+            else:
+                print(f"❌ ERROR: Could not create repo: {e}")
+                raise RuntimeError(f"Failed to create repo: {e}")
+
+    if not repo_exists:
+        raise RuntimeError(f"Repository {repo_id} does not exist and could not be created")
 
     # Upload files
     for name, path in files.items():
@@ -216,12 +251,22 @@ def upload_to_huggingface(
     return f"https://huggingface.co/datasets/{repo_id}"
 
 
+def get_hf_username(token: str) -> str | None:
+    """Get the HuggingFace username for the given token."""
+    try:
+        api = HfApi(token=token)
+        user_info = api.whoami(token=token)
+        return user_info.get("name")
+    except Exception:
+        return None
+
+
 def main():
     ap = argparse.ArgumentParser(description="Build and upload datasets to HuggingFace")
     ap.add_argument(
         "--hf-org",
         default="intertwine-ai",
-        help="HuggingFace organization name",
+        help="HuggingFace organization or username (default: intertwine-ai)",
     )
     ap.add_argument(
         "--dataset-name",
@@ -262,6 +307,13 @@ def main():
         print("Please add it to .env: HF_TOKEN=your_token_here")
         print("Or set it with: export HF_TOKEN=your_token_here")
         sys.exit(1)
+
+    # Get username to help with permission errors
+    username = get_hf_username(token)
+    if username and args.hf_org == "intertwine-ai":
+        print(f"\nNote: Authenticated as '{username}'")
+        print(f"      Attempting to upload to '{args.hf_org}'")
+        print(f"      If you lack permission, use: --hf-org {username}\n")
 
     try:
         # Build and upload E1

@@ -1,0 +1,23 @@
+{
+  "mode": "full",
+  "seed": 42,
+  "n_requested": 600,
+  "datasets": {
+    "cic-ids-2017": {
+      "hf_id": "bvk/CICIDS-2017",
+      "total": 600,
+      "labels": {
+        "Malicious": 0,
+        "Benign": 600
+      }
+    },
+    "unsw-nb15": {
+      "hf_id": "Mireu-Lab/UNSW-NB15",
+      "total": 600,
+      "labels": {
+        "Malicious": 334,
+        "Benign": 266
+      }
+    }
+  }
+}

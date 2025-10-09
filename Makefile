@@ -75,7 +75,7 @@ help:
 	@$(ECHO) "  make data-e2        - Build E2 K8s/TF datasets (requires K8S_ROOT, TF_ROOT, full mode)"
 	@$(ECHO) "  make data-e2-local  - Build E2 using cloned sources (run clone-e2-sources first)"
 	@$(ECHO) "  make data-all       - Build all production datasets"
-	@$(ECHO) "  make upload-datasets - Build and upload datasets to HuggingFace (requires HF_TOKEN)"
+	@$(ECHO) "  make upload-datasets - Build and upload datasets to HuggingFace (loads HF_TOKEN from .env)"
 	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)Data Building (Test Fixtures - Committed):$(NC)"
 	@$(ECHO) "  make data-e1-test   - Build E1 test fixtures for CI (small, checked in)"
@@ -452,13 +452,9 @@ data-test-all: data-e1-test data-e2-test
 
 # Upload datasets to HuggingFace Hub (requires HF_TOKEN)
 upload-datasets: venv
-	@if [ -z "$$HF_TOKEN" ]; then \
-		$(ECHO) "$(RED)Error: HF_TOKEN not set$(NC)"; \
-		$(ECHO) "Set it with: export HF_TOKEN=your_token_here"; \
-		exit 1; \
-	fi
 	@HF_ORG=$${HF_ORG:-intertwine-ai}; \
 	$(ECHO) "$(YELLOW)Building and uploading datasets to $$HF_ORG...$(NC)"; \
+	$(ECHO) "$(YELLOW)Note: HF_TOKEN will be loaded from .env file$(NC)"; \
 	$(ACTIVATE) && uv run python scripts/data/upload_to_hf.py --hf-org "$$HF_ORG"
 	@$(ECHO) "$(GREEN)✓ Datasets uploaded to HuggingFace$(NC)"
 
