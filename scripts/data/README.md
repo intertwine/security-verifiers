@@ -2,6 +2,14 @@
 
 This directory contains scripts for building and uploading datasets for the Security Verifiers environments.
 
+## Public Datasets
+
+Public metadata-only datasets are available for browsing:
+- **E1 (Network Logs)**: https://huggingface.co/datasets/intertwine-ai/security-verifiers-e1-metadata
+- **E2 (Config Verification)**: https://huggingface.co/datasets/intertwine-ai/security-verifiers-e2-metadata
+
+These repos include sampling metadata and instructions for requesting access to full datasets.
+
 ## Scripts
 
 ### `build_e1_iot23.py`
@@ -75,9 +83,41 @@ bash scripts/data/clone_e2_sources.sh
 make clone-e2-sources
 ```
 
+### `create_public_datasets.py`
+
+Creates PUBLIC metadata-only datasets on HuggingFace with model cards and access instructions (maintainers only).
+
+**Requirements:**
+- HF_TOKEN in `.env` file or environment variable
+- Packages: `huggingface_hub`, `python-dotenv`
+
+**Usage:**
+```bash
+# Set HF_TOKEN in .env (recommended)
+echo "HF_TOKEN=your_token_here" >> .env
+
+# Create public metadata-only datasets
+uv run python scripts/data/create_public_datasets.py --hf-org intertwine-ai
+
+# Or use Make target
+make create-public-datasets HF_ORG=intertwine-ai
+```
+
+**What's Uploaded:**
+- Sampling metadata files (`sampling-*.json`)
+- Tools versions (`tools-versions.json` for E2)
+- Model cards explaining privacy rationale
+- Links to GitHub Issues for access requests
+
+**Script Options:**
+- `--hf-org`: HuggingFace organization name (required)
+- `--dataset-name-prefix`: Base dataset name prefix (default: `security-verifiers`)
+- `--e1-only`: Only create E1 public dataset
+- `--e2-only`: Only create E2 public dataset
+
 ### `upload_to_hf.py`
 
-Builds and uploads production datasets to HuggingFace Hub (maintainers only).
+Builds and uploads PRIVATE production datasets to HuggingFace Hub (maintainers only).
 
 **Requirements:**
 
@@ -90,7 +130,7 @@ Builds and uploads production datasets to HuggingFace Hub (maintainers only).
 # Set HF_TOKEN in .env (recommended)
 echo "HF_TOKEN=your_token_here" >> .env
 
-# Upload all datasets
+# Upload all PRIVATE datasets
 uv run python scripts/data/upload_to_hf.py --hf-org intertwine-ai
 
 # Upload only E1 datasets

@@ -45,7 +45,18 @@ To protect evaluation integrity, production datasets are:
 - **Hosted privately on HuggingFace Hub** with gated access
 - Only **demo/test fixtures** are checked in for CI
 
-**For Users:**
+**Public Metadata (Browse & Request Access):**
+
+View sampling metadata and request access to full datasets:
+- **E1 (Network Logs)**: https://huggingface.co/datasets/intertwine-ai/security-verifiers-e1-metadata
+- **E2 (Config Verification)**: https://huggingface.co/datasets/intertwine-ai/security-verifiers-e2-metadata
+
+Each repo includes:
+- Sampling metadata showing how datasets were built
+- Model cards explaining why datasets are private
+- Instructions for requesting access via [GitHub Issues](https://github.com/intertwine/security-verifiers/issues)
+
+**For Approved Researchers:**
 
 If you have been granted access to the private datasets:
 
@@ -98,12 +109,20 @@ make data-e2 K8S_ROOT=/path/to/k8s TF_ROOT=/path/to/terraform
 # Or export it as environment variable
 export HF_TOKEN=your_token_here
 
-# Build and upload all datasets to HuggingFace Hub
+# Create PUBLIC metadata-only datasets (for community)
+make create-public-datasets HF_ORG=intertwine-ai
+
+# Build and upload PRIVATE full datasets (for approved researchers)
 make upload-datasets HF_ORG=intertwine-ai
 
-# Or use the script directly
+# Or use the scripts directly
+uv run python scripts/data/create_public_datasets.py --hf-org intertwine-ai
 uv run python scripts/data/upload_to_hf.py --hf-org intertwine-ai --e1-only
 ```
+
+**Public vs Private Datasets:**
+- **Public**: Metadata-only repos with sampling parameters and model cards explaining why datasets are private
+- **Private**: Full datasets with gated access to prevent training contamination
 
 Datasets are written to `environments/sv-env-{name}/data/` with reproducibility metadata in `sampling-*.json` files.
 

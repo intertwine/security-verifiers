@@ -13,7 +13,7 @@ build build-env deploy ci cd \
 \
 eval eval-e1 eval-e2 e1 e2 e3 e4 e5 e6 \
 \
-data-e1 data-e1-ood data-e1-test data-e2 data-e2-local data-e2-test data-all data-test-all upload-datasets clone-e2-sources \
+data-e1 data-e1-ood data-e1-test data-e2 data-e2-local data-e2-test data-all data-test-all upload-datasets create-public-datasets clone-e2-sources \
 \
 pre-commit clean clean-outputs clean-logs clean-outputs-all clean-all docs info dev watch
 
@@ -75,7 +75,8 @@ help:
 	@$(ECHO) "  make data-e2        - Build E2 K8s/TF datasets (requires K8S_ROOT, TF_ROOT, full mode)"
 	@$(ECHO) "  make data-e2-local  - Build E2 using cloned sources (run clone-e2-sources first)"
 	@$(ECHO) "  make data-all       - Build all production datasets"
-	@$(ECHO) "  make upload-datasets - Build and upload datasets to HuggingFace (loads HF_TOKEN from .env)"
+	@$(ECHO) "  make upload-datasets - Build and upload PRIVATE datasets to HuggingFace (loads HF_TOKEN from .env)"
+	@$(ECHO) "  make create-public-datasets - Create PUBLIC metadata-only datasets (loads HF_TOKEN from .env)"
 	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)Data Building (Test Fixtures - Committed):$(NC)"
 	@$(ECHO) "  make data-e1-test   - Build E1 test fixtures for CI (small, checked in)"
@@ -457,6 +458,14 @@ upload-datasets: venv
 	$(ECHO) "$(YELLOW)Note: HF_TOKEN will be loaded from .env file$(NC)"; \
 	$(ACTIVATE) && uv run python scripts/data/upload_to_hf.py --hf-org "$$HF_ORG"
 	@$(ECHO) "$(GREEN)✓ Datasets uploaded to HuggingFace$(NC)"
+
+# Create public metadata-only datasets
+create-public-datasets: venv
+	@HF_ORG=$${HF_ORG:-intertwine-ai}; \
+	$(ECHO) "$(YELLOW)Creating PUBLIC metadata-only datasets under $$HF_ORG...$(NC)"; \
+	$(ECHO) "$(YELLOW)Note: HF_TOKEN will be loaded from .env file$(NC)"; \
+	$(ACTIVATE) && uv run python scripts/data/create_public_datasets.py --hf-org "$$HF_ORG"
+	@$(ECHO) "$(GREEN)✓ Public metadata datasets created on HuggingFace$(NC)"
 
 # Quick commands
 quick-test:
