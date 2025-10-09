@@ -43,7 +43,36 @@ To prevent training contamination (models memorizing evaluation data during pre-
 - **Hosted privately on HuggingFace Hub** with gated access
 - Available for approved research use only
 
-### For Users: Download Private Datasets
+### Public Metadata
+
+**Browse dataset information and composition:**
+
+- <https://huggingface.co/datasets/intertwine-ai/security-verifiers-e1-metadata>
+
+The public metadata repo includes:
+
+- Sampling metadata showing how datasets were constructed
+- Model cards explaining the privacy rationale and dataset composition
+- Instructions for requesting access to full datasets
+
+### For Users: Request Access to Full Datasets
+
+**To access the full private datasets:**
+
+1. Open an access request issue: [Security Verifiers Issues](https://github.com/intertwine/security-verifiers/issues)
+2. Use the title: "Dataset Access Request: E1"
+3. Include: name, affiliation, research purpose, HuggingFace username
+4. Commitment to not redistribute or publish the raw data
+
+**Approval criteria:**
+
+- Legitimate research or educational use
+- Understanding of contamination concerns
+- Agreement to usage terms
+
+We typically respond within 2-3 business days.
+
+### For Approved Researchers: Download Private Datasets
 
 If you have been granted access:
 

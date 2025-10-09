@@ -1,4 +1,4 @@
-# Security Configuration Verification
+# Security Configuration Verification (E2)
 
 A tool-using RL environment for training and evaluating models on infrastructure configuration auditing. Models analyze Kubernetes and Terraform configurations, detect security violations using real security tools, and generate patches to fix issues.
 
@@ -10,6 +10,19 @@ This environment implements end-to-end configuration security auditing with tool
 **Task**: Detect security violations and generate fixes for infrastructure configurations
 **Tools**: OPA (Open Policy Agent), KubeLinter, Semgrep
 **Reward Structure**: Severity-weighted detection accuracy + successful patch generation
+
+## Dataset Access
+
+**Public Metadata**: Browse sampling information, dataset composition, and tool versions at:
+
+- <https://huggingface.co/datasets/intertwine-ai/security-verifiers-e2-metadata>
+
+**Full Dataset**: Private to prevent training contamination. Request access via:
+
+- [GitHub Issues](https://github.com/intertwine/security-verifiers/issues) with title "Dataset Access Request: E2"
+- Include: name, affiliation, research purpose, HuggingFace username
+
+The public metadata repo includes detailed model cards explaining the privacy rationale, tool versions (KubeLinter, Semgrep, OPA), and dataset composition. Multi-turn evaluation shows models achieve ~0.93 reward with tool calling vs ~0.62 without tools.
 
 ## Installation
 
@@ -30,6 +43,7 @@ pip install sv-env-config-verification
 This environment requires security scanning tools. Install them based on your platform:
 
 **macOS:**
+
 ```bash
 # Install kube-linter
 brew install kube-linter
@@ -42,6 +56,7 @@ brew install semgrep
 ```
 
 **Linux/Other:**
+
 ```bash
 # Install kube-linter
 wget https://github.com/stackrox/kube-linter/releases/download/v0.6.8/kube-linter-linux.tar.gz
@@ -131,10 +146,10 @@ metadata:
   name: webapp
 spec:
   containers:
-  - name: app
-    image: myapp:latest
-    securityContext:
-      runAsUser: 0  # Security violation: running as root
+    - name: app
+      image: myapp:latest
+      securityContext:
+        runAsUser: 0 # Security violation: running as root
 ```
 
 ### Expected Output
@@ -196,6 +211,7 @@ results = env.evaluate(
 ```
 
 Configure via environment variables:
+
 - `WEAVE_PROJECT`: Set project name
 - `WEAVE_DISABLED`: Set to 'true' to disable logging
 - `WANDB_API_KEY`: Your W&B API key
@@ -203,6 +219,7 @@ Configure via environment variables:
 ## Evaluation Approach
 
 ### Metrics Tracked
+
 - **Detection Precision**: Correct violation identification rate
 - **Detection Recall**: Coverage of actual violations
 - **Detection F1**: Harmonic mean of precision and recall
@@ -240,13 +257,14 @@ for use_tools in [True, False]:
 ## Performance Benchmarks
 
 | Model       | Detection F1 | Patch Success | With Tools | Overall |
-|-------------|-------------|---------------|------------|---------|
-| GPT-4o-mini | 72%         | 45%           | Yes        | 68%     |
-| GPT-4o-mini | 51%         | 28%           | No         | 44%     |
+| ----------- | ------------ | ------------- | ---------- | ------- |
+| GPT-4o-mini | 72%          | 45%           | Yes        | 68%     |
+| GPT-4o-mini | 51%          | 28%           | No         | 44%     |
 
 ## Dataset
 
 The environment includes:
+
 - **Kubernetes manifests**: Deployments, Services, ConfigMaps with security issues
 - **Terraform configurations**: AWS, GCP, Azure resources with misconfigurations
 - **Oracle labels**: Ground-truth violations from tool outputs for validation
@@ -274,6 +292,7 @@ This environment is part of the Open Security Verifiers suite - a collection of 
 ## Support
 
 For issues or questions:
+
 - Report issues on the [Prime Intellect Environments Hub](https://app.primeintellect.ai/dashboard/environments)
 - Check the [Security Verifiers GitHub repository](https://github.com/intertwine/security-verifiers)
 - Contact the Intertwine team

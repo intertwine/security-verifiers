@@ -1,4 +1,4 @@
-# Network Log Anomaly Detection
+# Network Log Anomaly Detection (E1)
 
 A security-focused RL environment for training and evaluating models on network intrusion detection. Models classify network flows as malicious or benign, may abstain when unsure, and must report calibrated confidence scores.
 
@@ -10,6 +10,19 @@ This environment implements calibrated classification with abstention support an
 **Task**: Ternary classification of network logs (Malicious / Benign / Abstain)
 **Reward Structure**: Accuracy, JSON format compliance, calibration, and cost-sensitive penalties
 **Dataset**: IoT-23 network traffic with labeled malicious/benign connections
+
+## Dataset Access
+
+**Public Metadata**: Browse sampling information and dataset composition at:
+
+- <https://huggingface.co/datasets/intertwine-ai/security-verifiers-e1-metadata>
+
+**Full Dataset**: Private to prevent training contamination. Request access via:
+
+- [GitHub Issues](https://github.com/intertwine/security-verifiers/issues) with title "Dataset Access Request: E1"
+- Include: name, affiliation, research purpose, HuggingFace username
+
+The public metadata repo includes detailed model cards explaining the privacy rationale and dataset composition.
 
 ## Installation
 
@@ -45,7 +58,7 @@ Before using this environment, you need to configure API keys for model inferenc
 
 **Note**: Without the HF_TOKEN, the environment will fall back to using a synthetic dataset with limited examples.
 
-2. **For persistent configuration, add to your shell profile**:
+1. **For persistent configuration, add to your shell profile**:
 
    ```bash
    echo 'export OPENAI_API_KEY="your-key"' >> ~/.bashrc
@@ -145,7 +158,11 @@ Network log entries with connection metadata:
 Strict JSON object:
 
 ```json
-{"label": "Benign|Malicious|Abstain", "confidence": 0.0, "rationale": "string (optional)"}
+{
+  "label": "Benign|Malicious|Abstain",
+  "confidence": 0.0,
+  "rationale": "string (optional)"
+}
 ```
 
 ### Scoring
@@ -202,6 +219,7 @@ results = env.evaluate(
 ```
 
 Configure Weave via environment variables:
+
 - `WEAVE_PROJECT`: Set project name (default: security-verifiers)
 - `WEAVE_DISABLED`: Set to 'true' to disable logging
 - `WANDB_API_KEY`: Your W&B API key for cloud logging
@@ -209,6 +227,7 @@ Configure Weave via environment variables:
 ## Evaluation Approach
 
 ### Metrics Tracked
+
 - **Accuracy**: Correct classification rate (Malicious/Benign/Abstain)
 - **Format Compliance**: Valid JSON output adherence
 - **Calibration Score**: Confidence alignment with actual accuracy
@@ -255,6 +274,7 @@ This environment is part of the Open Security Verifiers suite - a collection of 
 ## Support
 
 For issues or questions:
+
 - Report issues on the [Prime Intellect Environments Hub](https://app.primeintellect.ai/dashboard/environments)
 - Check the [Security Verifiers GitHub repository](https://github.com/intertwine/security-verifiers)
 - Contact the Intertwine team
