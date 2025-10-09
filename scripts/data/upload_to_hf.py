@@ -11,15 +11,23 @@ Usage:
     python scripts/data/upload_to_hf.py --hf-org intertwine-ai --dataset-name security-verifiers-e1-e2
 
 Requirements:
-    - HF_TOKEN environment variable must be set
+    - HF_TOKEN in .env file or environment variable
     - huggingface_hub package: uv add huggingface_hub
+    - python-dotenv package: uv add python-dotenv
 """
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
 from typing import Dict, List
+
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    print("Error: python-dotenv not installed. Run: uv add python-dotenv")
+    sys.exit(1)
 
 try:
     from huggingface_hub import HfApi, create_repo
@@ -244,13 +252,15 @@ def main():
     )
     args = ap.parse_args()
 
-    # Check for HF_TOKEN
-    import os
+    # Load environment variables from .env file
+    load_dotenv()
 
+    # Check for HF_TOKEN
     token = os.environ.get("HF_TOKEN")
     if not token:
-        print("Error: HF_TOKEN environment variable not set")
-        print("Please set it with: export HF_TOKEN=your_token_here")
+        print("Error: HF_TOKEN not found in .env file or environment")
+        print("Please add it to .env: HF_TOKEN=your_token_here")
+        print("Or set it with: export HF_TOKEN=your_token_here")
         sys.exit(1)
 
     try:

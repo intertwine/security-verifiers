@@ -22,6 +22,20 @@ make test-env E=name    # e.g., E=network-logs | config-verification | code-vuln
 # Run a single test (example)
 uv run pytest environments/sv-env-network-logs/sv_env_network_logs_test.py::TestNetworkLogParser::test_extracts_label_and_confidence -q
 
+# Data building - Production (private, not committed; requires .env with HF_TOKEN)
+make data-e1            # Build E1 IoT-23 dataset (LIMIT=1800, full mode)
+make data-e1-ood        # Build E1 OOD datasets (N=600, CIC+UNSW, full mode)
+make clone-e2-sources   # Clone recommended K8s/TF repos to scripts/data/sources/
+make data-e2-local      # Build E2 datasets from cloned sources (full mode)
+make data-e2 K8S_ROOT=<path> TF_ROOT=<path>  # Build E2 from custom paths (full mode)
+make data-all           # Build all E1 production datasets
+make upload-datasets HF_ORG=intertwine-ai  # Build and upload datasets to HuggingFace (maintainers only; requires HF_TOKEN in .env)
+
+# Data building - Test fixtures (small, checked in for CI)
+make data-e1-test       # Build E1 test fixtures (~20-30 samples)
+make data-e2-test       # Build E2 test fixtures (requires clone-e2-sources first)
+make data-test-all      # Build all test fixtures
+
 # Build & deploy
 make build              # build wheels for all envs
 make build-env E=name   # build one env
@@ -65,7 +79,28 @@ uv run python -m build --wheel environments/sv-env-network-logs
 - Copy and load .env (for API keys/tokens) before evals:
   - cp .env.example .env
   - set -a && source .env && set +a
-- Common vars: OPENAI_API_KEY (required for OpenAI-compatible endpoints), HF_TOKEN (optional for datasets)
+- Common vars:
+  - OPENAI_API_KEY (required for OpenAI-compatible endpoints)
+  - HF_TOKEN (optional for dataset downloads; required for upload_to_hf.py)
+  - WANDB_API_KEY (required for Weave logging)
+- The upload_to_hf.py script automatically loads HF_TOKEN from .env using python-dotenv
+
+## Logging Architecture
+
+Security Verifiers uses a dual-mode logging system:
+
+1. **Primary: Weave Auto-tracing** (enabled by default)
+   - Automatically traces all Verifiers operations when `weave_init` is imported before `verifiers`
+   - Provides comprehensive tracing with zero code changes
+   - Configure via environment variables:
+     - `WEAVE_AUTO_INIT=true/false` - Enable/disable auto-initialization (default: true)
+     - `WEAVE_PROJECT=<name>` - Set project name (default: security-verifiers)
+     - `WEAVE_DISABLED=true/false` - Completely disable Weave
+
+2. **Supplementary: RolloutLogger** (optional)
+   - Use for custom logging needs beyond automatic tracing
+   - Features: event filtering, local buffering, custom metrics
+   - Pass `logger=build_rollout_logger(...)` to `load_environment()`
 
 ## Big-picture architecture (how to be productive fast)
 
@@ -78,7 +113,7 @@ uv run python -m build --wheel environments/sv-env-network-logs
     - schema.py -> pydantic-validated model output (violations/patch/confidence)
     - patching.py -> unified-diff/JSON-patch application and re-scan support
     - reward.py -> severity-weighted detection (precision/recall/F1) + patch delta; exposed via reward_config_auditing
-    - sv_env_config_verification.py glues these into a Verifiers ToolEnv; tools=[run_kubelinter, run_semgrep, run_opa] (toggle with include_tools)
+    - __init__.py glues these into a Verifiers ToolEnv; tools=[run_kubelinter, run_semgrep, run_opa] (toggle with include_tools)
     - Tests pin behavior and check against golden oracles in dataset/oracle; tool versions pinned in ci/versions.txt
     - Multi-turn evaluation script supports up to 5 turns of tool interactions, creates temp files for analysis
   - E3-E6 (WIP): Skeletons provide dataset/parsers/rubrics and tool hooks; see each env's README.
@@ -105,14 +140,27 @@ uv run python -m build --wheel environments/sv-env-network-logs
 
 - Never run git commit/push from Warp; the user handles all Git operations.
 - Prefer Make targets over raw commands; check make help and make info.
+- Enforce strict JSON schemas; malformed outputs get zero reward.
+- Update environment READMEs when you change behavior; keep tests green.
 - For environment-specific details and examples, see each env's README and README-DEV (where present).
+
+## Deployment checklist (concise)
+
+- [ ] make test-env E=name
+- [ ] make lint && make format
+- [ ] README updated; pyproject deps correct
+- [ ] make build-env E=name
+- [ ] make eval E=name (or eval-e1/eval-e2)
 
 ## Key references (read as needed)
 
-- README.md: repo overview, quick start, reproducible evals
-- PRD.md: environment specifications and reward contracts
-- EXECUTIVE_SUMMARY.md: suite-level intent and shared toolbox
-- CLAUDE.md: additional agent-facing guidance (strict schemas, rubric-based rewards, deployment checklist)
+- README.md - repo overview and reproducible evals
+- PRD.md - environment specifications and reward contracts
+- EXECUTIVE_SUMMARY.md - suite-level intent and shared toolbox
+- docs/logging-guide.md - comprehensive logging documentation with examples
+- CLAUDE.md - Claude Code-specific guidance (mirrors this file)
+- WARP.md - this file
+- .github/workflows/ci.yml - CI steps
 
 —
 

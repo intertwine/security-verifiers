@@ -9,6 +9,7 @@ description = "Security Verifiers monorepo: shared tooling config (no runtime)."
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2",
+    "python-dotenv>=1.1.1",
     "wandb>=0.17.0",
     "weave>=0.50.0",
 ]

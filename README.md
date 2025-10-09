@@ -92,9 +92,17 @@ make data-e2 K8S_ROOT=/path/to/k8s TF_ROOT=/path/to/terraform
 **Upload to HuggingFace** (maintainers only):
 
 ```bash
-# Build and upload all datasets to HuggingFace Hub
+# Set HF_TOKEN in .env file (recommended)
+# HF_TOKEN=your_token_here
+
+# Or export it as environment variable
 export HF_TOKEN=your_token_here
+
+# Build and upload all datasets to HuggingFace Hub
 make upload-datasets HF_ORG=intertwine-ai
+
+# Or use the script directly
+uv run python scripts/data/upload_to_hf.py --hf-org intertwine-ai --e1-only
 ```
 
 Datasets are written to `environments/sv-env-{name}/data/` with reproducibility metadata in `sampling-*.json` files.

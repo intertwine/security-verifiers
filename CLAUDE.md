@@ -31,7 +31,7 @@ make clone-e2-sources   # Clone recommended K8s/TF repos to scripts/data/sources
 make data-e2-local      # Build E2 datasets from cloned sources (full mode)
 make data-e2 K8S_ROOT=<path> TF_ROOT=<path>  # Build E2 from custom paths (full mode)
 make data-all           # Build all E1 production datasets
-make upload-datasets HF_ORG=intertwine-ai  # Build and upload datasets to HuggingFace (maintainers only)
+make upload-datasets HF_ORG=intertwine-ai  # Build and upload datasets to HuggingFace (maintainers only; requires HF_TOKEN in .env)
 
 # Data building - Test fixtures (small, checked in for CI)
 make data-e1-test       # Build E1 test fixtures (~20-30 samples)
@@ -81,7 +81,11 @@ uv run python -m build --wheel environments/sv-env-network-logs
 - Copy and load .env (for API keys/tokens) before evals:
   - cp .env.example .env
   - set -a && source .env && set +a
-- Common vars: OPENAI_API_KEY (required for OpenAI-compatible endpoints), HF_TOKEN (optional for datasets)
+- Common vars:
+  - OPENAI_API_KEY (required for OpenAI-compatible endpoints)
+  - HF_TOKEN (optional for dataset downloads; required for upload_to_hf.py)
+  - WANDB_API_KEY (required for Weave logging)
+- The upload_to_hf.py script automatically loads HF_TOKEN from .env using python-dotenv
 
 ## Logging Architecture
 
