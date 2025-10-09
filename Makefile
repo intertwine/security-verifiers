@@ -13,6 +13,8 @@ build build-env deploy ci cd \
 \
 eval eval-e1 eval-e2 e1 e2 e3 e4 e5 e6 \
 \
+data-e1 data-e1-ood data-e1-test data-e2 data-e2-local data-e2-test data-all data-test-all upload-datasets clone-e2-sources \
+\
 pre-commit clean clean-outputs clean-logs clean-outputs-all clean-all docs info dev watch
 
 # Default Python version
@@ -66,6 +68,20 @@ help:
 	@$(ECHO) "  make eval-e1 MODELS=... N=10                     - Reproducible E1 evals (network-logs)"
 	@$(ECHO) "  make eval-e2 MODELS=... N=2 INCLUDE_TOOLS=true  - Reproducible E2 evals (config-verification)"
 	@$(ECHO) ""
+	@$(ECHO) "$(YELLOW)Data Building (Production - Private):$(NC)"
+	@$(ECHO) "  make data-e1        - Build E1 IoT-23 dataset (LIMIT=1800, full mode)"
+	@$(ECHO) "  make data-e1-ood    - Build E1 OOD datasets (CIC, UNSW; N=600, full mode)"
+	@$(ECHO) "  make clone-e2-sources - Clone K8s/TF repositories for E2"
+	@$(ECHO) "  make data-e2        - Build E2 K8s/TF datasets (requires K8S_ROOT, TF_ROOT, full mode)"
+	@$(ECHO) "  make data-e2-local  - Build E2 using cloned sources (run clone-e2-sources first)"
+	@$(ECHO) "  make data-all       - Build all production datasets"
+	@$(ECHO) "  make upload-datasets - Build and upload datasets to HuggingFace (requires HF_TOKEN)"
+	@$(ECHO) ""
+	@$(ECHO) "$(YELLOW)Data Building (Test Fixtures - Committed):$(NC)"
+	@$(ECHO) "  make data-e1-test   - Build E1 test fixtures for CI (small, checked in)"
+	@$(ECHO) "  make data-e2-test   - Build E2 test fixtures for CI (small, checked in)"
+	@$(ECHO) "  make data-test-all  - Build all test fixtures for CI"
+	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)Utilities:$(NC)"
 	@$(ECHO) "  make clean          - Remove build artifacts and caches"
 	@$(ECHO) "  make clean-outputs  - Remove outputs/evals artifacts (preserve outputs/logs)"
@@ -78,6 +94,9 @@ help:
 	@$(ECHO) "  E=network-logs      - Target specific environment"
 	@$(ECHO) "  MODEL=gpt-4o-mini   - Model for evaluation"
 	@$(ECHO) "  N=10                - Number of examples for eval"
+	@$(ECHO) "  LIMIT=1800          - Total rows for E1 dataset"
+	@$(ECHO) "  K8S_ROOT=path       - Kubernetes YAML directory for E2"
+	@$(ECHO) "  TF_ROOT=path        - Terraform HCL directory for E2"
 
 # Complete setup
 setup: venv install install-dev
@@ -341,6 +360,107 @@ eval-e2: venv
 	$(ECHO) "$(YELLOW)Evaluating E2 (config-verification) for models: $(MODELS) (N=$$N, INCLUDE_TOOLS=$$INCLUDE_TOOLS)$(NC)"; \
 	$(ACTIVATE) && set -a && source .env && set +a && \
 	python scripts/eval_config_verification.py --models "$(MODELS)" --num-examples $$N --include-tools $$INCLUDE_TOOLS
+
+# Data building targets (production - private, not committed)
+data-e1: venv
+	@LIMIT=$${LIMIT:-1800}; \
+	HF_ID=$${HF_ID:-19kmunz/iot-23-preprocessed}; \
+	$(ECHO) "$(YELLOW)Building E1 IoT-23 dataset (LIMIT=$$LIMIT)...$(NC)"; \
+	$(ACTIVATE) && set -a && source .env 2>/dev/null && set +a && \
+	uv run python scripts/data/build_e1_iot23.py --limit $$LIMIT --hf-id "$$HF_ID" --mode full
+	@$(ECHO) "$(GREEN)✓ E1 IoT-23 dataset built$(NC)"
+
+data-e1-ood: venv
+	@N=$${N:-600}; \
+	CIC_ID=$${CIC_ID:-bvk/CICIDS-2017}; \
+	UNSW_ID=$${UNSW_ID:-Mireu-Lab/UNSW-NB15}; \
+	$(ECHO) "$(YELLOW)Building E1 OOD datasets (N=$$N)...$(NC)"; \
+	$(ACTIVATE) && set -a && source .env 2>/dev/null && set +a && \
+	uv run python scripts/data/build_e1_ood.py --n $$N --cic-id "$$CIC_ID" --unsw-id "$$UNSW_ID" --mode full
+	@$(ECHO) "$(GREEN)✓ E1 OOD datasets built$(NC)"
+
+# Test fixtures (small datasets for CI - committed to repo)
+data-e1-test: venv
+	@$(ECHO) "$(YELLOW)Building E1 test fixtures for CI...$(NC)"; \
+	$(ACTIVATE) && set -a && source .env 2>/dev/null && set +a && \
+	uv run python scripts/data/build_e1_iot23.py --mode test && \
+	uv run python scripts/data/build_e1_ood.py --mode test
+	@$(ECHO) "$(GREEN)✓ E1 test fixtures built$(NC)"
+
+# Clone E2 source repositories
+clone-e2-sources:
+	@$(ECHO) "$(YELLOW)Cloning E2 source repositories...$(NC)"
+	@./scripts/data/clone_e2_sources.sh
+	@$(ECHO) "$(GREEN)✓ E2 sources cloned to scripts/data/sources/$(NC)"
+
+# Build E2 with custom paths (production)
+data-e2: venv
+	@if [ -z "$(K8S_ROOT)" ] || [ -z "$(TF_ROOT)" ]; then \
+		$(ECHO) "$(RED)Error: Specify K8S_ROOT and TF_ROOT$(NC)"; \
+		$(ECHO) "Example: make data-e2 K8S_ROOT=path/to/k8s TF_ROOT=path/to/terraform"; \
+		$(ECHO) "Or use: make clone-e2-sources && make data-e2-local"; \
+		exit 1; \
+	fi
+	@REGO_DIR=$${REGO_DIR:-environments/sv-env-config-verification/policies}; \
+	PATCHES_DIR=$${PATCHES_DIR}; \
+	MODE=$${MODE:-full}; \
+	$(ECHO) "$(YELLOW)Building E2 K8s/TF datasets (MODE=$$MODE)...$(NC)"; \
+	if [ -n "$$PATCHES_DIR" ]; then \
+		$(ACTIVATE) && uv run python scripts/data/build_e2_k8s_tf.py \
+			--k8s-root "$(K8S_ROOT)" --tf-root "$(TF_ROOT)" \
+			--rego-dir "$$REGO_DIR" --patches-dir "$$PATCHES_DIR" --mode "$$MODE"; \
+	else \
+		$(ACTIVATE) && uv run python scripts/data/build_e2_k8s_tf.py \
+			--k8s-root "$(K8S_ROOT)" --tf-root "$(TF_ROOT)" \
+			--rego-dir "$$REGO_DIR" --mode "$$MODE"; \
+	fi
+	@$(ECHO) "$(GREEN)✓ E2 K8s/TF datasets built$(NC)"
+
+# Build E2 using cloned local sources (production)
+data-e2-local: venv
+	@if [ ! -d "scripts/data/sources/kubernetes" ] || [ ! -d "scripts/data/sources/terraform" ]; then \
+		$(ECHO) "$(RED)Error: Source directories not found$(NC)"; \
+		$(ECHO) "Run: make clone-e2-sources first"; \
+		exit 1; \
+	fi
+	@$(MAKE) data-e2 \
+		K8S_ROOT=scripts/data/sources/kubernetes \
+		TF_ROOT=scripts/data/sources/terraform \
+		MODE=full
+
+# Build E2 test fixtures (small datasets for CI)
+data-e2-test: venv
+	@if [ ! -d "scripts/data/sources/kubernetes" ] || [ ! -d "scripts/data/sources/terraform" ]; then \
+		$(ECHO) "$(RED)Error: Source directories not found$(NC)"; \
+		$(ECHO) "Run: make clone-e2-sources first"; \
+		exit 1; \
+	fi
+	@$(ECHO) "$(YELLOW)Building E2 test fixtures for CI...$(NC)"; \
+	$(MAKE) data-e2 \
+		K8S_ROOT=scripts/data/sources/kubernetes \
+		TF_ROOT=scripts/data/sources/terraform \
+		MODE=test
+	@$(ECHO) "$(GREEN)✓ E2 test fixtures built$(NC)"
+
+# Build all production datasets
+data-all: data-e1 data-e1-ood
+	@$(ECHO) "$(GREEN)✓ All E1 datasets built (E2 requires: make clone-e2-sources && make data-e2-local)$(NC)"
+
+# Build all test fixtures for CI
+data-test-all: data-e1-test data-e2-test
+	@$(ECHO) "$(GREEN)✓ All test fixtures built for CI$(NC)"
+
+# Upload datasets to HuggingFace Hub (requires HF_TOKEN)
+upload-datasets: venv
+	@if [ -z "$$HF_TOKEN" ]; then \
+		$(ECHO) "$(RED)Error: HF_TOKEN not set$(NC)"; \
+		$(ECHO) "Set it with: export HF_TOKEN=your_token_here"; \
+		exit 1; \
+	fi
+	@HF_ORG=$${HF_ORG:-intertwine-ai}; \
+	$(ECHO) "$(YELLOW)Building and uploading datasets to $$HF_ORG...$(NC)"; \
+	$(ACTIVATE) && uv run python scripts/data/upload_to_hf.py --hf-org "$$HF_ORG"
+	@$(ECHO) "$(GREEN)✓ Datasets uploaded to HuggingFace$(NC)"
 
 # Quick commands
 quick-test:

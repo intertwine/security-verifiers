@@ -78,6 +78,16 @@ coverage.xml
 outputs/*
 !outputs/.gitkeep
 
+# Data sources (cloned repositories for dataset building)
+scripts/data/sources/*
+!scripts/data/sources/.gitkeep
+
+# Generated datasets (prevent training contamination)
+# Only demo/test fixtures are checked in for CI
+environments/*/data/*.jsonl
+!environments/*/data/*-demo.jsonl
+!environments/*/data/*-test.jsonl
+
 # Private Docs
 docs-internal/
 # Coverage reports

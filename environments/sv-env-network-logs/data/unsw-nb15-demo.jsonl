@@ -1,0 +1,3 @@
+{"prompt": "Device host-alpha observed TCP 3389→3389, duration 5.0, bytes 4096, flags [S]. Decide: Malicious or Benign (you may Abstain if unsure).", "answer": "Malicious", "meta": {"source": "synthetic-demo-unsw", "hash": "unsw-demo001"}}
+{"prompt": "Device host-beta observed UDP 123→123, duration 0.1, bytes 64, flags []. Decide: Malicious or Benign (you may Abstain if unsure).", "answer": "Benign", "meta": {"source": "synthetic-demo-unsw", "hash": "unsw-demo002"}}
+{"prompt": "Device host-gamma observed TCP 445→445, duration 15.0, bytes 32768, flags [SFRA]. Decide: Malicious or Benign (you may Abstain if unsure).", "answer": "Malicious", "meta": {"source": "synthetic-demo-unsw", "hash": "unsw-demo003"}}

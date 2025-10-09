@@ -35,6 +35,70 @@ See [EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md) for the high-level vision and [
 
 ## Getting Started
 
+### Dataset Access
+
+**⚠️ Important: Training Contamination Prevention**
+
+To protect evaluation integrity, production datasets are:
+
+- **NOT included in this repository**
+- **Hosted privately on HuggingFace Hub** with gated access
+- Only **demo/test fixtures** are checked in for CI
+
+**For Users:**
+
+If you have been granted access to the private datasets:
+
+```bash
+# Set your HuggingFace token
+export HF_TOKEN=your_token_here
+
+# Download datasets from HuggingFace
+# (Instructions provided after access approval)
+```
+
+**For Contributors:**
+
+If you need to build datasets locally:
+
+**E1 (Network Logs):**
+
+```bash
+# Build production datasets (not committed)
+make data-e1            # IoT-23 primary (1800 samples)
+make data-e1-ood        # CIC-IDS-2017 + UNSW-NB15 OOD (600 each)
+make data-all           # Build all E1 datasets
+
+# Build test fixtures (committed for CI)
+make data-e1-test       # Small synthetic datasets (~20-30 samples)
+```
+
+**E2 (Config Verification):**
+
+```bash
+# Clone source repositories (one-time setup)
+make clone-e2-sources   # Clones K8s/Terraform repos to scripts/data/sources/
+
+# Build production datasets (not committed)
+make data-e2-local      # From cloned sources
+
+# Build test fixtures (committed for CI)
+make data-e2-test       # Small datasets for smoke tests
+
+# Or build from custom paths
+make data-e2 K8S_ROOT=/path/to/k8s TF_ROOT=/path/to/terraform
+```
+
+**Upload to HuggingFace** (maintainers only):
+
+```bash
+# Build and upload all datasets to HuggingFace Hub
+export HF_TOKEN=your_token_here
+make upload-datasets HF_ORG=intertwine-ai
+```
+
+Datasets are written to `environments/sv-env-{name}/data/` with reproducibility metadata in `sampling-*.json` files.
+
 ### Reproducible evaluations
 
 - E1 (network-logs):

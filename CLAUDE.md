@@ -24,6 +24,20 @@ make test-env E=name    # e.g., E=network-logs | config-verification | code-vuln
 # Run a single test (example)
 uv run pytest environments/sv-env-network-logs/sv_env_network_logs_test.py::TestNetworkLogParser::test_extracts_label_and_confidence -q
 
+# Data building - Production (private, not committed; requires .env with HF_TOKEN)
+make data-e1            # Build E1 IoT-23 dataset (LIMIT=1800, full mode)
+make data-e1-ood        # Build E1 OOD datasets (N=600, CIC+UNSW, full mode)
+make clone-e2-sources   # Clone recommended K8s/TF repos to scripts/data/sources/
+make data-e2-local      # Build E2 datasets from cloned sources (full mode)
+make data-e2 K8S_ROOT=<path> TF_ROOT=<path>  # Build E2 from custom paths (full mode)
+make data-all           # Build all E1 production datasets
+make upload-datasets HF_ORG=intertwine-ai  # Build and upload datasets to HuggingFace (maintainers only)
+
+# Data building - Test fixtures (small, checked in for CI)
+make data-e1-test       # Build E1 test fixtures (~20-30 samples)
+make data-e2-test       # Build E2 test fixtures (requires clone-e2-sources first)
+make data-test-all      # Build all test fixtures
+
 # Build & deploy
 make build              # build wheels for all envs
 make build-env E=name   # build one env
