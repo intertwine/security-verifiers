@@ -88,6 +88,9 @@ environments/*/data/*.jsonl
 !environments/*/data/*-demo.jsonl
 !environments/*/data/*-test.jsonl
 
+# Test sampling metadata (generated on-demand, not committed)
+environments/*/data/sampling-*-test.json
+
 # Private Docs
 docs-internal/
 # Coverage reports

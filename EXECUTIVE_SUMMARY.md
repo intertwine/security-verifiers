@@ -43,7 +43,7 @@
 
 To prevent training contamination, production datasets are hosted privately on HuggingFace with gated access. Public metadata-only repositories are available for browsing:
 
-- **E1 (Network Logs)**: https://huggingface.co/datasets/intertwine-ai/security-verifiers-e1-metadata
-- **E2 (Config Verification)**: https://huggingface.co/datasets/intertwine-ai/security-verifiers-e2-metadata
+- **E1 (Network Logs)**: <https://huggingface.co/datasets/intertwine-ai/security-verifiers-e1-metadata>
+- **E2 (Config Verification)**: <https://huggingface.co/datasets/intertwine-ai/security-verifiers-e2-metadata>
 
 Each public repo includes sampling metadata, model cards explaining the privacy rationale, and instructions for requesting access via [GitHub Issues](https://github.com/intertwine/security-verifiers/issues).
