@@ -27,7 +27,14 @@ make clone-e2-sources   # Clone recommended K8s/TF repos to scripts/data/sources
 make data-e2-local      # Build E2 datasets from cloned sources (full mode)
 make data-e2 K8S_ROOT=<path> TF_ROOT=<path>  # Build E2 from custom paths (full mode)
 make data-all           # Build all E1 production datasets
-make upload-datasets HF_ORG=intertwine-ai  # Build and upload datasets to HuggingFace (maintainers only; requires HF_TOKEN in .env)
+
+# HuggingFace dataset management (maintainers only; requires HF_TOKEN in .env)
+make validate-data                           # Validate E1 & E2 canonical splits with Pydantic
+make hf-e1-push HF_ORG=intertwine-ai        # Push E1 PUBLIC metadata (flat schema)
+make hf-e2-push HF_ORG=intertwine-ai        # Push E2 PUBLIC metadata (flat schema)
+make hf-e1p-push-canonical HF_ORG=intertwine-ai  # Push E1 PRIVATE canonical with Features
+make hf-e2p-push-canonical HF_ORG=intertwine-ai  # Push E2 PRIVATE canonical with Features
+make hf-push-all HF_ORG=intertwine-ai       # Push all metadata (public + private)
 
 # Data building - Test fixtures (small, checked in for CI)
 make data-e1-test       # Build E1 test fixtures (~20-30 samples)
@@ -79,9 +86,9 @@ uv run python -m build --wheel environments/sv-env-network-logs
   - set -a && source .env && set +a
 - Common vars:
   - OPENAI_API_KEY (required for OpenAI-compatible endpoints)
-  - HF_TOKEN (optional for dataset downloads; required for upload_to_hf.py)
+  - HF_TOKEN (optional for dataset downloads; required for HF push operations)
   - WANDB_API_KEY (required for Weave logging)
-- The upload_to_hf.py script automatically loads HF_TOKEN from .env using python-dotenv
+- HF push scripts (export_metadata_flat.py, push_canonical_with_features.py) automatically load HF_TOKEN from .env using python-dotenv
 
 ## Logging Architecture
 

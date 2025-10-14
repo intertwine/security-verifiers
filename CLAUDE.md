@@ -31,7 +31,14 @@ make clone-e2-sources   # Clone recommended K8s/TF repos to scripts/data/sources
 make data-e2-local      # Build E2 datasets from cloned sources (full mode)
 make data-e2 K8S_ROOT=<path> TF_ROOT=<path>  # Build E2 from custom paths (full mode)
 make data-all           # Build all E1 production datasets
-make upload-datasets HF_ORG=intertwine-ai  # Build and upload datasets to HuggingFace (maintainers only; requires HF_TOKEN in .env)
+
+# HuggingFace dataset management (maintainers only; requires HF_TOKEN in .env)
+make validate-data                           # Validate E1 & E2 canonical splits with Pydantic
+make hf-e1-push HF_ORG=intertwine-ai        # Push E1 PUBLIC metadata (flat schema)
+make hf-e2-push HF_ORG=intertwine-ai        # Push E2 PUBLIC metadata (flat schema)
+make hf-e1p-push-canonical HF_ORG=intertwine-ai  # Push E1 PRIVATE canonical with Features
+make hf-e2p-push-canonical HF_ORG=intertwine-ai  # Push E2 PRIVATE canonical with Features
+make hf-push-all HF_ORG=intertwine-ai       # Push all metadata (public + private)
 
 # Data building - Test fixtures (small, checked in for CI)
 make data-e1-test       # Build E1 test fixtures (~20-30 samples)
@@ -64,6 +71,22 @@ make clean-logs         # remove outputs/logs only
 make clean-outputs-all  # clear outputs/ (keeps .gitkeep)
 # File watch (optional): requires entr; on macOS: brew install entr
 make watch
+
+# HuggingFace flat metadata schema (for Dataset Viewer)
+make hf-e1-meta     # Build E1 metadata locally
+make hf-e2-meta     # Build E2 metadata locally
+make hf-e1-push     # Push E1 metadata to PUBLIC repo
+make hf-e2-push     # Push E2 metadata to PUBLIC repo
+make hf-e1p-push    # Push E1 metadata to PRIVATE repo (meta split only)
+make hf-e2p-push    # Push E2 metadata to PRIVATE repo (meta split only)
+make hf-push-all    # Push all metadata to all repos
+
+# Pydantic validators & canonical push with Features (PRIVATE repos)
+make validate-data            # Validate E1 & E2 splits with Pydantic
+make hf-e1p-push-canonical    # Push E1 canonical splits with explicit Features
+make hf-e2p-push-canonical    # Push E2 canonical splits with explicit Features
+make hf-e1p-push-canonical-dry # Dry run E1 canonical push
+make hf-e2p-push-canonical-dry # Dry run E2 canonical push
 ```
 
 ### Manual equivalents (fallback)
@@ -83,9 +106,9 @@ uv run python -m build --wheel environments/sv-env-network-logs
   - set -a && source .env && set +a
 - Common vars:
   - OPENAI_API_KEY (required for OpenAI-compatible endpoints)
-  - HF_TOKEN (optional for dataset downloads; required for upload_to_hf.py)
+  - HF_TOKEN (optional for dataset downloads; required for HF metadata pushes)
   - WANDB_API_KEY (required for Weave logging)
-- The upload_to_hf.py script automatically loads HF_TOKEN from .env using python-dotenv
+- HF push scripts (export_metadata_flat.py, push_canonical_with_features.py) automatically load HF_TOKEN from .env using python-dotenv
 
 ## Logging Architecture
 

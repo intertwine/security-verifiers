@@ -13,7 +13,9 @@ build build-env deploy ci cd \
 \
 eval eval-e1 eval-e2 e1 e2 e3 e4 e5 e6 \
 \
-data-e1 data-e1-ood data-e1-test data-e2 data-e2-local data-e2-test data-all data-test-all upload-datasets create-public-datasets clone-e2-sources \
+data-e1 data-e1-ood data-e1-test data-e2 data-e2-local data-e2-test data-all data-test-all clone-e2-sources \
+hf-e1-meta hf-e2-meta hf-e1-push hf-e2-push hf-e1p-meta hf-e2p-meta hf-e1p-push hf-e2p-push hf-push-all \
+validate-e1-data validate-e2-data validate-data hf-e1p-push-canonical hf-e2p-push-canonical hf-e1p-push-canonical-dry hf-e2p-push-canonical-dry \
 \
 pre-commit clean clean-outputs clean-logs clean-outputs-all clean-all docs info dev watch
 
@@ -75,13 +77,27 @@ help:
 	@$(ECHO) "  make data-e2        - Build E2 K8s/TF datasets (requires K8S_ROOT, TF_ROOT, full mode)"
 	@$(ECHO) "  make data-e2-local  - Build E2 using cloned sources (run clone-e2-sources first)"
 	@$(ECHO) "  make data-all       - Build all production datasets"
-	@$(ECHO) "  make upload-datasets - Build and upload PRIVATE datasets to HuggingFace (loads HF_TOKEN from .env)"
-	@$(ECHO) "  make create-public-datasets - Create PUBLIC metadata-only datasets (loads HF_TOKEN from .env)"
 	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)Data Building (Test Fixtures - Committed):$(NC)"
 	@$(ECHO) "  make data-e1-test   - Build E1 test fixtures for CI (small, checked in)"
 	@$(ECHO) "  make data-e2-test   - Build E2 test fixtures for CI (small, checked in)"
 	@$(ECHO) "  make data-test-all  - Build all test fixtures for CI"
+	@$(ECHO) ""
+	@$(ECHO) "$(YELLOW)HuggingFace Flat Metadata Schema (Dataset Viewer):$(NC)"
+	@$(ECHO) "  make hf-e1-meta     - Build E1 metadata (flat schema) locally"
+	@$(ECHO) "  make hf-e2-meta     - Build E2 metadata (flat schema) locally"
+	@$(ECHO) "  make hf-e1-push     - Push E1 metadata to PUBLIC repo (HF_ORG=intertwine-ai)"
+	@$(ECHO) "  make hf-e2-push     - Push E2 metadata to PUBLIC repo (HF_ORG=intertwine-ai)"
+	@$(ECHO) "  make hf-e1p-push    - Push E1 metadata to PRIVATE repo (meta split only)"
+	@$(ECHO) "  make hf-e2p-push    - Push E2 metadata to PRIVATE repo (meta split only)"
+	@$(ECHO) "  make hf-push-all    - Push all metadata to all repos (public + private)"
+	@$(ECHO) ""
+	@$(ECHO) "$(YELLOW)Data Validation & Canonical Push (HF Features):$(NC)"
+	@$(ECHO) "  make validate-data            - Validate E1 & E2 canonical splits (Pydantic)"
+	@$(ECHO) "  make hf-e1p-push-canonical    - Push E1 canonical with Features (PRIVATE)"
+	@$(ECHO) "  make hf-e2p-push-canonical    - Push E2 canonical with Features (PRIVATE)"
+	@$(ECHO) "  make hf-e1p-push-canonical-dry - Dry run E1 canonical push"
+	@$(ECHO) "  make hf-e2p-push-canonical-dry - Dry run E2 canonical push"
 	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)Utilities:$(NC)"
 	@$(ECHO) "  make clean          - Remove build artifacts and caches"
@@ -451,21 +467,124 @@ data-all: data-e1 data-e1-ood
 data-test-all: data-e1-test data-e2-test
 	@$(ECHO) "$(GREEN)✓ All test fixtures built for CI$(NC)"
 
-# Upload datasets to HuggingFace Hub (requires HF_TOKEN)
-upload-datasets: venv
-	@HF_ORG=$${HF_ORG:-intertwine-ai}; \
-	$(ECHO) "$(YELLOW)Building and uploading datasets to $$HF_ORG...$(NC)"; \
-	$(ECHO) "$(YELLOW)Note: HF_TOKEN will be loaded from .env file$(NC)"; \
-	$(ACTIVATE) && uv run python scripts/data/upload_to_hf.py --hf-org "$$HF_ORG"
-	@$(ECHO) "$(GREEN)✓ Datasets uploaded to HuggingFace$(NC)"
+# ========== Flat Metadata Schema Targets (HF Dataset Viewer) ==========
+# Build metadata locally (flat schema)
+hf-e1-meta: venv
+	@$(ECHO) "$(YELLOW)Building E1 metadata (flat schema)...$(NC)"
+	@$(ACTIVATE) && uv run python scripts/hf/export_metadata_flat.py \
+		--env e1 --out build/hf/e1/meta.jsonl
+	@$(ECHO) "$(GREEN)✓ E1 metadata built: build/hf/e1/meta.jsonl$(NC)"
 
-# Create public metadata-only datasets
-create-public-datasets: venv
+hf-e2-meta: venv
+	@$(ECHO) "$(YELLOW)Building E2 metadata (flat schema)...$(NC)"
+	@$(ACTIVATE) && uv run python scripts/hf/export_metadata_flat.py \
+		--env e2 --out build/hf/e2/meta.jsonl
+	@$(ECHO) "$(GREEN)✓ E2 metadata built: build/hf/e2/meta.jsonl$(NC)"
+
+# Push to PUBLIC metadata-only repos
+hf-e1-push: venv
 	@HF_ORG=$${HF_ORG:-intertwine-ai}; \
-	$(ECHO) "$(YELLOW)Creating PUBLIC metadata-only datasets under $$HF_ORG...$(NC)"; \
-	$(ECHO) "$(YELLOW)Note: HF_TOKEN will be loaded from .env file$(NC)"; \
-	$(ACTIVATE) && uv run python scripts/data/create_public_datasets.py --hf-org "$$HF_ORG"
-	@$(ECHO) "$(GREEN)✓ Public metadata datasets created on HuggingFace$(NC)"
+	$(ECHO) "$(YELLOW)Pushing E1 metadata to PUBLIC repo: $$HF_ORG/security-verifiers-e1-metadata$(NC)"; \
+	$(ACTIVATE) && uv run python scripts/hf/export_metadata_flat.py \
+		--env e1 --out build/hf/e1/meta.jsonl \
+		--repo "$$HF_ORG/security-verifiers-e1-metadata" --split meta --push
+	@$(ECHO) "$(GREEN)✓ E1 metadata pushed to PUBLIC repo$(NC)"
+
+hf-e2-push: venv
+	@HF_ORG=$${HF_ORG:-intertwine-ai}; \
+	$(ECHO) "$(YELLOW)Pushing E2 metadata to PUBLIC repo: $$HF_ORG/security-verifiers-e2-metadata$(NC)"; \
+	$(ACTIVATE) && uv run python scripts/hf/export_metadata_flat.py \
+		--env e2 --out build/hf/e2/meta.jsonl \
+		--repo "$$HF_ORG/security-verifiers-e2-metadata" --split meta --push
+	@$(ECHO) "$(GREEN)✓ E2 metadata pushed to PUBLIC repo$(NC)"
+
+# Push to PRIVATE full dataset repos (only updates meta split)
+hf-e1p-meta: venv
+	@$(ECHO) "$(YELLOW)Building E1 metadata for PRIVATE repo (flat schema)...$(NC)"
+	@$(ACTIVATE) && uv run python scripts/hf/export_metadata_flat.py \
+		--env e1 --out build/hf/e1/meta.jsonl
+	@$(ECHO) "$(GREEN)✓ E1 metadata built: build/hf/e1/meta.jsonl$(NC)"
+
+hf-e2p-meta: venv
+	@$(ECHO) "$(YELLOW)Building E2 metadata for PRIVATE repo (flat schema)...$(NC)"
+	@$(ACTIVATE) && uv run python scripts/hf/export_metadata_flat.py \
+		--env e2 --out build/hf/e2/meta.jsonl
+	@$(ECHO) "$(GREEN)✓ E2 metadata built: build/hf/e2/meta.jsonl$(NC)"
+
+hf-e1p-push: venv
+	@HF_ORG=$${HF_ORG:-intertwine-ai}; \
+	$(ECHO) "$(YELLOW)Pushing E1 metadata to PRIVATE repo: $$HF_ORG/security-verifiers-e1 (meta split only)$(NC)"; \
+	$(ACTIVATE) && uv run python scripts/hf/export_metadata_flat.py \
+		--env e1 --out build/hf/e1/meta.jsonl \
+		--repo "$$HF_ORG/security-verifiers-e1" --split meta --push --private
+	@$(ECHO) "$(GREEN)✓ E1 metadata pushed to PRIVATE repo (meta split only)$(NC)"
+
+hf-e2p-push: venv
+	@HF_ORG=$${HF_ORG:-intertwine-ai}; \
+	$(ECHO) "$(YELLOW)Pushing E2 metadata to PRIVATE repo: $$HF_ORG/security-verifiers-e2 (meta split only)$(NC)"; \
+	$(ACTIVATE) && uv run python scripts/hf/export_metadata_flat.py \
+		--env e2 --out build/hf/e2/meta.jsonl \
+		--repo "$$HF_ORG/security-verifiers-e2" --split meta --push --private
+	@$(ECHO) "$(GREEN)✓ E2 metadata pushed to PRIVATE repo (meta split only)$(NC)"
+
+# Convenience: push all metadata to all repos
+hf-push-all: hf-e1-push hf-e2-push hf-e1p-push hf-e2p-push
+	@$(ECHO) "$(GREEN)✓ All metadata pushed (public + private repos)$(NC)"
+
+# ========== Pydantic Validators & Canonical Push (with Features) ==========
+# Validate canonical splits with Pydantic before pushes
+validate-e1-data: venv
+	@$(ECHO) "$(YELLOW)Validating E1 canonical splits with Pydantic...$(NC)"
+	@$(ACTIVATE) && uv run python scripts/data/validate_splits_e1.py \
+		--dir environments/sv-env-network-logs/data
+	@$(ECHO) "$(GREEN)✓ E1 validation passed$(NC)"
+
+validate-e2-data: venv
+	@$(ECHO) "$(YELLOW)Validating E2 canonical splits with Pydantic...$(NC)"
+	@$(ACTIVATE) && uv run python scripts/data/validate_splits_e2.py \
+		--dir environments/sv-env-config-verification/data
+	@$(ECHO) "$(GREEN)✓ E2 validation passed$(NC)"
+
+validate-data: validate-e1-data validate-e2-data
+	@$(ECHO) "$(GREEN)✓ All data validation passed$(NC)"
+
+# Push canonical splits with explicit HF Features (PRIVATE repos only)
+hf-e1p-push-canonical: venv
+	@HF_ORG=$${HF_ORG:-intertwine-ai}; \
+	$(ECHO) "$(YELLOW)Pushing E1 canonical splits to PRIVATE repo: $$HF_ORG/security-verifiers-e1$(NC)"; \
+	$(ACTIVATE) && uv run python scripts/hf/push_canonical_with_features.py \
+		--env e1 \
+		--repo "$$HF_ORG/security-verifiers-e1" \
+		--data-dir environments/sv-env-network-logs/data \
+		--push
+	@$(ECHO) "$(GREEN)✓ E1 canonical splits pushed$(NC)"
+
+hf-e2p-push-canonical: venv
+	@HF_ORG=$${HF_ORG:-intertwine-ai}; \
+	$(ECHO) "$(YELLOW)Pushing E2 canonical splits to PRIVATE repo: $$HF_ORG/security-verifiers-e2$(NC)"; \
+	$(ACTIVATE) && uv run python scripts/hf/push_canonical_with_features.py \
+		--env e2 \
+		--repo "$$HF_ORG/security-verifiers-e2" \
+		--data-dir environments/sv-env-config-verification/data \
+		--push
+	@$(ECHO) "$(GREEN)✓ E2 canonical splits pushed$(NC)"
+
+# Dry run canonical pushes (no --push)
+hf-e1p-push-canonical-dry: venv
+	@HF_ORG=$${HF_ORG:-intertwine-ai}; \
+	$(ECHO) "$(YELLOW)[DRY RUN] E1 canonical splits to $$HF_ORG/security-verifiers-e1$(NC)"; \
+	$(ACTIVATE) && uv run python scripts/hf/push_canonical_with_features.py \
+		--env e1 \
+		--repo "$$HF_ORG/security-verifiers-e1" \
+		--data-dir environments/sv-env-network-logs/data
+
+hf-e2p-push-canonical-dry: venv
+	@HF_ORG=$${HF_ORG:-intertwine-ai}; \
+	$(ECHO) "$(YELLOW)[DRY RUN] E2 canonical splits to $$HF_ORG/security-verifiers-e2$(NC)"; \
+	$(ACTIVATE) && uv run python scripts/hf/push_canonical_with_features.py \
+		--env e2 \
+		--repo "$$HF_ORG/security-verifiers-e2" \
+		--data-dir environments/sv-env-config-verification/data
 
 # Quick commands
 quick-test:

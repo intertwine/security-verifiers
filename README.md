@@ -37,7 +37,7 @@ See [EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md) for the high-level vision and [
 
 ### Dataset Access
 
-**⚠️ Important: Training Contamination Prevention**
+#### ⚠️ Important: Training Contamination Prevention
 
 To protect evaluation integrity, production datasets are:
 
@@ -48,13 +48,17 @@ To protect evaluation integrity, production datasets are:
 **Public Metadata (Browse & Request Access):**
 
 View sampling metadata and request access to full datasets:
-- **E1 (Network Logs)**: https://huggingface.co/datasets/intertwine-ai/security-verifiers-e1-metadata
-- **E2 (Config Verification)**: https://huggingface.co/datasets/intertwine-ai/security-verifiers-e2-metadata
+
+- **E1 (Network Logs)**: <https://huggingface.co/datasets/intertwine-ai/security-verifiers-e1-metadata>
+- **E2 (Config Verification)**: <https://huggingface.co/datasets/intertwine-ai/security-verifiers-e2-metadata>
 
 Each repo includes:
+
 - Sampling metadata showing how datasets were built
 - Model cards explaining why datasets are private
 - Instructions for requesting access via [GitHub Issues](https://github.com/intertwine/security-verifiers/issues)
+
+**Metadata Schema:** All HuggingFace metadata splits use a standardized flat schema for stable dataset viewer rendering. Structured details are JSON-encoded in the `payload_json` field for easy parsing while maintaining a consistent tabular display.
 
 **For Approved Researchers:**
 
@@ -109,20 +113,31 @@ make data-e2 K8S_ROOT=/path/to/k8s TF_ROOT=/path/to/terraform
 # Or export it as environment variable
 export HF_TOKEN=your_token_here
 
-# Create PUBLIC metadata-only datasets (for community)
-make create-public-datasets HF_ORG=intertwine-ai
+# Validate canonical splits before any push
+make validate-data
 
-# Build and upload PRIVATE full datasets (for approved researchers)
-make upload-datasets HF_ORG=intertwine-ai
+# Push PUBLIC metadata (flat schema for Dataset Viewer)
+make hf-e1-push HF_ORG=intertwine-ai
+make hf-e2-push HF_ORG=intertwine-ai
 
-# Or use the scripts directly
-uv run python scripts/data/create_public_datasets.py --hf-org intertwine-ai
-uv run python scripts/data/upload_to_hf.py --hf-org intertwine-ai --e1-only
+# Push PRIVATE canonical splits with explicit HF Features
+make hf-e1p-push-canonical HF_ORG=intertwine-ai
+make hf-e2p-push-canonical HF_ORG=intertwine-ai
+
+# Or push all metadata at once (public + private repos)
+make hf-push-all HF_ORG=intertwine-ai
 ```
 
 **Public vs Private Datasets:**
-- **Public**: Metadata-only repos with sampling parameters and model cards explaining why datasets are private
-- **Private**: Full datasets with gated access to prevent training contamination
+
+- **Public**: Flat metadata schema for HF Dataset Viewer compatibility (sampling, tools, provenance)
+- **Private**: Canonical training splits with explicit Features for consistent nested rendering
+
+**Schema Enforcement:**
+
+- Pydantic validators ensure schema consistency before any push
+- Explicit HuggingFace Features for stable Dataset Viewer rendering
+- Separate workflows for metadata (public) vs canonical data (private)
 
 Datasets are written to `environments/sv-env-{name}/data/` with reproducibility metadata in `sampling-*.json` files.
 
@@ -250,13 +265,13 @@ uv run pre-commit run --all-files
 
 ## Environment Specifications
 
-| Environment                  | Type          | Reward Focus                                   | Key Innovation                            |
-| ---------------------------- | ------------- | ---------------------------------------------- | ----------------------------------------- |
-| `sv-env-network-logs`        | SingleTurnEnv | Calibration, abstention, asymmetric costs      | Operational SOC metrics over raw accuracy |
-| `sv-env-phishing-detection`  | SingleTurnEnv | Evidence-seeking, FN penalties                 | Tool-calling for URL/domain reputation    |
-| `sv-env-config-verification` | ToolEnv       | Machine-verified fixes with patch verification | OPA/Rego/KubeLinter/Semgrep ground truth  |
-| `sv-env-code-vulnerability`  | MultiTurnEnv  | Test-passing, minimal diffs                    | Executable verification loop              |
-| `sv-env-redteam-attack`      | MultiTurnEnv  | Unsafe elicitation success                     | Llama Guard 3 safety scoring              |
+| Environment                  | Type                  | Reward Focus                                   | Key Innovation                            |
+| ---------------------------- | --------------------- | ---------------------------------------------- | ----------------------------------------- |
+| `sv-env-network-logs`        | SingleTurnEnv         | Calibration, abstention, asymmetric costs      | Operational SOC metrics over raw accuracy |
+| `sv-env-phishing-detection`  | SingleTurnEnv         | Evidence-seeking, FN penalties                 | Tool-calling for URL/domain reputation    |
+| `sv-env-config-verification` | ToolEnv               | Machine-verified fixes with patch verification | OPA/Rego/KubeLinter/Semgrep ground truth  |
+| `sv-env-code-vulnerability`  | MultiTurnEnv          | Test-passing, minimal diffs                    | Executable verification loop              |
+| `sv-env-redteam-attack`      | MultiTurnEnv          | Unsafe elicitation success                     | Llama Guard 3 safety scoring              |
 | `sv-env-redteam-defense`     | SingleTurnEnv (alpha) | Helpful/harmless balance                       | Co-training with attacker agent           |
 
 ## Shared Toolbox
@@ -290,6 +305,7 @@ env = load_environment()
 ```
 
 **Configuration Options:**
+
 - `WEAVE_AUTO_INIT`: Enable/disable automatic initialization (default: `true`)
 - `WEAVE_PROJECT`: Weave project name (default: `security-verifiers`)
 - `WEAVE_DISABLED`: Completely disable Weave (overrides other settings)
@@ -318,12 +334,14 @@ reward_dips = logger.find_reward_dips(threshold=0.2)
 ```
 
 **Features:**
+
 - Custom event filtering and transformation
 - Local event buffering for offline analysis
 - Query capabilities (e.g., `find_reward_dips()`)
 - Integration with both Weave and Weights & Biases
 
 **Learn More:**
+
 - 📖 **[Comprehensive Logging Guide](docs/logging-guide.md)** - Detailed configuration, examples, and best practices
 - [Weave Verifiers Integration](https://weave-docs.wandb.ai/guides/integrations/verifiers)
 - [Weave Tracing](https://docs.wandb.com/weave/tracing)

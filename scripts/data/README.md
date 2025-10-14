@@ -5,10 +5,22 @@ This directory contains scripts for building and uploading datasets for the Secu
 ## Public Datasets
 
 Public metadata-only datasets are available for browsing:
-- **E1 (Network Logs)**: https://huggingface.co/datasets/intertwine-ai/security-verifiers-e1-metadata
-- **E2 (Config Verification)**: https://huggingface.co/datasets/intertwine-ai/security-verifiers-e2-metadata
+
+- **E1 (Network Logs)**: <https://huggingface.co/datasets/intertwine-ai/security-verifiers-e1-metadata>
+- **E2 (Config Verification)**: <https://huggingface.co/datasets/intertwine-ai/security-verifiers-e2-metadata>
 
 These repos include sampling metadata and instructions for requesting access to full datasets.
+
+**Metadata Schema:** All HuggingFace metadata splits use a standardized six-column flat schema:
+
+- `section`: Category (sampling/ood/tools/provenance/notes)
+- `name`: Short identifier key
+- `description`: 1-2 sentence summary
+- `payload_json`: JSON-encoded structured details (minified)
+- `version`: Dataset version (e.g., "v1")
+- `created_at`: ISO-8601 UTC timestamp
+
+This schema ensures consistent rendering in the HuggingFace Dataset Viewer across all metadata splits.
 
 ## Scripts
 
@@ -83,85 +95,101 @@ bash scripts/data/clone_e2_sources.sh
 make clone-e2-sources
 ```
 
-### `create_public_datasets.py`
+### `export_metadata_flat.py` (in `scripts/hf/`)
 
-Creates PUBLIC metadata-only datasets on HuggingFace with model cards and access instructions (maintainers only).
+Exports metadata in a standardized flat schema for HuggingFace Dataset Viewer compatibility.
 
-**Requirements:**
-- HF_TOKEN in `.env` file or environment variable
-- Packages: `huggingface_hub`, `python-dotenv`
+**Location:** `scripts/hf/export_metadata_flat.py`
 
-**Usage:**
-```bash
-# Set HF_TOKEN in .env (recommended)
-echo "HF_TOKEN=your_token_here" >> .env
-
-# Create public metadata-only datasets
-uv run python scripts/data/create_public_datasets.py --hf-org intertwine-ai
-
-# Or use Make target
-make create-public-datasets HF_ORG=intertwine-ai
-```
-
-**What's Uploaded:**
-- Sampling metadata files (`sampling-*.json`)
-- Tools versions (`tools-versions.json` for E2)
-- Model cards explaining privacy rationale
-- Links to GitHub Issues for access requests
-
-**Script Options:**
-- `--hf-org`: HuggingFace organization name (required)
-- `--dataset-name-prefix`: Base dataset name prefix (default: `security-verifiers`)
-- `--e1-only`: Only create E1 public dataset
-- `--e2-only`: Only create E2 public dataset
-
-### `upload_to_hf.py`
-
-Builds and uploads PRIVATE production datasets to HuggingFace Hub (maintainers only).
+**Purpose:** Normalizes all metadata into a uniform six-column schema to ensure stable rendering in the HF Dataset Viewer.
 
 **Requirements:**
 
-- HF_TOKEN in `.env` file or environment variable
-- Packages: `huggingface_hub`, `python-dotenv`
+- HF_TOKEN in `.env` file or environment variable (for `--push`)
+- Packages: `huggingface_hub`, `datasets`, `python-dotenv`
 
 **Usage:**
 
 ```bash
-# Set HF_TOKEN in .env (recommended)
-echo "HF_TOKEN=your_token_here" >> .env
+# Build metadata locally (flat schema)
+make hf-e1-meta      # E1 metadata
+make hf-e2-meta      # E2 metadata
 
-# Upload all PRIVATE datasets
-uv run python scripts/data/upload_to_hf.py --hf-org intertwine-ai
+# Push to PUBLIC metadata-only repos
+make hf-e1-push      # Push to intertwine-ai/security-verifiers-e1-metadata
+make hf-e2-push      # Push to intertwine-ai/security-verifiers-e2-metadata
 
-# Upload only E1 datasets
-uv run python scripts/data/upload_to_hf.py --hf-org intertwine-ai --e1-only
+# Push to PRIVATE full dataset repos (meta split only)
+make hf-e1p-push     # Push to intertwine-ai/security-verifiers-e1
+make hf-e2p-push     # Push to intertwine-ai/security-verifiers-e2
 
-# Upload only E2 datasets
-uv run python scripts/data/upload_to_hf.py --hf-org intertwine-ai --e2-only
+# Push all metadata to all repos
+make hf-push-all
 
-# Or use Make target
-make upload-datasets HF_ORG=intertwine-ai
+# Or run directly
+uv run python scripts/hf/export_metadata_flat.py --env e1 --out build/hf/e1/meta.jsonl
+uv run python scripts/hf/export_metadata_flat.py --env e1 --out build/hf/e1/meta.jsonl \
+  --repo intertwine-ai/security-verifiers-e1-metadata --split meta --push
 ```
 
 **Script Options:**
 
-- `--hf-org`: HuggingFace organization name (default: `intertwine-ai`)
-- `--dataset-name`: Base dataset name on HF Hub (default: `security-verifiers`)
-- `--k8s-root`: Path to K8s source files for E2 (default: `scripts/data/sources/kubernetes`)
-- `--tf-root`: Path to Terraform source files for E2 (default: `scripts/data/sources/terraform`)
-- `--e1-only`: Only build and upload E1 datasets
-- `--e2-only`: Only build and upload E2 datasets
+- `--env`: Environment (e1 or e2) (required)
+- `--out`: Output JSONL file path (required)
+- `--repo`: HuggingFace repo ID (required for `--push`)
+- `--split`: Split name (default: `meta`)
+- `--push`: Push to HuggingFace Hub after exporting
+- `--private`: Flag for logging (private repos managed manually)
+- `--created-at`: Override timestamp (ISO-8601 UTC)
 
-**Testing:**
-The upload script includes comprehensive unit tests:
+**What's Exported:**
+
+- Sampling metadata (how datasets were built)
+- OOD dataset details (for E1)
+- Tool versions and descriptions (for E2)
+- Dataset provenance and sources
+- Privacy rationale and access instructions
+
+**Important:** When pushing to private repos, only the `meta` split is updated. Canonical `train/dev/test/ood` splits remain unchanged.
+
+### `push_canonical_with_features.py` (in `scripts/hf/`)
+
+Pushes canonical training/eval splits to PRIVATE HuggingFace repos with explicit Features for consistent nested rendering.
+
+**Location:** `scripts/hf/push_canonical_with_features.py`
+
+**Purpose:** Upload train/dev/test/ood splits with explicit HuggingFace Features so the Dataset Viewer renders nested structures consistently.
+
+**Requirements:**
+
+- HF_TOKEN in `.env` file or environment variable
+- Packages: `huggingface_hub`, `datasets`, `python-dotenv`
+
+**Usage:**
 
 ```bash
-# Run tests
-uv run pytest scripts/data/upload_to_hf_test.py -v
+# Validate canonical splits first
+make validate-data
 
-# Check code quality
-uv run ruff check scripts/data/upload_to_hf.py
+# Dry run to preview (no actual push)
+make hf-e1p-push-canonical-dry
+make hf-e2p-push-canonical-dry
+
+# Actually push to PRIVATE repos
+make hf-e1p-push-canonical HF_ORG=intertwine-ai
+make hf-e2p-push-canonical HF_ORG=intertwine-ai
 ```
+
+**What's Pushed:**
+
+- **E1**: `train`, `dev`, `test`, `ood` splits with explicit Features (ClassLabel for answer, nested meta)
+- **E2**: `train` split (K8s + Terraform combined) with explicit Features (nested violations list, patch field)
+
+**Schema Enforcement:**
+
+- Pydantic validators (`validate_splits_e1.py`, `validate_splits_e2.py`) run before push
+- Explicit HuggingFace Features ensure consistent nested rendering
+- Coerces `info.patch: null` → `""` for E2 to match Features schema
 
 ## Output Locations
 
@@ -184,7 +212,7 @@ Each dataset includes sampling metadata in `sampling-*.json` files for reproduci
 
 These scripts respect the following environment variables:
 
-- `HF_TOKEN`: HuggingFace API token (required for `upload_to_hf.py`)
+- `HF_TOKEN`: HuggingFace API token (required for pushing to HuggingFace)
 - `LIMIT`: Override sample count for E1 builds (e.g., `LIMIT=100`)
 - `N`: Override sample count for E1 OOD builds (e.g., `N=50`)
 
@@ -204,8 +232,15 @@ make data-e1-test       # E1 test fixtures
 make data-e2-test       # E2 test fixtures
 make data-test-all      # All test fixtures
 
-# Upload to HuggingFace (maintainers only)
-make upload-datasets HF_ORG=intertwine-ai
+# Validate canonical splits (Pydantic)
+make validate-data      # Validate E1 & E2 canonical data
+
+# HuggingFace operations (maintainers only)
+make hf-e1-push                 # Push E1 PUBLIC metadata
+make hf-e2-push                 # Push E2 PUBLIC metadata
+make hf-e1p-push-canonical      # Push E1 PRIVATE canonical splits
+make hf-e2p-push-canonical      # Push E2 PRIVATE canonical splits
+make hf-push-all                # Push all metadata (public + private)
 
 # Utilities
 make clone-e2-sources   # Clone E2 source repositories
