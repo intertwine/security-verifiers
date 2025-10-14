@@ -43,7 +43,8 @@ To protect evaluation integrity, production datasets are:
 
 - **NOT included in this repository**
 - **Hosted privately on HuggingFace Hub** with gated access
-- Only **demo/test fixtures** are checked in for CI
+- Only **demo fixtures** (5 small samples) are committed for quick testing
+- **Test fixtures** are generated on-demand for CI
 
 **Public Metadata (Browse & Request Access):**
 
@@ -84,8 +85,8 @@ make data-e1            # IoT-23 primary (1800 samples)
 make data-e1-ood        # CIC-IDS-2017 + UNSW-NB15 OOD (600 each)
 make data-all           # Build all E1 datasets
 
-# Build test fixtures (committed for CI)
-make data-e1-test       # Small synthetic datasets (~20-30 samples)
+# Build test fixtures (generated on-demand for CI)
+make data-e1-test       # Small test datasets (~20-30 samples)
 ```
 
 **E2 (Config Verification):**
@@ -97,8 +98,8 @@ make clone-e2-sources   # Clones K8s/Terraform repos to scripts/data/sources/
 # Build production datasets (not committed)
 make data-e2-local      # From cloned sources
 
-# Build test fixtures (committed for CI)
-make data-e2-test       # Small datasets for smoke tests
+# Build test fixtures (generated on-demand for CI)
+make data-e2-test       # Small test datasets for smoke tests
 
 # Or build from custom paths
 make data-e2 K8S_ROOT=/path/to/k8s TF_ROOT=/path/to/terraform
