@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any, Dict, List, cast
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 os.environ.setdefault("PYTHONPATH", str(REPO_ROOT))
 
 # Initialize Weave before importing environments for automatic tracing

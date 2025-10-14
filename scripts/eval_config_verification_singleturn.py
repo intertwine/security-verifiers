@@ -20,6 +20,7 @@ import argparse
 import json
 import os
 import subprocess
+import sys
 import time
 import uuid
 from pathlib import Path
@@ -27,6 +28,7 @@ from typing import Any, Dict, List, cast
 
 # Ensure local repo modules are importable (sv_shared etc.)
 REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 os.environ.setdefault("PYTHONPATH", str(REPO_ROOT))
 
 # pylint: disable=wrong-import-position
