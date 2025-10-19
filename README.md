@@ -228,7 +228,7 @@ Before using any of the security verification environments, you need to set up y
    # Get your key at: https://openrouter.ai/keys
    OPENROUTER_API_KEY=your-openrouter-api-key-here
 
-   # Required for logging: Weights & Biases API Key
+    # Required for Weave/W&B logging: Weights & Biases API Key
    # Sign up free at: https://wandb.ai
    # Get your key at: https://wandb.ai/authorize
    WANDB_API_KEY=your-wandb-api-key-here
@@ -300,11 +300,11 @@ uv run pre-commit run --all-files
 | Environment                  | Type                  | Reward Focus                                   | Key Innovation                            |
 | ---------------------------- | --------------------- | ---------------------------------------------- | ----------------------------------------- |
 | `sv-env-network-logs`        | SingleTurnEnv         | Calibration, abstention, asymmetric costs      | Operational SOC metrics over raw accuracy |
-| `sv-env-phishing-detection`  | SingleTurnEnv         | Evidence-seeking, FN penalties                 | Tool-calling for URL/domain reputation    |
+| `sv-env-phishing-detection`  | SingleTurnEnv         | Evidence-seeking, FN penalties                 | URL heuristics with structured evidence   |
 | `sv-env-config-verification` | ToolEnv               | Machine-verified fixes with patch verification | OPA/Rego/KubeLinter/Semgrep ground truth  |
-| `sv-env-code-vulnerability`  | MultiTurnEnv          | Test-passing, minimal diffs                    | Executable verification loop              |
+| `sv-env-code-vulnerability`  | ToolEnv               | Test-passing, minimal diffs                    | Executable verification loop              |
 | `sv-env-redteam-attack`      | MultiTurnEnv          | Unsafe elicitation success                     | Llama Guard 3 safety scoring              |
-| `sv-env-redteam-defense`     | SingleTurnEnv (alpha) | Helpful/harmless balance                       | Co-training with attacker agent           |
+| `sv-env-redteam-defense`     | SingleTurnEnv (alpha) | Helpful/harmless balance                       | Synthetic refusal curriculum & safety heuristics |
 
 ## Shared Toolbox
 
