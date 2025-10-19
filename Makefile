@@ -108,12 +108,13 @@ help:
 	@$(ECHO) "  make pre-commit     - Install and run pre-commit hooks"
 	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)Environment Variables:$(NC)"
-	@$(ECHO) "  E=network-logs      - Target specific environment"
-	@$(ECHO) "  MODEL=gpt-4o-mini   - Model for evaluation"
-	@$(ECHO) "  N=10                - Number of examples for eval"
-	@$(ECHO) "  LIMIT=1800          - Total rows for E1 dataset"
-	@$(ECHO) "  K8S_ROOT=path       - Kubernetes YAML directory for E2"
-	@$(ECHO) "  TF_ROOT=path        - Terraform HCL directory for E2"
+	@$(ECHO) "  E=network-logs             - Target specific environment"
+	@$(ECHO) "  MODEL=gpt-4o-mini          - Model for evaluation"
+	@$(ECHO) "  N=10                       - Number of examples for eval"
+	@$(ECHO) "  MAX_CONSECUTIVE_ERRORS=3   - Error threshold (default: 3, 0 to disable)"
+	@$(ECHO) "  LIMIT=1800                 - Total rows for E1 dataset"
+	@$(ECHO) "  K8S_ROOT=path              - Kubernetes YAML directory for E2"
+	@$(ECHO) "  TF_ROOT=path               - Terraform HCL directory for E2"
 
 # Complete setup
 setup: venv install install-dev
@@ -357,6 +358,9 @@ e5:
 e6:
 	@$(MAKE) test-env E=redteam-defense
 
+# Default error threshold for evaluations
+MAX_CONSECUTIVE_ERRORS ?= 3
+
 # E1/E2 eval helpers
 eval-e1: venv
 	@if [ -z "$(MODELS)" ]; then \
@@ -364,9 +368,10 @@ eval-e1: venv
 		exit 1; \
 	fi
 	@N=$${N:-10}; \
-	$(ECHO) "$(YELLOW)Evaluating E1 (network-logs) for models: $(MODELS) (N=$$N)$(NC)"; \
+	MAX_ERRORS=$${MAX_CONSECUTIVE_ERRORS:-3}; \
+	$(ECHO) "$(YELLOW)Evaluating E1 (network-logs) for models: $(MODELS) (N=$$N, max_errors=$$MAX_ERRORS)$(NC)"; \
 	$(ACTIVATE) && set -a && source .env && set +a && \
-	python scripts/eval_network_logs.py --models "$(MODELS)" --num-examples $$N
+	python scripts/eval_network_logs.py --models "$(MODELS)" --num-examples $$N --max-consecutive-errors $$MAX_ERRORS
 
 eval-e2: venv
 	@if [ -z "$(MODELS)" ]; then \
@@ -374,9 +379,10 @@ eval-e2: venv
 		exit 1; \
 	fi
 	@N=$${N:-2}; INCLUDE_TOOLS=$${INCLUDE_TOOLS:-true}; \
-	$(ECHO) "$(YELLOW)Evaluating E2 (config-verification) for models: $(MODELS) (N=$$N, INCLUDE_TOOLS=$$INCLUDE_TOOLS)$(NC)"; \
+	MAX_ERRORS=$${MAX_CONSECUTIVE_ERRORS:-3}; \
+	$(ECHO) "$(YELLOW)Evaluating E2 (config-verification) for models: $(MODELS) (N=$$N, INCLUDE_TOOLS=$$INCLUDE_TOOLS, max_errors=$$MAX_ERRORS)$(NC)"; \
 	$(ACTIVATE) && set -a && source .env && set +a && \
-	python scripts/eval_config_verification.py --models "$(MODELS)" --num-examples $$N --include-tools $$INCLUDE_TOOLS
+	python scripts/eval_config_verification.py --models "$(MODELS)" --num-examples $$N --include-tools $$INCLUDE_TOOLS --max-consecutive-errors $$MAX_ERRORS
 
 # Data building targets (production - private, not committed)
 data-e1: venv

@@ -47,8 +47,13 @@ make build-env E=name   # build one env
 make deploy E=name      # build + push to Environments Hub (requires prime login)
 
 # Reproducible evals (artifacts in outputs/evals/...)
-make eval-e1 MODELS="gpt-5-mini,gpt-4.1-mini" N=10
-make eval-e2 MODELS="gpt-4o-mini" N=2 INCLUDE_TOOLS=true  # Multi-turn eval with tool calling
+# Supports OpenAI models (gpt-*) and non-OpenAI models via OpenRouter (qwen-2.5-7b, llama-3.1-8b, etc.)
+make eval-e1 MODELS="gpt-4.1-mini,qwen-2.5-7b" N=10
+make eval-e2 MODELS="gpt-4o-mini,llama-3.1-8b" N=2 INCLUDE_TOOLS=true  # Multi-turn eval with tool calling
+
+# Early failure detection (prevents wasted API costs on misconfigured models)
+make eval-e1 MODELS="gpt-4.1-mini" N=100 MAX_CONSECUTIVE_ERRORS=5  # Stop after 5 consecutive errors
+make eval-e2 MODELS="invalid-model" N=10 MAX_CONSECUTIVE_ERRORS=0  # Disable early stopping (never stop)
 
 # Shortcuts
 make e1  # test E1 (network-logs)
@@ -85,9 +90,13 @@ uv run python -m build --wheel environments/sv-env-network-logs
   - cp .env.example .env
   - set -a && source .env && set +a
 - Common vars:
-  - OPENAI_API_KEY (required for OpenAI-compatible endpoints)
+  - OPENAI_API_KEY (required for OpenAI models: gpt-*, o1-*)
+  - OPENROUTER_API_KEY (required for non-OpenAI models: qwen-2.5-7b, llama-3.1-8b, claude-3.5-sonnet, etc.)
+    - Get your key at: https://openrouter.ai/keys
+    - Supports 200+ models with unified API
   - HF_TOKEN (optional for dataset downloads; required for HF push operations)
   - WANDB_API_KEY (required for Weave logging)
+  - MAX_CONSECUTIVE_ERRORS (optional, default: 3; set to 0 to disable early stopping)
 - HF push scripts (export_metadata_flat.py, push_canonical_with_features.py) automatically load HF_TOKEN from .env using python-dotenv
 
 ## Logging Architecture
@@ -130,7 +139,9 @@ Security Verifiers uses a dual-mode logging system:
 
 - Reproducible evals & artifacts
 
-  - scripts/eval_network_logs.py, scripts/eval_config_verification.py write run metadata + per-example results under outputs/evals/sv-env-{name}--{model}/{run_id}/{metadata.json,results.jsonl}
+  - scripts/eval_network_logs.py, scripts/eval_config_verification.py, scripts/eval_config_verification_singleturn.py write run metadata + per-example results under outputs/evals/sv-env-{name}--{model}/{run_id}/{metadata.json,results.jsonl}
+  - All evaluation scripts support early stopping via --max-consecutive-errors (default: 3) to prevent wasted API costs on misconfigured models
+  - E2 uses multi-turn evaluation by default, enabling models to call tools (kube-linter, semgrep, OPA) and achieve ~0.93 reward with tools vs ~0.62 without
 
 - CI
   - .github/workflows/ci.yml installs uv, pins kube-linter version (from E2 ci/versions.txt), runs ruff + pytest (+coverage), and builds wheels on tag/workflow-dispatch.

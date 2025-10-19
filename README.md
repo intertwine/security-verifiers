@@ -144,21 +144,40 @@ Datasets are written to `environments/sv-env-{name}/data/` with reproducibility 
 
 ### Reproducible evaluations
 
-- E1 (network-logs):
+The evaluation scripts support both OpenAI models and non-OpenAI models via [OpenRouter](https://openrouter.ai):
+
+- **OpenAI models** (gpt-*, o1-*): Use `OPENAI_API_KEY`
+- **Non-OpenAI models** (qwen-2.5-7b, llama-3.1-8b, claude-3.5-sonnet, etc.): Use `OPENROUTER_API_KEY`
+
+**E1 (network-logs):**
 
 ```bash
-make eval-e1 MODELS="gpt-5-mini,gpt-4.1-mini" N=10
+# OpenAI models
+make eval-e1 MODELS="gpt-4.1-mini,gpt-4o-mini" N=10
+
+# Mix of OpenAI and non-OpenAI models (requires both API keys)
+make eval-e1 MODELS="gpt-4.1-mini,qwen-2.5-7b,llama-3.1-8b" N=100
 ```
 
-Artifacts: outputs/evals/sv-env-network-logs--{model}/<run_id>/{metadata.json,results.jsonl}
+Artifacts: `outputs/evals/sv-env-network-logs--{model}/<run_id>/{metadata.json,results.jsonl}`
 
-- E2 (config-verification):
+**E2 (config-verification):**
 
 ```bash
-make eval-e2 MODELS="gpt-5-mini,gpt-4.1-mini,gpt-4o-mini" N=2 INCLUDE_TOOLS=true
+# Multi-turn evaluation with tool calling
+make eval-e2 MODELS="gpt-4o-mini,qwen-2.5-7b" N=2 INCLUDE_TOOLS=true
 ```
 
-Artifacts: outputs/evals/sv-env-config-verification--{model}/<run_id>/{metadata.json,results.jsonl}
+Artifacts: `outputs/evals/sv-env-config-verification--{model}/<run_id>/{metadata.json,results.jsonl}`
+
+**Supported Model Shortcuts:**
+
+- `qwen-2.5-7b` → `qwen/qwen-2.5-7b-instruct`
+- `qwen-2.5-72b` → `qwen/qwen-2.5-72b-instruct`
+- `llama-3.1-8b` → `meta-llama/llama-3.1-8b-instruct`
+- `llama-3.1-70b` → `meta-llama/llama-3.1-70b-instruct`
+- `claude-3.5-sonnet` → `anthropic/claude-3.5-sonnet`
+- Or use full OpenRouter model paths directly
 
 ### Prerequisites
 
@@ -194,8 +213,12 @@ Before using any of the security verification environments, you need to set up y
 2. **Add your API keys to the `.env` file**:
 
    ```bash
-   # Required: OpenAI API Key (for model inference)
+   # Required for OpenAI models (gpt-*, o1-*): OpenAI API Key
    OPENAI_API_KEY=your-openai-api-key-here
+
+   # Required for non-OpenAI models (qwen, llama, claude, etc.): OpenRouter API Key
+   # Get your key at: https://openrouter.ai/keys
+   OPENROUTER_API_KEY=your-openrouter-api-key-here
 
    # Required for logging: Weights & Biases API Key
    # Sign up free at: https://wandb.ai

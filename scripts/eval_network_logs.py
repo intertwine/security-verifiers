@@ -29,6 +29,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 os.environ.setdefault("PYTHONPATH", str(REPO_ROOT))
 
+# Import eval utilities (must be before environment imports to avoid circular deps)
+from eval_utils import EarlyStopError, ErrorTracker  # noqa: E402
+
 # Initialize Weave before importing environments for automatic tracing
 # Note: weave_init is imported but its initialization happens automatically
 from sv_shared import weave_init  # type: ignore  # noqa: F401, E402
@@ -50,6 +53,63 @@ try:
     from openai import OpenAI
 except Exception as exc:  # pragma: no cover
     raise SystemExit(f"The 'openai' package is required: {exc}") from exc
+
+
+def _get_client_for_model(model: str) -> tuple[OpenAI, str]:
+    """
+    Get appropriate OpenAI-compatible client for the given model.
+
+    Returns:
+        tuple: (client, effective_model_name)
+
+    Routing logic:
+    - OpenAI models (gpt-*, o1-*): Use OpenAI directly
+    - Other models: Use OpenRouter as proxy (requires OPENROUTER_API_KEY)
+
+    Environment variables:
+    - OPENAI_API_KEY: For OpenAI models
+    - OPENROUTER_API_KEY: For non-OpenAI models via OpenRouter
+    """
+    # Check if this is an OpenAI model
+    openai_prefixes = ("gpt-", "o1-", "text-davinci", "text-curie", "text-babbage", "text-ada")
+    is_openai = model.startswith(openai_prefixes)
+
+    if is_openai:
+        # Use standard OpenAI client
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise SystemExit("OPENAI_API_KEY not set in environment")
+        return OpenAI(api_key=api_key), model
+    else:
+        # Use OpenRouter for non-OpenAI models
+        openrouter_key = os.environ.get("OPENROUTER_API_KEY")
+        if not openrouter_key:
+            raise SystemExit(
+                f"Model '{model}' is not an OpenAI model. "
+                "Please set OPENROUTER_API_KEY to use OpenRouter as a proxy.\n"
+                "Get your key at: https://openrouter.ai/keys"
+            )
+
+        # Map common model shortcuts to OpenRouter paths
+        # Check available models at: https://openrouter.ai/models
+        model_map = {
+            "qwen-2.5-7b": "qwen/qwen-2.5-7b-instruct",
+            "qwen-2.5-72b": "qwen/qwen-2.5-72b-instruct",
+            "qwen-2.5-coder-32b": "qwen/qwen-2.5-coder-32b-instruct",
+            "llama-3.1-8b": "meta-llama/llama-3.1-8b-instruct",
+            "llama-3.1-70b": "meta-llama/llama-3.1-70b-instruct",
+            "claude-3.5-sonnet": "anthropic/claude-3.5-sonnet",
+            "claude-3-opus": "anthropic/claude-3-opus",
+        }
+
+        openrouter_model = model_map.get(model, model)
+
+        client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=openrouter_key,
+        )
+
+        return client, openrouter_model
 
 
 # pylint: disable=broad-exception-caught
@@ -103,6 +163,13 @@ def main() -> None:
     parser.add_argument("--num-examples", type=int, default=10, help="Number of examples to evaluate")
     parser.add_argument("--temperature", type=float, default=0.2, help="Sampling temperature")
     parser.add_argument("--max-tokens", type=int, default=512, help="Max tokens per completion")
+    parser.add_argument(
+        "--max-consecutive-errors",
+        type=int,
+        default=3,
+        help="Stop evaluation after this many consecutive errors (default: 3). "
+        "Set to 0 to disable early stopping.",
+    )
     args = parser.parse_args()
 
     models = parse_models(args.models)
@@ -118,15 +185,19 @@ def main() -> None:
     parser_cls = env.parser  # type: ignore[attr-defined]
     format_reward = parser_cls.get_format_reward_func()
 
-    # OpenAI client
-    client = OpenAI()
-
     out_base = REPO_ROOT / "outputs" / "evals"
     ensure_dir(out_base)
 
     ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
     for model in models:
+        # Get appropriate client for this model
+        try:
+            client, effective_model = _get_client_for_model(model)
+        except SystemExit as e:
+            print(f"✗ Skipping {model}: {e}")
+            continue
+
         run_id = uuid.uuid4().hex[:8]
         run_dir = out_base / f"sv-env-network-logs--{model}" / run_id
         ensure_dir(run_dir)
@@ -136,84 +207,115 @@ def main() -> None:
         metadata: Dict[str, Any] = {
             "environment": "sv-env-network-logs",
             "model": model,
+            "effective_model": effective_model,  # Track the actual model name used (e.g., OpenRouter path)
             "timestamp": ts,
             "num_examples": len(dataset),
             "temperature": args.temperature,
             "max_tokens": args.max_tokens,
+            "max_consecutive_errors": args.max_consecutive_errors,
             "git_commit": _git_commit(),
         }
         meta_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
+        # Initialize error tracker for early stopping
+        error_tracker = None
+        if args.max_consecutive_errors > 0:
+            window_size = max(5, args.max_consecutive_errors)
+            error_tracker = ErrorTracker(
+                max_consecutive_errors=args.max_consecutive_errors, window_size=window_size
+            )
+
         with results_path.open("w", encoding="utf-8") as f:
-            for i, sample in enumerate(dataset):
-                question = str(sample.get("question", ""))
-                answer = str(sample.get("answer", ""))
-                system_prompt = getattr(env, "system_prompt", "You are a network security analyst...")
+            try:
+                for i, sample in enumerate(dataset):
+                    question = str(sample.get("question", ""))
+                    answer = str(sample.get("answer", ""))
+                    system_prompt = getattr(env, "system_prompt", "You are a network security analyst...")
 
-                record: Dict[str, Any] = {
-                    "index": i,
-                    "prompt": question,
-                    "answer": answer,
-                }
+                    record: Dict[str, Any] = {
+                        "index": i,
+                        "prompt": question,
+                        "answer": answer,
+                    }
 
-                try:
-                    # Try max_tokens; if rejected, retry with max_completion_tokens
                     try:
-                        resp = client.chat.completions.create(
-                            model=model,
-                            messages=[
-                                {"role": "system", "content": system_prompt},
-                                {"role": "user", "content": question},
-                            ],
-                            temperature=args.temperature,
-                            max_tokens=args.max_tokens,
-                        )
-                    except Exception as e1:
-                        if "max_tokens" in str(e1) and "max_completion_tokens" in str(e1):
+                        # Try max_tokens; if rejected, retry with max_completion_tokens
+                        try:
                             resp = client.chat.completions.create(
-                                model=model,
+                                model=effective_model,  # noqa: E501  # Use effective model name
                                 messages=[
                                     {"role": "system", "content": system_prompt},
                                     {"role": "user", "content": question},
                                 ],
                                 temperature=args.temperature,
-                                max_completion_tokens=args.max_tokens,
+                                max_tokens=args.max_tokens,
                             )
-                        else:
-                            raise
-                    text = resp.choices[0].message.content if resp.choices else ""
-                    record["completion"] = text
-                except Exception as e:
-                    record["completion_error"] = str(e)
-                    record["completion"] = ""
-                    text = ""
+                        except Exception as e1:
+                            if "max_tokens" in str(e1) and "max_completion_tokens" in str(e1):
+                                resp = client.chat.completions.create(
+                                    model=effective_model,  # noqa: E501  # Use effective model name
+                                    messages=[
+                                        {"role": "system", "content": system_prompt},
+                                        {"role": "user", "content": question},
+                                    ],
+                                    temperature=args.temperature,
+                                    max_completion_tokens=args.max_tokens,
+                                )
+                            else:
+                                raise
+                        text = resp.choices[0].message.content if resp.choices else ""
+                        record["completion"] = text
 
-                # Rewards
-                try:
-                    r_acc = float(reward_accuracy(completion=text, answer=answer, parser=parser_cls))
-                except Exception:
-                    r_acc = 0.0
-                try:
-                    r_cal = float(reward_calibration(completion=text, answer=answer, parser=parser_cls))
-                except Exception:
-                    r_cal = 0.0
-                try:
-                    r_cost = float(reward_asymmetric_cost(completion=text, answer=answer, parser=parser_cls))
-                except Exception:
-                    r_cost = 0.0
-                try:
-                    r_format = float(format_reward(text, answer=answer))
-                except Exception:
-                    r_format = 0.0
+                        # Track success
+                        if error_tracker:
+                            error_tracker.record_success()
 
-                record["rewards"] = {
-                    "reward_accuracy": r_acc,
-                    "reward_calibration": r_cal,
-                    "reward_asymmetric_cost": r_cost,
-                    "format_reward": r_format,
-                }
+                    except Exception as e:
+                        error_msg = str(e)
+                        record["completion_error"] = error_msg
+                        record["completion"] = ""
+                        text = ""
 
-                f.write(json.dumps(record) + "\n")
+                        # Track error and check for early stop
+                        if error_tracker:
+                            error_tracker.record_error(error_msg, index=i)
+
+                    # Rewards
+                    try:
+                        r_acc = float(reward_accuracy(completion=text, answer=answer, parser=parser_cls))
+                    except Exception:
+                        r_acc = 0.0
+                    try:
+                        r_cal = float(reward_calibration(completion=text, answer=answer, parser=parser_cls))
+                    except Exception:
+                        r_cal = 0.0
+                    try:
+                        r_cost = float(
+                            reward_asymmetric_cost(completion=text, answer=answer, parser=parser_cls)
+                        )  # noqa: E501
+                    except Exception:
+                        r_cost = 0.0
+                    try:
+                        r_format = float(format_reward(text, answer=answer))
+                    except Exception:
+                        r_format = 0.0
+
+                    record["rewards"] = {
+                        "reward_accuracy": r_acc,
+                        "reward_calibration": r_cal,
+                        "reward_asymmetric_cost": r_cost,
+                        "format_reward": r_format,
+                    }
+
+                    f.write(json.dumps(record) + "\n")
+
+            except EarlyStopError as e:
+                print(f"\n✗ Early stopping triggered for {model}:")
+                print(f"  {e}")
+                if error_tracker:
+                    stats = error_tracker.get_stats()
+                    print(f"  Stats: {stats['total_errors']}/{stats['total_samples']} samples failed")
+                continue
 
         print(f"✓ Saved artifacts for {model} -> {run_dir}")
 

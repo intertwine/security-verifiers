@@ -254,6 +254,45 @@ for use_tools in [True, False]:
     print(f"  Patch Success: {results.stats.get('patch_success', 0):.2%}")
 ```
 
+## Early Failure Detection
+
+All E2 evaluation scripts support early stopping to prevent wasted API costs on misconfigured models or API issues:
+
+```bash
+# Multi-turn evaluation (default: stop after 3 consecutive errors)
+python scripts/eval_config_verification.py \
+  --models "gpt-4o-mini" \
+  --num-examples 100 \
+  --max-consecutive-errors 3
+
+# Disable early stopping (process all examples regardless of errors)
+python scripts/eval_config_verification.py \
+  --models "experimental-model" \
+  --num-examples 50 \
+  --max-consecutive-errors 0
+
+# Single-turn evaluation with custom threshold
+python scripts/eval_config_verification_singleturn.py \
+  --models "gpt-4o-mini" \
+  --num-examples 100 \
+  --max-consecutive-errors 5
+```
+
+**Via Makefile:**
+
+```bash
+# Use default threshold (3 errors)
+make eval-e2 MODELS="gpt-4o-mini" N=100
+
+# Custom threshold
+make eval-e2 MODELS="gpt-4o-mini" N=100 MAX_CONSECUTIVE_ERRORS=5
+
+# Disable early stopping
+make eval-e2 MODELS="test-model" N=50 MAX_CONSECUTIVE_ERRORS=0
+```
+
+The early stopping system tracks consecutive API/completion errors and halts evaluation when the threshold is reached, saving time and costs. Tool execution failures are not counted toward the error threshold - only API-level errors trigger early stopping.
+
 ## Performance Benchmarks
 
 | Model       | Detection F1 | Patch Success | With Tools | Overall |
