@@ -36,6 +36,7 @@ os.environ.setdefault("PYTHONPATH", str(REPO_ROOT))
 
 # Import eval utilities (must be before environment imports to avoid circular deps)
 from scripts.eval_utils import EarlyStopError, ErrorTracker  # noqa: E402
+from scripts.model_router import get_client_for_model  # noqa: E402
 
 # Initialize Weave before importing environments for automatic tracing
 # pylint: disable=wrong-import-position
@@ -49,63 +50,6 @@ try:
     from openai import OpenAI
 except Exception as exc:  # pragma: no cover
     raise SystemExit(f"The 'openai' package is required: {exc}") from exc
-
-
-def _get_client_for_model(model: str) -> tuple[OpenAI, str]:
-    """
-    Get appropriate OpenAI-compatible client for the given model.
-
-    Returns:
-        tuple: (client, effective_model_name)
-
-    Routing logic:
-    - OpenAI models (gpt-*, o1-*): Use OpenAI directly
-    - Other models: Use OpenRouter as proxy (requires OPENROUTER_API_KEY)
-
-    Environment variables:
-    - OPENAI_API_KEY: For OpenAI models
-    - OPENROUTER_API_KEY: For non-OpenAI models via OpenRouter
-    """
-    # Check if this is an OpenAI model
-    openai_prefixes = ("gpt-", "o1-", "text-davinci", "text-curie", "text-babbage", "text-ada")
-    is_openai = model.startswith(openai_prefixes)
-
-    if is_openai:
-        # Use standard OpenAI client
-        api_key = os.environ.get("OPENAI_API_KEY")
-        if not api_key:
-            raise SystemExit("OPENAI_API_KEY not set in environment")
-        return OpenAI(api_key=api_key), model
-    else:
-        # Use OpenRouter for non-OpenAI models
-        openrouter_key = os.environ.get("OPENROUTER_API_KEY")
-        if not openrouter_key:
-            raise SystemExit(
-                f"Model '{model}' is not an OpenAI model. "
-                "Please set OPENROUTER_API_KEY to use OpenRouter as a proxy.\n"
-                "Get your key at: https://openrouter.ai/keys"
-            )
-
-        # Map common model shortcuts to OpenRouter paths
-        # Check available models at: https://openrouter.ai/models
-        model_map = {
-            "qwen-2.5-7b": "qwen/qwen-2.5-7b-instruct",
-            "qwen-2.5-72b": "qwen/qwen-2.5-72b-instruct",
-            "qwen-2.5-coder-32b": "qwen/qwen-2.5-coder-32b-instruct",
-            "llama-3.1-8b": "meta-llama/llama-3.1-8b-instruct",
-            "llama-3.1-70b": "meta-llama/llama-3.1-70b-instruct",
-            "claude-3.5-sonnet": "anthropic/claude-3.5-sonnet",
-            "claude-3-opus": "anthropic/claude-3-opus",
-        }
-
-        openrouter_model = model_map.get(model, model)
-
-        client = OpenAI(
-            base_url="https://openrouter.ai/api/v1",
-            api_key=openrouter_key,
-        )
-
-        return client, openrouter_model
 
 
 def _git_commit() -> str | None:
@@ -400,7 +344,7 @@ def main() -> None:
 
         # Get appropriate client for this model
         try:
-            client, effective_model = _get_client_for_model(model)
+            client, effective_model = get_client_for_model(model)
         except SystemExit as e:
             print(f"✗ Skipping {model}: {e}")
             continue

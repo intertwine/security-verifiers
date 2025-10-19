@@ -99,3 +99,4 @@ htmlcov/
 .coverage.*
 coverage.xml
 *.cover
+.cache/

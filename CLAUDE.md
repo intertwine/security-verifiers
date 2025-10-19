@@ -51,8 +51,9 @@ make build-env E=name   # build one env
 make deploy E=name      # build + push to Environments Hub (requires prime login)
 
 # Reproducible evaluations (artifacts go to outputs/evals/...)
-# Supports OpenAI models (gpt-*) and non-OpenAI models via OpenRouter (qwen-2.5-7b, llama-3.1-8b, etc.)
-make eval-e1 MODELS="gpt-4.1-mini,qwen-2.5-7b" N=10
+# Supports OpenAI models (gpt-*) and 200+ non-OpenAI models via OpenRouter
+# Model names auto-resolved via scripts/model_router.py (fuzzy matching + live API + 24h cache)
+make eval-e1 MODELS="gpt-4.1-mini,qwen3-14b" N=10  # "qwen3-14b" → "qwen/qwen3-14b" automatically
 make eval-e2 MODELS="gpt-4o-mini,llama-3.1-8b" N=2 INCLUDE_TOOLS=true  # Multi-turn eval with tool calling
 
 # Early failure detection (prevents wasted API costs on misconfigured models)
@@ -159,7 +160,9 @@ Security Verifiers uses a dual-mode logging system:
 
 - Reproducible evals & artifacts
 
-  - scripts/eval_network_logs.py, scripts/eval_config_verification.py write run metadata + per-example results under outputs/evals/sv-env-{name}--{model}/{run_id}/{metadata.json,results.jsonl}
+  - scripts/eval_network_logs.py, scripts/eval_config_verification.py, scripts/eval_config_verification_singleturn.py write run metadata + per-example results under outputs/evals/sv-env-{name}--{model}/{run_id}/{metadata.json,results.jsonl}
+  - All evaluation scripts support early stopping via --max-consecutive-errors (default: 3) to prevent wasted API costs
+  - scripts/model_router.py: Robust model routing with OpenRouter API auto-discovery, fuzzy matching, and offline fallbacks
 
 - CI
   - .github/workflows/ci.yml installs uv, pins kube-linter version (from E2 ci/versions.txt), runs ruff + pytest (+coverage), and builds wheels on tag/workflow-dispatch.

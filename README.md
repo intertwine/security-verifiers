@@ -144,10 +144,13 @@ Datasets are written to `environments/sv-env-{name}/data/` with reproducibility 
 
 ### Reproducible evaluations
 
-The evaluation scripts support both OpenAI models and non-OpenAI models via [OpenRouter](https://openrouter.ai):
+The evaluation scripts support both OpenAI models and 200+ non-OpenAI models via [OpenRouter](https://openrouter.ai):
 
 - **OpenAI models** (gpt-*, o1-*): Use `OPENAI_API_KEY`
 - **Non-OpenAI models** (qwen-2.5-7b, llama-3.1-8b, claude-3.5-sonnet, etc.): Use `OPENROUTER_API_KEY`
+  - **Auto-discovery**: Model names are automatically resolved using OpenRouter's live model list
+  - **Fuzzy matching**: Shorthand names like `qwen3-14b` automatically map to `qwen/qwen3-14b`
+  - **Offline fallback**: Cached model list (24h) + hardcoded mappings ensure offline reliability
 
 **E1 (network-logs):**
 
@@ -170,14 +173,19 @@ make eval-e2 MODELS="gpt-4o-mini,qwen-2.5-7b" N=2 INCLUDE_TOOLS=true
 
 Artifacts: `outputs/evals/sv-env-config-verification--{model}/<run_id>/{metadata.json,results.jsonl}`
 
-**Supported Model Shortcuts:**
+**Model Name Resolution (Automatic):**
 
-- `qwen-2.5-7b` → `qwen/qwen-2.5-7b-instruct`
-- `qwen-2.5-72b` → `qwen/qwen-2.5-72b-instruct`
-- `llama-3.1-8b` → `meta-llama/llama-3.1-8b-instruct`
-- `llama-3.1-70b` → `meta-llama/llama-3.1-70b-instruct`
-- `claude-3.5-sonnet` → `anthropic/claude-3.5-sonnet`
-- Or use full OpenRouter model paths directly
+The evaluation scripts use [scripts/model_router.py](scripts/model_router.py) for robust model routing:
+
+1. **Live discovery**: Fetches available models from OpenRouter API (cached 24h)
+2. **Fuzzy matching**: Shorthand names auto-resolve (e.g., `qwen3-14b` → `qwen/qwen3-14b`)
+3. **Offline fallback**: Works without network via cached + hardcoded mappings
+4. **Future-proof**: New OpenRouter models work automatically without code changes
+
+**Examples:**
+- `qwen3-14b` → `qwen/qwen3-14b` (auto-discovered from API)
+- `llama-3.1-8b` → `meta-llama/llama-3.1-8b-instruct` (hardcoded fallback)
+- `qwen/qwen3-14b` → `qwen/qwen3-14b` (full paths work as-is)
 
 ### Prerequisites
 
