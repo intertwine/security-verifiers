@@ -24,6 +24,60 @@ This environment implements end-to-end configuration security auditing with tool
 
 The public metadata repo includes detailed model cards explaining the privacy rationale, tool versions (KubeLinter, Semgrep, OPA), and dataset composition. Multi-turn evaluation shows models achieve ~0.93 reward with tool calling vs ~0.62 without tools.
 
+### Dataset Loading Strategies
+
+This environment supports **multi-tiered dataset loading** for flexibility across different deployment scenarios:
+
+1. **Local datasets** (built with `make data-e2-local`)
+2. **HuggingFace Hub** (with `HF_TOKEN` authentication)
+3. **Builtin fixtures** (for testing without data dependencies)
+
+#### Loading Modes
+
+```python
+import verifiers as vf
+
+# Auto mode (default): Try local → hub → builtin
+env = vf.load_environment("sv-env-config-verification")
+
+# Local only: Require local dataset
+env = vf.load_environment("sv-env-config-verification", dataset_source="local")
+
+# Hub only: Load from HuggingFace
+env = vf.load_environment("sv-env-config-verification", dataset_source="hub")
+
+# Synthetic only: Use builtin fixtures (no data needed)
+env = vf.load_environment("sv-env-config-verification", dataset_source="synthetic")
+
+# Select specific dataset
+env = vf.load_environment(
+    "sv-env-config-verification",
+    dataset_name="k8s-labeled-v1.jsonl",  # Kubernetes only
+    dataset_source="local"
+)
+```
+
+#### Using Your Own HuggingFace Repository
+
+If you've built and pushed datasets to your own HuggingFace repository:
+
+```python
+import os
+
+# Configure custom repository
+os.environ["HF_TOKEN"] = "hf_your_token_here"
+os.environ["E2_HF_REPO"] = "your-org/security-verifiers-e2-private"
+
+# Load from your repository
+env = vf.load_environment(
+    "sv-env-config-verification",
+    dataset_source="hub",
+    max_examples=100
+)
+```
+
+**See [docs/user-dataset-guide.md](../../docs/user-dataset-guide.md) for instructions on building and pushing datasets to your own HuggingFace repository.**
+
 ## Installation
 
 Install the environment using the Prime CLI:

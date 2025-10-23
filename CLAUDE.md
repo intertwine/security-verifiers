@@ -136,6 +136,105 @@ uv run python -m build --wheel environments/sv-env-network-logs
   - Override via script invocation: `uv run python scripts/eval_network_logs.py --models gpt-5-mini --num-examples 10 --max-tokens 1024`
 - HF push scripts (export_metadata_flat.py, push_canonical_with_features.py) automatically load HF_TOKEN from .env using python-dotenv
 
+## Prime Intellect Hub Deployment
+
+All Security Verifiers environments are fully compatible with Prime Intellect's Environments Hub. The repository includes complete infrastructure for:
+
+1. **Multi-tiered dataset loading**: Automatic fallback from local → hub → synthetic
+2. **User-configurable HF repos**: Push datasets to your own HuggingFace repositories
+3. **Hub validation & deployment**: Automated testing and deployment workflows
+
+### Quick Hub Deployment
+
+```bash
+# Validate environment
+make hub-validate E=network-logs
+
+# Deploy with validation
+make hub-deploy E=network-logs
+
+# Use on Hub
+vf-eval your-org/sv-env-network-logs --model gpt-5-mini --num-examples 10
+```
+
+### Dataset Management for Hub Users
+
+When deploying to the Hub, users won't have access to intertwine's private datasets. Two options:
+
+**Option 1: Use synthetic datasets (for testing)**
+
+```python
+# Environments work without any datasets using synthetic fallback
+env = vf.load_environment("sv-env-network-logs", dataset_source="synthetic")
+```
+
+**Option 2: Build and push to user's own HF repos (for production)**
+
+```bash
+# Build datasets locally
+make data-e1 data-e1-ood
+make clone-e2-sources && make data-e2-local
+
+# Configure user's HF repositories
+export HF_TOKEN=hf_your_token_here
+export E1_HF_REPO=your-org/security-verifiers-e1-private
+export E2_HF_REPO=your-org/security-verifiers-e2-private
+
+# Push datasets
+make hub-push-datasets
+
+# Test loading
+make hub-test-datasets
+```
+
+### Dataset Loading Modes
+
+All environments support flexible dataset loading via `dataset_source` parameter:
+
+- `auto` (default): Try local → hub → synthetic
+- `local`: Require local JSONL files
+- `hub`: Load from HuggingFace (requires HF_TOKEN and E1_HF_REPO/E2_HF_REPO)
+- `synthetic`: Use test fixtures
+
+**Examples:**
+
+```python
+# Auto mode with fallback
+env = vf.load_environment("sv-env-network-logs")
+
+# Explicit Hub loading
+env = vf.load_environment("sv-env-network-logs", dataset_source="hub")
+
+# Synthetic for quick testing
+env = vf.load_environment("sv-env-network-logs", dataset_source="synthetic")
+```
+
+### Hub Deployment Checklist
+
+Use this checklist when deploying environments to the Hub:
+
+```bash
+# 1. Validate environment
+make hub-validate E=network-logs
+
+# 2. (Optional) Build and push datasets to your HF repo
+make data-e1
+export HF_TOKEN=... E1_HF_REPO=...
+make hub-push-datasets
+
+# 3. Deploy to Hub
+make hub-deploy E=network-logs
+
+# 4. Test deployed environment
+vf-eval your-org/sv-env-network-logs --model gpt-5-mini --num-examples 3
+```
+
+### Documentation
+
+- **[docs/hub-deployment.md](docs/hub-deployment.md)**: Complete Hub deployment guide
+- **[docs/user-dataset-guide.md](docs/user-dataset-guide.md)**: Build and push datasets to your own HF repos
+- **Environment READMEs**: E1 and E2 READMEs include Hub usage examples
+
 ## Logging Architecture
 
 Security Verifiers uses a dual-mode logging system:
