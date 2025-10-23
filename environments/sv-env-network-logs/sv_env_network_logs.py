@@ -115,15 +115,24 @@ def load_environment(
             with open(dataset_path, "r") as f:
                 for line in f:
                     if line.strip():
-                        examples.append(json.loads(line))
+                        example = json.loads(line)
+                        # Normalize field names: our build scripts use "prompt" but env expects "question"
+                        if "prompt" in example and "question" not in example:
+                            example["question"] = example["prompt"]
+                        examples.append(example)
             dataset = Dataset.from_list(examples)
-            dataset = transform_dataset(dataset, max_examples)
+
+            # Local JSONL files from make data-e1 are already in the correct format
+            # Just apply max_examples limit, don't transform
+            if max_examples and len(dataset) > max_examples:
+                dataset = dataset.select(range(max_examples))
         else:
             # Load from HuggingFace Hub
             # The `load_dataset` function with a `split` argument returns a `Dataset` object.
             # We assert the type to satisfy the linter and ensure correctness.
             dataset = load_dataset(dataset_name, split="train")
             assert isinstance(dataset, Dataset), "Loaded dataset is not of type Dataset"
+            # HF datasets need transformation from raw format to question/answer format
             dataset = transform_dataset(dataset, max_examples)
     except (
         FileNotFoundError,
