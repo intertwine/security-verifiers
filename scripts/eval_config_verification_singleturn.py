@@ -227,13 +227,21 @@ def main() -> None:
                             ],
                         }
 
-                        # Only add optional parameters if explicitly provided
-                        # GPT-5 series models don't support custom temperature (only default: 1)
-                        is_gpt5 = effective_model.startswith("gpt-5")
-                        if args.temperature is not None and not is_gpt5:
+                        # GPT-5 and o1 series models have restricted parameter support
+                        # - temperature: not supported (only default: 1)
+                        # - max_tokens: not supported, use max_completion_tokens instead
+                        is_reasoning_model = effective_model.startswith(("gpt-5", "o1-", "o3-"))
+
+                        # Add temperature only for non-reasoning models
+                        if args.temperature is not None and not is_reasoning_model:
                             kwargs["temperature"] = args.temperature
+
+                        # Add token limit with appropriate parameter name
                         if args.max_tokens is not None:
-                            kwargs["max_tokens"] = args.max_tokens
+                            if is_reasoning_model:
+                                kwargs["max_completion_tokens"] = args.max_tokens
+                            else:
+                                kwargs["max_tokens"] = args.max_tokens
 
                         resp = client.chat.completions.create(**kwargs)
                         text = resp.choices[0].message.content if resp.choices else ""

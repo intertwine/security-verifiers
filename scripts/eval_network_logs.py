@@ -201,26 +201,25 @@ def main() -> None:
                             ],
                         }
 
-                        # GPT-5 series models don't support custom temperature (only default: 1)
-                        # Skip temperature parameter for gpt-5* models
-                        is_gpt5 = effective_model.startswith("gpt-5")
-                        if not is_gpt5:
+                        # GPT-5 and o1 series models have restricted parameter support
+                        # - temperature: not supported (only default: 1)
+                        # - max_tokens: not supported, use max_completion_tokens instead
+                        is_reasoning_model = effective_model.startswith(("gpt-5", "o1-", "o3-"))
+
+                        # Add temperature only for non-reasoning models
+                        if not is_reasoning_model:
                             base_kwargs["temperature"] = args.temperature
 
-                        # Try max_tokens; if rejected, retry with max_completion_tokens
-                        try:
-                            resp = client.chat.completions.create(
-                                **base_kwargs,
-                                max_tokens=args.max_tokens,
-                            )
-                        except Exception as e1:
-                            if "max_tokens" in str(e1) and "max_completion_tokens" in str(e1):
-                                resp = client.chat.completions.create(
-                                    **base_kwargs,
-                                    max_completion_tokens=args.max_tokens,
-                                )
-                            else:
-                                raise
+                        # Add token limit with appropriate parameter name
+                        if is_reasoning_model:
+                            # Reasoning models require max_completion_tokens
+                            base_kwargs["max_completion_tokens"] = args.max_tokens
+                        else:
+                            # Legacy models use max_tokens
+                            base_kwargs["max_tokens"] = args.max_tokens
+
+                        # Make API call with proper parameters
+                        resp = client.chat.completions.create(**base_kwargs)
                         text = resp.choices[0].message.content if resp.choices else ""
                         record["completion"] = text
 

@@ -177,13 +177,21 @@ async def run_multiturn_evaluation(
                 kwargs["tools"] = openai_tools
                 kwargs["tool_choice"] = "auto"
 
-            # Add optional parameters
-            # GPT-5 series models don't support custom temperature (only default: 1)
-            is_gpt5 = model.startswith("gpt-5")
-            if temperature is not None and not is_gpt5:
+            # GPT-5 and o1 series models have restricted parameter support
+            # - temperature: not supported (only default: 1)
+            # - max_tokens: not supported, use max_completion_tokens instead
+            is_reasoning_model = model.startswith(("gpt-5", "o1-", "o3-"))
+
+            # Add temperature only for non-reasoning models
+            if temperature is not None and not is_reasoning_model:
                 kwargs["temperature"] = temperature
+
+            # Add token limit with appropriate parameter name
             if max_tokens is not None:
-                kwargs["max_tokens"] = max_tokens
+                if is_reasoning_model:
+                    kwargs["max_completion_tokens"] = max_tokens
+                else:
+                    kwargs["max_tokens"] = max_tokens
 
             # Make API call
             response = client.chat.completions.create(**kwargs)

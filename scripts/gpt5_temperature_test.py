@@ -307,6 +307,193 @@ class TestGPT5TemperatureParameterNames:
             assert not is_gpt5, f"{variant} should NOT be detected as GPT-5"
 
 
+class TestReasoningModelMaxTokens:
+    """Test suite for max_completion_tokens handling in reasoning models."""
+
+    def test_reasoning_model_detection(self):
+        """Test that reasoning models are correctly identified."""
+        reasoning_models = [
+            "gpt-5",
+            "gpt-5-mini",
+            "gpt-5-nano",
+            "o1-preview",
+            "o1-mini",
+            "o3-mini",
+        ]
+
+        for model in reasoning_models:
+            is_reasoning = model.startswith(("gpt-5", "o1-", "o3-"))
+            assert is_reasoning, f"{model} should be detected as reasoning model"
+
+    def test_non_reasoning_model_detection(self):
+        """Test that non-reasoning models are not misidentified."""
+        non_reasoning_models = [
+            "gpt-4",
+            "gpt-4-turbo",
+            "gpt-4o",
+            "gpt-4o-mini",
+            "gpt-3.5-turbo",
+            "qwen/qwen3-14b",
+        ]
+
+        for model in non_reasoning_models:
+            is_reasoning = model.startswith(("gpt-5", "o1-", "o3-"))
+            assert not is_reasoning, f"{model} should NOT be detected as reasoning model"
+
+    @patch("eval_network_logs.get_client_for_model")
+    @patch("eval_network_logs.load_environment")
+    def test_e1_uses_max_completion_tokens_for_gpt5(self, mock_load_env, mock_get_client):
+        """Test that E1 uses max_completion_tokens for GPT-5 models."""
+        from eval_network_logs import main
+
+        # Mock the environment
+        mock_env = Mock()
+        mock_env.dataset = [
+            {"question": "Is this malicious?", "answer": '{"label": "Benign", "confidence": 0.9}'}
+        ]
+        mock_env.parser = Mock()
+        mock_env.parser.get_format_reward_func = Mock(return_value=lambda x, **kwargs: 1.0)
+        mock_env.system_prompt = "Test prompt"
+        mock_load_env.return_value = mock_env
+
+        # Mock the OpenAI client
+        mock_client = Mock()
+        mock_response = Mock()
+        mock_response.choices = [Mock(message=Mock(content='{"label": "Benign", "confidence": 0.9}'))]
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_get_client.return_value = (mock_client, "gpt-5-mini")
+
+        # Mock reward functions
+        with (
+            patch("eval_network_logs.reward_accuracy", return_value=1.0),
+            patch("eval_network_logs.reward_calibration", return_value=1.0),
+            patch("eval_network_logs.reward_asymmetric_cost", return_value=1.0),
+            patch(
+                "sys.argv",
+                [
+                    "eval_network_logs.py",
+                    "--models",
+                    "gpt-5-mini",
+                    "--num-examples",
+                    "1",
+                    "--max-tokens",
+                    "2048",
+                ],
+            ),
+        ):
+            main()
+
+        # Get the kwargs from the API call
+        call_kwargs = mock_client.chat.completions.create.call_args[1]
+
+        # Verify max_completion_tokens is used instead of max_tokens
+        assert "max_completion_tokens" in call_kwargs, "GPT-5 should use max_completion_tokens"
+        assert "max_tokens" not in call_kwargs, "GPT-5 should NOT use max_tokens"
+        assert call_kwargs["max_completion_tokens"] == 2048
+
+    @patch("eval_network_logs.get_client_for_model")
+    @patch("eval_network_logs.load_environment")
+    def test_e1_uses_max_tokens_for_gpt4(self, mock_load_env, mock_get_client):
+        """Test that E1 uses max_tokens for non-reasoning models."""
+        from eval_network_logs import main
+
+        # Mock the environment
+        mock_env = Mock()
+        mock_env.dataset = [
+            {"question": "Is this malicious?", "answer": '{"label": "Benign", "confidence": 0.9}'}
+        ]
+        mock_env.parser = Mock()
+        mock_env.parser.get_format_reward_func = Mock(return_value=lambda x, **kwargs: 1.0)
+        mock_env.system_prompt = "Test prompt"
+        mock_load_env.return_value = mock_env
+
+        # Mock the OpenAI client for GPT-4
+        mock_client = Mock()
+        mock_response = Mock()
+        mock_response.choices = [Mock(message=Mock(content='{"label": "Benign", "confidence": 0.9}'))]
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_get_client.return_value = (mock_client, "gpt-4o-mini")
+
+        # Mock reward functions
+        with (
+            patch("eval_network_logs.reward_accuracy", return_value=1.0),
+            patch("eval_network_logs.reward_calibration", return_value=1.0),
+            patch("eval_network_logs.reward_asymmetric_cost", return_value=1.0),
+            patch(
+                "sys.argv",
+                [
+                    "eval_network_logs.py",
+                    "--models",
+                    "gpt-4o-mini",
+                    "--num-examples",
+                    "1",
+                    "--max-tokens",
+                    "2048",
+                ],
+            ),
+        ):
+            main()
+
+        # Get the kwargs from the API call
+        call_kwargs = mock_client.chat.completions.create.call_args[1]
+
+        # Verify max_tokens is used for non-reasoning models
+        assert "max_tokens" in call_kwargs, "GPT-4 should use max_tokens"
+        assert "max_completion_tokens" not in call_kwargs, "GPT-4 should NOT use max_completion_tokens"
+        assert call_kwargs["max_tokens"] == 2048
+
+    @patch("eval_network_logs.get_client_for_model")
+    @patch("eval_network_logs.load_environment")
+    def test_e1_uses_max_completion_tokens_for_o1(self, mock_load_env, mock_get_client):
+        """Test that E1 uses max_completion_tokens for o1 models."""
+        from eval_network_logs import main
+
+        # Mock the environment
+        mock_env = Mock()
+        mock_env.dataset = [
+            {"question": "Is this malicious?", "answer": '{"label": "Benign", "confidence": 0.9}'}
+        ]
+        mock_env.parser = Mock()
+        mock_env.parser.get_format_reward_func = Mock(return_value=lambda x, **kwargs: 1.0)
+        mock_env.system_prompt = "Test prompt"
+        mock_load_env.return_value = mock_env
+
+        # Mock the OpenAI client for o1
+        mock_client = Mock()
+        mock_response = Mock()
+        mock_response.choices = [Mock(message=Mock(content='{"label": "Benign", "confidence": 0.9}'))]
+        mock_client.chat.completions.create.return_value = mock_response
+        mock_get_client.return_value = (mock_client, "o1-preview")
+
+        # Mock reward functions
+        with (
+            patch("eval_network_logs.reward_accuracy", return_value=1.0),
+            patch("eval_network_logs.reward_calibration", return_value=1.0),
+            patch("eval_network_logs.reward_asymmetric_cost", return_value=1.0),
+            patch(
+                "sys.argv",
+                [
+                    "eval_network_logs.py",
+                    "--models",
+                    "o1-preview",
+                    "--num-examples",
+                    "1",
+                    "--max-tokens",
+                    "2048",
+                ],
+            ),
+        ):
+            main()
+
+        # Get the kwargs from the API call
+        call_kwargs = mock_client.chat.completions.create.call_args[1]
+
+        # Verify max_completion_tokens is used for o1 models
+        assert "max_completion_tokens" in call_kwargs, "o1 should use max_completion_tokens"
+        assert "max_tokens" not in call_kwargs, "o1 should NOT use max_tokens"
+        assert call_kwargs["max_completion_tokens"] == 2048
+
+
 class TestDefaultTemperatureValue:
     """Test that the default temperature argument is correctly set."""
 
