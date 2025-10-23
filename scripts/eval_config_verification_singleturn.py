@@ -228,7 +228,9 @@ def main() -> None:
                         }
 
                         # Only add optional parameters if explicitly provided
-                        if args.temperature is not None:
+                        # GPT-5 series models don't support custom temperature (only default: 1)
+                        is_gpt5 = effective_model.startswith("gpt-5")
+                        if args.temperature is not None and not is_gpt5:
                             kwargs["temperature"] = args.temperature
                         if args.max_tokens is not None:
                             kwargs["max_tokens"] = args.max_tokens

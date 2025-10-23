@@ -192,26 +192,31 @@ def main() -> None:
                     }
 
                     try:
+                        # Build base kwargs
+                        base_kwargs = {
+                            "model": effective_model,  # Use effective model name
+                            "messages": [
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": question},
+                            ],
+                        }
+
+                        # GPT-5 series models don't support custom temperature (only default: 1)
+                        # Skip temperature parameter for gpt-5* models
+                        is_gpt5 = effective_model.startswith("gpt-5")
+                        if not is_gpt5:
+                            base_kwargs["temperature"] = args.temperature
+
                         # Try max_tokens; if rejected, retry with max_completion_tokens
                         try:
                             resp = client.chat.completions.create(
-                                model=effective_model,  # noqa: E501  # Use effective model name
-                                messages=[
-                                    {"role": "system", "content": system_prompt},
-                                    {"role": "user", "content": question},
-                                ],
-                                temperature=args.temperature,
+                                **base_kwargs,
                                 max_tokens=args.max_tokens,
                             )
                         except Exception as e1:
                             if "max_tokens" in str(e1) and "max_completion_tokens" in str(e1):
                                 resp = client.chat.completions.create(
-                                    model=effective_model,  # noqa: E501  # Use effective model name
-                                    messages=[
-                                        {"role": "system", "content": system_prompt},
-                                        {"role": "user", "content": question},
-                                    ],
-                                    temperature=args.temperature,
+                                    **base_kwargs,
                                     max_completion_tokens=args.max_tokens,
                                 )
                             else:

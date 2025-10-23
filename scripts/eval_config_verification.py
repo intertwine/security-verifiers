@@ -178,7 +178,9 @@ async def run_multiturn_evaluation(
                 kwargs["tool_choice"] = "auto"
 
             # Add optional parameters
-            if temperature is not None:
+            # GPT-5 series models don't support custom temperature (only default: 1)
+            is_gpt5 = model.startswith("gpt-5")
+            if temperature is not None and not is_gpt5:
                 kwargs["temperature"] = temperature
             if max_tokens is not None:
                 kwargs["max_tokens"] = max_tokens
