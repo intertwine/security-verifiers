@@ -53,8 +53,49 @@ def get_version(binary: str, flag: str = "version") -> str:
     return "unknown"
 
 
-def find_files(root: Path, exts: Tuple[str, ...]) -> List[Path]:
-    return [p for p in root.rglob("*") if p.suffix.lower() in exts and p.is_file()]
+def is_valid_k8s_manifest(path: Path) -> bool:
+    """Check if file contains valid K8s manifest."""
+    try:
+        content = path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return False
+
+    # Skip empty files
+    if not content.strip():
+        return False
+
+    # Check for K8s API markers (need at least 2 to be confident)
+    k8s_markers = ["apiVersion:", "kind:", "metadata:", "spec:"]
+    marker_count = sum(1 for marker in k8s_markers if marker in content)
+    return marker_count >= 2
+
+
+def is_valid_hcl(path: Path) -> bool:
+    """Check if file contains valid Terraform HCL."""
+    try:
+        content = path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return False
+
+    # Skip empty files
+    if not content.strip():
+        return False
+
+    # Check for HCL block markers
+    hcl_markers = ["resource ", "module ", "data ", "variable ", "output ", "provider ", "terraform "]
+    return any(marker in content for marker in hcl_markers)
+
+
+def find_files(root: Path, exts: Tuple[str, ...], validator=None) -> List[Path]:
+    """Find files by extension, optionally filtering by content validator."""
+    files = [p for p in root.rglob("*") if p.suffix.lower() in exts and p.is_file()]
+    if validator:
+        original_count = len(files)
+        files = [f for f in files if validator(f)]
+        filtered_count = original_count - len(files)
+        if filtered_count > 0:
+            print(f"  Filtered out {filtered_count} invalid files (empty or wrong content)")
+    return files
 
 
 def kubelinter_scan(path: Path) -> List[Dict[str, Any]]:
@@ -239,8 +280,14 @@ def main():
     }
     (args.outdir / "tools-versions.json").write_text(json.dumps(versions, indent=2))
 
-    k8s_files = find_files(args.k8s_root, (".yml", ".yaml"))
-    tf_files = find_files(args.tf_root, (".tf",))
+    print(f"Scanning K8s manifests in {args.k8s_root}...")
+    k8s_files = find_files(args.k8s_root, (".yml", ".yaml"), validator=is_valid_k8s_manifest)
+    print(f"  Found {len(k8s_files)} valid K8s manifests")
+
+    print(f"\nScanning Terraform files in {args.tf_root}...")
+    tf_files = find_files(args.tf_root, (".tf",), validator=is_valid_hcl)
+    print(f"  Found {len(tf_files)} valid Terraform files")
+
     k8s_items = emit_items(k8s_files, "k8s", args.rego_dir, args.outdir / f"k8s-labeled{suffix}.jsonl")
     tf_items = emit_items(tf_files, "tf", args.rego_dir, args.outdir / f"terraform-labeled{suffix}.jsonl")
 

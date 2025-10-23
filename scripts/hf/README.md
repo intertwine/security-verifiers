@@ -119,33 +119,134 @@ uv run pytest tests/hf/ -v
 
 ## Deployment Workflow
 
-1. **Build metadata locally:**
+### Phase 1: Build and Validate Datasets Locally
+
+1. **Build canonical datasets:**
+   ```bash
+   # E1 datasets
+   make data-e1          # IoT-23 primary dataset
+   make data-e1-ood      # CIC-IDS-2017 + UNSW-NB15 OOD datasets
+
+   # E2 datasets (requires cloned sources)
+   make clone-e2-sources # Clone K8s/TF repos to scripts/data/sources/
+   make data-e2-local    # Build from cloned sources
+   ```
+
+2. **Validate datasets:**
+   ```bash
+   # Pydantic validation (schema + types)
+   make validate-data
+
+   # Deep validation (dedup, balance, content)
+   uv run python scripts/data/validate_e1_datasets.py --datasets all
+   uv run python scripts/data/validate_e2_datasets.py --datasets all
+   ```
+
+### Phase 2: Build Metadata
+
+3. **Build metadata locally:**
    ```bash
    make hf-e1-meta hf-e2-meta
    ```
 
-2. **Validate output:**
+4. **Validate metadata output:**
    ```bash
    # Check schema consistency
    cat build/hf/e1/meta.jsonl | jq -r 'keys | sort | join(",")' | sort | uniq
 
    # Validate payload_json
    cat build/hf/e1/meta.jsonl | jq -r '.payload_json' | head -n 3 | jq -c .
-   ```
 
-3. **Run tests:**
-   ```bash
+   # Run metadata tests
    uv run pytest tests/hf/ -v
    ```
 
-4. **Push to HuggingFace:**
-   ```bash
-   # Set HF_TOKEN in .env
-   echo "HF_TOKEN=your_token_here" >> .env
+### Phase 3: Push to HuggingFace
 
-   # Push to all repos
-   make hf-push-all
+5. **Set up HuggingFace token:**
+   ```bash
+   # Add to .env (required for all HF operations)
+   echo "HF_TOKEN=your_token_here" >> .env
+   source .env
    ```
+
+6. **Push metadata to public repos (safe, browse-only):**
+   ```bash
+   make hf-e1-push     # → intertwine-ai/security-verifiers-e1-metadata
+   make hf-e2-push     # → intertwine-ai/security-verifiers-e2-metadata
+   ```
+
+7. **Push canonical splits to private repos (gated access):**
+   ```bash
+   make hf-e1p-push-canonical  # → intertwine-ai/security-verifiers-e1
+   make hf-e2p-push-canonical  # → intertwine-ai/security-verifiers-e2
+   ```
+
+8. **Or push everything at once:**
+   ```bash
+   make hf-push-all  # Metadata (public) + canonical (private)
+   ```
+
+### Phase 4: Verify Push
+
+9. **Verify datasets load correctly:**
+   ```bash
+   uv run python -c "
+   from datasets import load_dataset
+
+   # E1
+   ds = load_dataset('intertwine-ai/security-verifiers-e1', split='train', token=True)
+   print(f'E1 train: {len(ds)} samples')
+
+   # E2
+   ds = load_dataset('intertwine-ai/security-verifiers-e2', split='train', token=True)
+   print(f'E2 train: {len(ds)} samples')
+   "
+   ```
+
+## Troubleshooting
+
+### Issue: Schema Mismatch Errors
+
+**Problem:** `Features of the new split don't match the features of the existing splits`
+
+**Cause:** HuggingFace repos have old JSONL files or README metadata from previous push
+
+**Solution:**
+```bash
+# 1. Remove old data files from HF repo (via Web UI or API)
+# 2. Update README.md to remove dataset_info section
+# 3. Clear local cache and re-push
+rm -rf ~/.cache/huggingface/datasets/intertwine-ai/security-verifiers-*
+make hf-e1p-push-canonical  # Re-push with clean state
+```
+
+### Issue: Datasets Not Appearing After Upload
+
+**Problem:** Progress bars show upload complete but splits aren't visible
+
+**Cause:** HuggingFace needs time to process uploads or README has conflicting metadata
+
+**Solution:**
+1. Wait 1-2 minutes for HuggingFace processing
+2. Check README.md doesn't have old `dataset_info` YAML
+3. Force reload: `load_dataset(..., download_mode='force_redownload')`
+
+### Issue: Validation Failures
+
+**Problem:** `make validate-data` reports schema errors
+
+**Cause:** Dataset build scripts have bugs or source data changed
+
+**Solution:**
+```bash
+# Rebuild datasets with fixes
+make data-e1 data-e1-ood data-e2-local
+
+# Re-run validation
+make validate-data
+uv run python scripts/data/validate_e1_datasets.py --datasets all
+```
 
 ## Guardrails
 

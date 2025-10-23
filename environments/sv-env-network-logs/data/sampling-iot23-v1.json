@@ -3,8 +3,8 @@
   "seed": 42,
   "total": 1800,
   "by_split": {
-    "train": 523,
-    "dev": 1274,
-    "test": 3
+    "train": 1253,
+    "dev": 269,
+    "test": 278
   }
 }

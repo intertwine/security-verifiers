@@ -52,10 +52,28 @@ def five_tuple_key(row: Dict[str, Any]) -> str:
     return hashlib.sha256(t.encode()).hexdigest()[:16]
 
 
+def get_port(row: Dict[str, Any], port_type: str) -> str:
+    """Extract port with fallback for multiple column names."""
+    if port_type == "src":
+        candidates = ["src_port", "sport", "id.orig_p", "Src Port"]
+    else:
+        candidates = ["dst_port", "dport", "id.resp_p", "Dst Port"]
+
+    for col in candidates:
+        if col in row and row[col] is not None:
+            val = row[col]
+            # Handle the case where port might be 0 or negative
+            if isinstance(val, (int, float)) and val >= 0:
+                return str(int(val))
+            elif isinstance(val, str) and val.strip() and val != "-":
+                return val.strip()
+    return "?"
+
+
 def render_prompt(row: Dict[str, Any]) -> str:
     proto = row.get("protocol") or row.get("proto") or "?"
-    sp = row.get("src_port") or row.get("sport") or row.get("id.orig_p") or "?"
-    dp = row.get("dst_port") or row.get("dport") or row.get("id.resp_p") or "?"
+    sp = get_port(row, "src")
+    dp = get_port(row, "dst")
     dur = row.get("duration") or row.get("flow_duration") or "?"
     # For 19kmunz/iot-23-preprocessed: orig_bytes + resp_bytes
     orig_b = row.get("orig_bytes") or 0
@@ -102,12 +120,19 @@ def dedup(rows: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 def split_by_scenario(
-    rows: List[Dict[str, Any]], train_p=0.7, dev_p=0.15
+    rows: List[Dict[str, Any]], train_p=0.70, dev_p=0.15
 ) -> List[Tuple[Dict[str, Any], str]]:
-    # scenario-aware split to reduce leakage
-    by_scn = {}
+    """
+    Split dataset into train/dev/test with proper distribution.
+    Default: 70% train, 15% dev, 15% test
+
+    Uses stratified split within each scenario to handle imbalanced scenarios.
+    """
+    from collections import defaultdict
+
+    # Group by scenario and label to maintain balance
+    by_scn_label = defaultdict(list)
     for r in rows:
-        # Use connection state or service as scenario proxy if no explicit scenario
         scn = str(
             r.get("scenario")
             or r.get("Scenario")
@@ -116,19 +141,29 @@ def split_by_scenario(
             or r.get("service")
             or "unknown"
         )
-        by_scn.setdefault(scn, []).append(r)
-    scenarios = list(by_scn.keys())
-    random.shuffle(scenarios)
-    n = len(scenarios)
-    train_cut = int(n * train_p)
-    dev_cut = int(n * (train_p + dev_p))
-    split_map = {
-        s: ("train" if i < train_cut else "dev" if i < dev_cut else "test") for i, s in enumerate(scenarios)
-    }
+        label = r.get("label") or r.get("binary_label") or "unknown"
+        key = f"{scn}:{label}"
+        by_scn_label[key].append(r)
+
+    # Split each scenario:label group proportionally
     paired = []
-    for s, lst in by_scn.items():
-        for r in lst:
-            paired.append((r, split_map[s]))
+    for group_rows in by_scn_label.values():
+        random.shuffle(group_rows)
+        n = len(group_rows)
+        train_cut = int(n * train_p)
+        dev_cut = int(n * (train_p + dev_p))
+
+        for i, r in enumerate(group_rows):
+            if i < train_cut:
+                split = "train"
+            elif i < dev_cut:
+                split = "dev"
+            else:
+                split = "test"
+            paired.append((r, split))
+
+    # Final shuffle to mix scenarios
+    random.shuffle(paired)
     return paired
 
 

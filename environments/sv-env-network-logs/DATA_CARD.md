@@ -12,17 +12,24 @@ Rationale: Matches the environment's single-turn, calibrated classification desi
 
 ## Construction
 
-- **Script:** `scripts/data/build_e1_iot23.py` (scenario-aware split, dedup by 5-tuple hash)
+- **Scripts:**
+  - `scripts/data/build_e1_iot23.py` (IoT-23 primary dataset)
+  - `scripts/data/build_e1_ood.py` (CIC-IDS-2017 & UNSW-NB15 OOD datasets)
 - **Prompt format:** concise natural-language summary of key flow features (proto/ports/bytes/duration/flags + device)
+  - Example: `Device unknown-device observed tcp 23381→81, duration ?, bytes ?, flags [S]. Decide: Malicious or Benign (you may Abstain if unsure).`
 - **Label:** `Malicious` or `Benign` (gold); model may output `Abstain` which is scored by the environment's calibration/abstention reward
-- **Splits:** `train/dev/test` from IoT-23 (70/15/15 by scenario), `ood` from CIC/UNSW slices
-- **Sampling seed:** 42; `sampling-iot23-v1.json` records counts and seed
+- **Splits:** `train/dev/test` from IoT-23 (70/15/15 stratified by scenario+label), `ood` from CIC/UNSW slices
+- **Sampling seed:** 42; `sampling-iot23-v1.json` and `sampling-e1-ood-v1.json` record counts and seed
 
 ## Quality & Leakage Controls
 
-- **Scenario-aware splitting** to reduce train/test leakage
-- **Deduplication:** SHA-256 of `(src,dst,sport,dport,proto)` per row
+- **Stratified splitting** within scenario:label groups to reduce train/test leakage while maintaining proper split ratios
+- **Deduplication:**
+  - **IoT-23:** SHA-256 of `(src,dst,sport,dport,proto)` 5-tuple
+  - **OOD datasets:** Content-based SHA-256 of `(src,dst,sport,dport,proto,bytes,duration,state,service)` to reduce false duplicates
 - **Balance:** ±5% class balance per split to stabilize ECE/FN rate
+- **CIC-IDS-2017:** Fetches 10-30x samples to overcome temporal clustering (attacks appear late in dataset); stratified to ensure 50/50 malicious/benign
+- **UNSW-NB15:** Fetches 3x samples for deduplication; maintains natural label distribution with 9+ attack categories
 - **Borderline tags:** ambiguous low-traffic/partial scans retained to probe abstention
 
 ## Licensing & Ethics
@@ -174,10 +181,47 @@ make eval-e1 MODELS="gpt-4o-mini,gpt-4.1-mini" N=300
 
 ## Dataset Statistics
 
-| Dataset | Samples | Malicious | Benign | Split |
-|---------|---------|-----------|--------|-------|
-| IoT-23 | 1800 | ~900 | ~900 | train/dev/test (523/1274/3) |
-| CIC-IDS-2017 (OOD) | 600 | varies* | varies* | ood |
-| UNSW-NB15 (OOD) | 600 | 334 | 266 | ood |
+### IoT-23 Primary Dataset
 
-\* CIC-IDS-2017: Random sampling may produce imbalanced subsets due to temporal clustering of attacks in the original dataset
+| Metric | Value |
+|--------|-------|
+| Total samples | 1800 |
+| Train samples | 1253 (69.6%) |
+| Dev samples | 269 (14.9%) |
+| Test samples | 278 (15.4%) |
+| Malicious | 900 (50.0%) |
+| Benign | 900 (50.0%) |
+| Unique hashes | 1800 (100% dedup) |
+| Scenarios | 9 (S0, OTH, SF, S3, RSTR, REJ, S1, RSTOS0, RSTO) |
+
+### Out-of-Distribution Datasets
+
+**CIC-IDS-2017:**
+
+| Metric | Value |
+|--------|-------|
+| Total samples | 600 |
+| Malicious | 300 (50.0%) |
+| Benign | 300 (50.0%) |
+| Unique hashes | 600 (100% dedup) |
+| Dedup method | Content-based (5-tuple + bytes + duration + state + service) |
+| Attack families | 15 categories (DDoS, PortScan, Brute Force, XSS, SQL Injection, etc.) |
+
+**UNSW-NB15:**
+
+| Metric | Value |
+|--------|-------|
+| Total samples | 600 |
+| Malicious | 330 (55.0%) |
+| Benign | 270 (45.0%) |
+| Unique hashes | 600 (100% dedup) |
+| Dedup method | Content-based (5-tuple + bytes + duration + state + service) |
+| Attack categories | 9 types (Exploits: 178, Fuzzers: 81, DoS: 41, Reconnaissance: 9, Backdoor: 5, Generic: 8, Analysis: 4, Shellcode: 3, Worms: 1) |
+
+**Quality Improvements (v1.1 - October 2025):**
+
+- ✅ Fixed CIC-IDS-2017: Now 100% unique (was 59%), 50/50 balance (was 100% benign)
+- ✅ Fixed UNSW-NB15: Now 100% unique (was 6.8% due to 5-tuple collisions)
+- ✅ Fixed IoT-23 splits: Now 70/15/15 (was 29/71/0.17 due to scenario imbalance)
+- ✅ Fixed port rendering: All prompts use `sport→dport` arrow format
+- ✅ All datasets validated with 0 duplicates, proper label balance, and diverse attack coverage

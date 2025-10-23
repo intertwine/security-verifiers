@@ -2,22 +2,40 @@
   "mode": "full",
   "seed": 42,
   "n_requested": 600,
+  "deduplication": "content-based (5-tuple + bytes + duration + state + service)",
   "datasets": {
     "cic-ids-2017": {
       "hf_id": "bvk/CICIDS-2017",
       "total": 600,
       "labels": {
-        "Malicious": 0,
-        "Benign": 600
-      }
+        "Malicious": 300,
+        "Benign": 300
+      },
+      "attack_families": {
+        "NA": 600
+      },
+      "unique_hashes": 600
     },
     "unsw-nb15": {
       "hf_id": "Mireu-Lab/UNSW-NB15",
       "total": 600,
       "labels": {
-        "Malicious": 334,
-        "Benign": 266
-      }
+        "Malicious": 330,
+        "Benign": 270
+      },
+      "attack_families": {
+        "Normal": 270,
+        "Exploits": 178,
+        "Fuzzers": 81,
+        "DoS": 41,
+        "Reconnaissance": 9,
+        "Backdoor": 5,
+        "Generic": 8,
+        "Analysis": 4,
+        "Shellcode": 3,
+        "Worms": 1
+      },
+      "unique_hashes": 600
     }
   }
 }

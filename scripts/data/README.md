@@ -28,6 +28,13 @@ This schema ensures consistent rendering in the HuggingFace Dataset Viewer acros
 
 Builds the E1 (Network Log Anomaly Detection) primary dataset from IoT-23.
 
+**Quality Features (v1.1):**
+- **70/15/15 split distribution** (train/dev/test) with stratified sampling
+- **Robust port extraction** handling multiple column name variants (`id.orig_p`, `sport`, etc.)
+- **Arrow format ports** (`sport→dport`) in prompts for readability
+- **100% deduplication** effectiveness (1800 unique samples)
+- **50/50 label balance** (malicious/benign)
+
 **Usage:**
 
 ```bash
@@ -42,9 +49,23 @@ make data-e1        # production
 make data-e1-test   # test fixtures
 ```
 
+**Output:**
+- `environments/sv-env-network-logs/data/iot23-train-dev-test-v1.jsonl` (1800 samples)
+  - train: 1253 samples (69.6%)
+  - dev: 269 samples (14.9%)
+  - test: 278 samples (15.4%)
+- `environments/sv-env-network-logs/data/sampling-iot23-v1.json` (metadata)
+
 ### `build_e1_ood.py`
 
 Builds E1 out-of-distribution (OOD) datasets from CIC-IDS-2017 and UNSW-NB15.
+
+**Quality Features (v1.1):**
+- **Content-based deduplication** using 5-tuple + bytes + duration + state + service (not just 5-tuple)
+- **Stratified sampling for CIC-IDS-2017** to overcome temporal clustering (fetches 10-30x samples)
+- **100% unique hashes** for both datasets (600/600 each)
+- **50/50 label balance** for CIC-IDS-2017 (was 100% benign in v1.0)
+- **Diverse attack types** represented in CIC-IDS-2017
 
 **Usage:**
 
@@ -60,9 +81,21 @@ make data-e1-ood        # production
 make data-e1-test       # includes OOD test fixtures
 ```
 
+**Output:**
+- `environments/sv-env-network-logs/data/cic-ids-2017-ood-v1.jsonl` (600 samples, 50/50 balance)
+- `environments/sv-env-network-logs/data/unsw-nb15-ood-v1.jsonl` (600 samples, 55/45 balance)
+- `environments/sv-env-network-logs/data/sampling-e1-ood-v1.json` (metadata)
+
 ### `build_e2_k8s_tf.py`
 
 Builds E2 (Security Config Verification) datasets from Kubernetes and Terraform source files.
+
+**Quality Features (v1.1):**
+- **K8s manifest validation** requiring ≥2 API markers (`apiVersion`, `kind`, `metadata`, `spec`)
+- **Terraform HCL validation** requiring blocks (`resource`, `module`, `data`, `variable`, `output`, `provider`)
+- **Pre-filtering before scanning** removes empty files and non-HCL/YAML content
+- **100% valid prompts** after filtering (K8s: 444/444, Terraform: 115/115)
+- **Tool version pinning** for reproducibility (KubeLinter 0.7.6, Semgrep 1.137.0, OPA 1.8.0)
 
 **Usage:**
 
@@ -80,6 +113,72 @@ uv run python scripts/data/build_e2_k8s_tf.py --mode test
 make clone-e2-sources   # one-time setup
 make data-e2-local      # production
 make data-e2-test       # test fixtures
+```
+
+**Output:**
+- `environments/sv-env-config-verification/data/k8s-labeled-v1.jsonl` (444 samples)
+  - KubeLinter: 1014 violations, Semgrep: 422 violations
+  - 244 files with violations (55.0%)
+- `environments/sv-env-config-verification/data/terraform-labeled-v1.jsonl` (115 samples)
+  - Semgrep: 4 violations (3.5% of files)
+  - Low violation rate indicates high-quality source repos
+- `environments/sv-env-config-verification/data/tools-versions.json` (tool versions)
+- `environments/sv-env-config-verification/data/sampling-e2-v1.json` (metadata)
+
+### `validate_e1_datasets.py`
+
+Validates E1 datasets against HuggingFace sources.
+
+**Checks:**
+- Schema compliance (prompt, answer, meta fields)
+- Label distribution and balance (±5% threshold)
+- Deduplication effectiveness (hash uniqueness)
+- Split distribution (train/dev/test ratios)
+- Field mapping accuracy (source columns → prompt rendering)
+- Sample verification (5 random items vs HuggingFace source)
+
+**Usage:**
+
+```bash
+# Validate all E1 datasets (requires HF_TOKEN)
+uv run python scripts/data/validate_e1_datasets.py --datasets all
+
+# Validate specific dataset
+uv run python scripts/data/validate_e1_datasets.py --datasets iot23
+uv run python scripts/data/validate_e1_datasets.py --datasets ood
+
+# Save report
+uv run python scripts/data/validate_e1_datasets.py --datasets all --output outputs/validation-e1-report.json
+```
+
+### `validate_e2_datasets.py`
+
+Validates E2 datasets against source repositories.
+
+**Checks:**
+- Schema compliance (prompt, info.violations, meta fields)
+- Violation analysis (tool coverage, severity levels)
+- Prompt content validation (K8s YAML / Terraform HCL markers)
+- Tool version consistency
+- Source file verification (requires local source repos)
+
+**Usage:**
+
+```bash
+# Validate all E2 datasets
+uv run python scripts/data/validate_e2_datasets.py --datasets all
+
+# Validate specific dataset
+uv run python scripts/data/validate_e2_datasets.py --datasets k8s
+uv run python scripts/data/validate_e2_datasets.py --datasets terraform
+
+# With source verification (requires local source repos)
+uv run python scripts/data/validate_e2_datasets.py \
+  --k8s-source-root scripts/data/sources/kubernetes \
+  --tf-source-root scripts/data/sources/terraform
+
+# Save report
+uv run python scripts/data/validate_e2_datasets.py --datasets all --output outputs/validation-e2-report.json
 ```
 
 ### `clone_e2_sources.sh`
