@@ -13,7 +13,6 @@ Or: make test-integration (if implemented in Makefile)
 import os
 import subprocess
 import sys
-from pathlib import Path
 
 import pytest
 
@@ -29,7 +28,7 @@ def run_command(cmd: list[str], timeout: int = 60) -> tuple[int, str, str]:
             check=False,
         )
         return result.returncode, result.stdout, result.stderr
-    except subprocess.TimeoutExpired as e:
+    except subprocess.TimeoutExpired:
         return 1, "", f"Command timed out after {timeout}s: {' '.join(cmd)}"
 
 

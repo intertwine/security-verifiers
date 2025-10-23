@@ -29,16 +29,14 @@ import os
 import sys
 from pathlib import Path
 
+
 def check_prerequisites():
     """Check that all prerequisites are met."""
     errors = []
 
     # Check HF_TOKEN
     if not os.environ.get("HF_TOKEN"):
-        errors.append(
-            "❌ HF_TOKEN not set\n"
-            "   Set it in .env file or: export HF_TOKEN=hf_your_token_here"
-        )
+        errors.append("❌ HF_TOKEN not set\n   Set it in .env file or: export HF_TOKEN=hf_your_token_here")
 
     # Check E1_HF_REPO
     if not os.environ.get("E1_HF_REPO"):
@@ -81,7 +79,7 @@ def push_datasets():
     print("=" * 70)
     print("Security Verifiers Dataset Upload")
     print("=" * 70)
-    print(f"Target repositories:")
+    print("Target repositories:")
     print(f"  E1 (Network Logs):        {E1_REPO}")
     print(f"  E2 (Config Verification): {E2_REPO}")
     print()
@@ -108,7 +106,7 @@ def push_datasets():
         if not dataset_path.exists():
             print(f"⚠️  Skipping: {filename}")
             print(f"   Reason: File not found at {dataset_path}")
-            print(f"   Build with: make data-e1")
+            print("   Build with: make data-e1")
             print()
             continue
 
@@ -153,7 +151,7 @@ def push_datasets():
         if not dataset_path.exists():
             print(f"⚠️  Skipping: {filename}")
             print(f"   Reason: File not found at {dataset_path}")
-            print(f"   Build with: make clone-e2-sources && make data-e2-local")
+            print("   Build with: make clone-e2-sources && make data-e2-local")
             print()
             continue
 
@@ -198,8 +196,8 @@ def push_datasets():
         print(f"   export E1_HF_REPO={E1_REPO}")
         print(f"   export E2_HF_REPO={E2_REPO}")
         print('   uv run python -c "from sv_env_network_logs import load_environment; \\')
-        print('     env = load_environment(dataset_source=\'hub\', max_examples=10); \\')
-        print('     print(f\'Loaded {len(env.dataset)} examples\')"')
+        print("     env = load_environment(dataset_source='hub', max_examples=10); \\")
+        print("     print(f'Loaded {len(env.dataset)} examples')\"")
         print()
         print("3. Deploy environments to Prime Intellect Hub:")
         print("   make deploy E=network-logs")

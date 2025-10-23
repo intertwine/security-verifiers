@@ -3,8 +3,8 @@
 from .dataset_loader import (
     DEFAULT_E1_HF_REPO,
     DEFAULT_E2_HF_REPO,
-    DatasetSource,
     HF_DATASET_MAP,
+    DatasetSource,
     load_dataset_with_fallback,
 )
 from .parsers import JsonClassificationParser

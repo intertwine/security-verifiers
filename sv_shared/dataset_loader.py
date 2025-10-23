@@ -24,10 +24,9 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Literal, Optional
+from typing import Callable, Dict, Literal, Optional
 
 from datasets import Dataset
-
 
 # Default HuggingFace repositories (intertwine's private repos)
 DEFAULT_E1_HF_REPO = "intertwine-ai/security-verifiers-e1-private"
@@ -170,8 +169,7 @@ def _load_from_hub(
     # Look up dataset metadata
     if dataset_name not in HF_DATASET_MAP:
         raise ValueError(
-            f"Unknown dataset: {dataset_name}\n"
-            f"Available datasets: {', '.join(HF_DATASET_MAP.keys())}"
+            f"Unknown dataset: {dataset_name}\nAvailable datasets: {', '.join(HF_DATASET_MAP.keys())}"
         )
 
     metadata = HF_DATASET_MAP[dataset_name]
@@ -196,6 +194,7 @@ def _load_from_hub(
 
         # Apply field mapping if provided
         if field_mapping:
+
             def map_fields(example):
                 for old_field, new_field in field_mapping.items():
                     if old_field in example and new_field not in example:
