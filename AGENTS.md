@@ -147,7 +147,7 @@ Security Verifiers uses a dual-mode logging system:
 
   - scripts/eval_network_logs.py, scripts/eval_config_verification.py, scripts/eval_config_verification_singleturn.py write run metadata + per-example results under outputs/evals/sv-env-{name}--{model}/{run_id}/{metadata.json,results.jsonl}
   - All evaluation scripts support early stopping via --max-consecutive-errors (default: 3) to prevent wasted API costs on misconfigured models
-  - E2 uses multi-turn evaluation by default, enabling models to call tools (kube-linter, semgrep, OPA) and achieve ~0.93 reward with tools vs ~0.62 without
+  - E2 uses multi-turn evaluation by default, enabling models to call tools (kube-linter, semgrep, OPA) and typically improving rewards significantly compared to tool-free runs
   - scripts/model_router.py provides robust model name resolution: (1) fetches live models from OpenRouter API with 24h caching, (2) fuzzy-matches shorthand names (e.g., qwen3-14b → qwen/qwen3-14b), (3) falls back to hardcoded mappings when offline, (4) supports any OpenRouter model without code changes
 
 - CI
