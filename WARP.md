@@ -51,16 +51,22 @@ make deploy E=name      # build + push to Environments Hub (requires prime login
 # Reproducible evaluations (artifacts go to outputs/evals/...)
 # Supports OpenAI models (gpt-*) and 200+ non-OpenAI models via OpenRouter
 # Model names auto-resolved via scripts/model_router.py (fuzzy matching + live API + 24h cache)
-make eval-e1 MODELS="gpt-4.1-mini,qwen3-14b" N=10  # "qwen3-14b" → "qwen/qwen3-14b" automatically
-make eval-e2 MODELS="gpt-4o-mini,llama-3.1-8b" N=2 INCLUDE_TOOLS=true  # Multi-turn eval with tool calling
+make eval-e1 MODELS="gpt-5-mini,qwen3-14b" N=10  # "qwen3-14b" → "qwen/qwen3-14b" automatically
+make eval-e2 MODELS="gpt-5-mini,llama-3.1-8b" N=2 INCLUDE_TOOLS=true  # Multi-turn eval with tool calling
 
-# Dataset selection (E1: HF datasets or local .jsonl; E2: locally-built datasets)
-make eval-e1 MODELS="gpt-4o-mini" N=1800 DATASET="iot23-train-dev-test-v1.jsonl"  # E1 local dataset
-make eval-e2 MODELS="gpt-4o-mini" N=50 DATASET="k8s-labeled-v1.jsonl"  # E2 k8s only
-make eval-e2 MODELS="gpt-4o-mini" N=10 DATASET="combined"  # E2 both k8s + terraform (default)
+# Dataset selection
+# E1 supports: local .jsonl files (relative to env/data/ or absolute paths). Build with 'make data-e1'.
+# E2 supports: locally-built datasets from make data-e2-local (k8s, terraform, or combined)
+make eval-e1 MODELS="gpt-5-mini" N=1800 DATASET="iot23-train-dev-test-v1.jsonl"  # E1 primary dataset (default)
+make eval-e1 MODELS="gpt-5-mini" N=600 DATASET="cic-ids-2017-ood-v1.jsonl"  # E1 OOD dataset
+make eval-e1 MODELS="gpt-5-mini" N=600 DATASET="unsw-nb15-ood-v1.jsonl"  # E1 OOD dataset
+make eval-e2 MODELS="gpt-5-mini" N=10 DATASET="combined"  # E2 both k8s + terraform (default)
+make eval-e2 MODELS="gpt-5-mini" N=50 DATASET="k8s-labeled-v1.jsonl"  # E2 k8s only
+make eval-e2 MODELS="gpt-5-mini" N=50 DATASET="terraform-labeled-v1.jsonl"  # E2 terraform only
+make eval-e2 MODELS="gpt-5-mini" N=2 DATASET="builtin"  # E2 test fixtures (for testing)
 
 # Early failure detection (prevents wasted API costs on misconfigured models)
-make eval-e1 MODELS="gpt-4.1-mini" N=100 MAX_CONSECUTIVE_ERRORS=5  # Stop after 5 consecutive errors
+make eval-e1 MODELS="gpt-5-mini" N=100 MAX_CONSECUTIVE_ERRORS=5  # Stop after 5 consecutive errors
 make eval-e2 MODELS="invalid-model" N=10 MAX_CONSECUTIVE_ERRORS=0  # Disable early stopping (never stop)
 
 # Shortcuts

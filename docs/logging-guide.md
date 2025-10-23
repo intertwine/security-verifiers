@@ -42,7 +42,7 @@ If you don't have a W&B account or want to run without logging:
 export WEAVE_DISABLED=true
 
 # Run normally - no logging will occur
-python scripts/eval_network_logs.py --models gpt-4o-mini --num-examples 10
+python scripts/eval_network_logs.py --models gpt-5-mini --num-examples 10
 ```
 
 ### Option 2: Automatic Logging (Recommended)
@@ -60,7 +60,7 @@ export WEAVE_AUTO_INIT=true
 export WEAVE_PROJECT=my-security-project
 
 # Run your evaluation - logging happens automatically!
-python scripts/eval_network_logs.py --models gpt-4o-mini --num-examples 10
+python scripts/eval_network_logs.py --models gpt-5-mini --num-examples 10
 ```
 
 ### Option 3: Custom Logging
@@ -167,7 +167,7 @@ env = load_environment(max_examples=100)
 client = OpenAI()
 results = env.evaluate(
     client,
-    "gpt-4o-mini",
+    "gpt-5-mini",
     num_examples=10,
     rollouts_per_example=2
 )
@@ -525,7 +525,7 @@ for env_name in ENVIRONMENTS:
     client = OpenAI()
     env_results = env.evaluate(
         client,
-        "gpt-4o-mini",
+        "gpt-5-mini",
         num_examples=50
     )
 
@@ -561,7 +561,7 @@ logger = build_rollout_logger({
 env = load_environment(logger=logger)
 
 # Run evaluation
-results = env.evaluate(client, "gpt-4o-mini", num_examples=100)
+results = env.evaluate(client, "gpt-5-mini", num_examples=100)
 
 # Analyze failures locally
 failures = logger.query_events(

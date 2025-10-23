@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 import verifiers as vf
-from datasets import Dataset
 
-from sv_env_network_logs import NetworkLogParser, load_environment, transform_dataset
+from sv_env_network_logs import NetworkLogParser, load_environment
 from sv_shared.rewards import (
     reward_accuracy,
     reward_calibration,
@@ -89,48 +88,18 @@ def test_reward_asymmetric_cost(completion: str, answer: str, expected: float) -
     assert reward == expected
 
 
-def test_transform_dataset() -> None:
-    raw_data = [
-        {
-            "id.orig_h": "192.168.1.1",
-            "id.orig_p": 12345,
-            "id.resp_h": "8.8.8.8",
-            "id.resp_p": 53,
-            "proto": "udp",
-            "service": "dns",
-            "detailed-label": "Benign",
-            "label": "Benign",
-        },
-        {
-            "id.orig_h": "10.0.0.2",
-            "id.orig_p": 666,
-            "id.resp_h": "10.0.0.1",
-            "id.resp_p": 666,
-            "proto": "tcp",
-            "service": "-NA-",
-            "detailed-label": "Attack",
-            "label": "Malicious",
-        },
-    ]
-    raw_dataset = Dataset.from_list(raw_data)
-    transformed = transform_dataset(raw_dataset, max_examples=None)
-    assert len(transformed) == 2
-    assert "question" in transformed.column_names
-    assert "answer" in transformed.column_names
-    assert transformed[0]["answer"] == "Benign"
-
-
-@patch("sv_env_network_logs.load_dataset")
-def test_load_environment_builds_rubric(mock_load_dataset) -> None:
-    mock_load_dataset.return_value = Dataset.from_list([{"id.orig_h": "1", "label": "Benign"}])
+def test_load_environment_with_synthetic_dataset() -> None:
+    """Test that load_environment works with synthetic fallback dataset."""
     logger = Mock()
     logger.enabled = True
 
-    env = load_environment(max_examples=1, logger=logger)
+    # Request synthetic dataset explicitly
+    env = load_environment(dataset_name="synthetic", max_examples=5, logger=logger)
     assert isinstance(env, vf.SingleTurnEnv)
     assert len(env.rubric.reward_funcs) == 4
-    mock_load_dataset.assert_called_once()
+    assert env.dataset is not None
+    assert len(env.dataset) > 0
     logger.log_environment_init.assert_called_once()
     call_kwargs = logger.log_environment_init.call_args.kwargs
     assert call_kwargs["environment_name"] == "sv-env-network-logs"
-    assert call_kwargs["total_examples"] == 1
+    assert "synthetic" in call_kwargs["dataset_name"]

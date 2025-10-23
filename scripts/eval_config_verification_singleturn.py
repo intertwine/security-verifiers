@@ -9,7 +9,7 @@ Reproducible evaluator for sv-env-config-verification.
 
 Usage:
   python scripts/eval_config_verification.py \
-    --models gpt-5-mini,gpt-4.1-mini \
+    --models gpt-5-mini,gpt-5-mini \
     --num-examples 2 \
     --include-tools true
 """
@@ -100,7 +100,7 @@ def main() -> None:
     parser.add_argument(
         "--models",
         required=True,
-        help="Comma-separated list of model ids (e.g., gpt-5-mini,gpt-4.1-mini)",
+        help="Comma-separated list of model ids (e.g., gpt-5-mini,gpt-5-mini)",
     )
     parser.add_argument(
         "--num-examples",
@@ -112,7 +112,11 @@ def main() -> None:
         "--dataset",
         type=str,
         default="builtin",
-        help="Dataset name (currently only 'builtin' is supported for E2)",
+        help=(
+            "Local dataset to load. Build datasets with 'make data-e2-local'. "
+            "Options: builtin (fixtures), k8s-labeled-v1.jsonl (N=444), "
+            "terraform-labeled-v1.jsonl (N=115), combined (N=559)"
+        ),
     )
     parser.add_argument(
         "--include-tools",

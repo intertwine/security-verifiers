@@ -186,14 +186,20 @@ Benchmarks on 100 examples from the IoT-23 dataset (illustrative).
 
 ## Dataset
 
-The environment uses the [IoT-23 dataset](https://huggingface.co/datasets/19kmunz/iot-23-preprocessed-minimumcolumns), containing real network traffic from IoT devices with labeled malicious and benign connections. A synthetic fallback dataset ensures the environment works even without dataset access.
+The environment uses locally-built datasets derived from public network intrusion detection datasets. Build datasets with `make data-e1` before use. Available datasets:
+
+- **iot23-train-dev-test-v1.jsonl** (N=1800): Primary dataset from IoT-23, 70/15/15 train/dev/test split
+- **cic-ids-2017-ood-v1.jsonl** (N=600): Out-of-distribution dataset from CIC-IDS-2017
+- **unsw-nb15-ood-v1.jsonl** (N=600): Out-of-distribution dataset from UNSW-NB15
+
+A synthetic fallback dataset ensures the environment works for testing even without built datasets.
 
 ## Requirements
 
 - Python 3.12+
 - `verifiers>=0.1.4`
 - API key for model inference (e.g., OpenAI API key)
-- HuggingFace token for dataset access (optional but recommended)
+- HuggingFace token (only for building datasets with `make data-e1`)
 
 ## Weights & Biases Logging
 
@@ -211,7 +217,7 @@ weave.init(project="network-logs-security")
 env = vf.load_environment("intertwine/sv-env-network-logs")
 results = env.evaluate(
     client=vf.OpenAIClient(),
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     num_examples=100
 )
 
@@ -248,7 +254,7 @@ env = vf.load_environment("intertwine/sv-env-network-logs")
 # Run evaluation
 results = env.evaluate(
     client=vf.OpenAIClient(),
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     num_examples=500,
     seed=42
 )

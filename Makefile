@@ -112,7 +112,7 @@ help:
 	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)Environment Variables:$(NC)"
 	@$(ECHO) "  E=network-logs             - Target specific environment"
-	@$(ECHO) "  MODEL=gpt-4o-mini          - Model for evaluation"
+	@$(ECHO) "  MODEL=gpt-5-mini          - Model for evaluation"
 	@$(ECHO) "  N=10                       - Number of examples for eval"
 	@$(ECHO) "  MAX_CONSECUTIVE_ERRORS=3   - Error threshold (default: 3, 0 to disable)"
 	@$(ECHO) "  LIMIT=1800                 - Total rows for E1 dataset"
@@ -284,10 +284,10 @@ deploy: venv install-dev
 eval: venv
 	@if [ -z "$(E)" ]; then \
 		$(ECHO) "$(RED)Error: Specify environment with E=name$(NC)"; \
-		$(ECHO) "Example: make eval E=network-logs MODEL=gpt-4o-mini N=10"; \
+		$(ECHO) "Example: make eval E=network-logs MODEL=gpt-5-mini N=10"; \
 		exit 1; \
 	fi
-	@MODEL=$${MODEL:-gpt-4o-mini}; \
+	@MODEL=$${MODEL:-gpt-5-mini}; \
 	N=$${N:-10}; \
 	$(ECHO) "$(YELLOW)Evaluating sv-env-$(E) with $$MODEL ($$N examples)...$(NC)"; \
 	$(ACTIVATE) && vf-eval intertwine/sv-env-$(E) --model $$MODEL --num-examples $$N
@@ -367,11 +367,11 @@ MAX_CONSECUTIVE_ERRORS ?= 3
 # E1/E2 eval helpers
 eval-e1: venv
 	@if [ -z "$(MODELS)" ]; then \
-		$(ECHO) "$(RED)Error: Provide MODELS=\"gpt-5-mini,gpt-4.1-mini\"$(NC)"; \
+		$(ECHO) "$(RED)Error: Provide MODELS=\"gpt-5-mini,gpt-5-mini\"$(NC)"; \
 		exit 1; \
 	fi
 	@N=$${N:-10}; \
-	DATASET=$${DATASET:-19kmunz/iot-23-preprocessed-minimumcolumns}; \
+	DATASET=$${DATASET:-iot23-train-dev-test-v1.jsonl}; \
 	MAX_ERRORS=$${MAX_CONSECUTIVE_ERRORS:-3}; \
 	$(ECHO) "$(YELLOW)Evaluating E1 (network-logs) for models: $(MODELS) (N=$$N, dataset=$$DATASET, max_errors=$$MAX_ERRORS)$(NC)"; \
 	$(ACTIVATE) && set -a && source .env && set +a && \
@@ -379,7 +379,7 @@ eval-e1: venv
 
 eval-e2: venv
 	@if [ -z "$(MODELS)" ]; then \
-		$(ECHO) "$(RED)Error: Provide MODELS=\"gpt-5-mini,gpt-4.1-mini\"$(NC)"; \
+		$(ECHO) "$(RED)Error: Provide MODELS=\"gpt-5-mini,gpt-5-mini\"$(NC)"; \
 		exit 1; \
 	fi
 	@N=$${N:-2}; \

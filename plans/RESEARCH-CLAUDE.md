@@ -369,7 +369,7 @@ python scripts/analyze_patches.py \
 #### Evaluation Protocol for E4
 
 ```bash
-make eval-e4 MODELS="gpt-4o-mini,qwen-2.5-72b" N=100
+make eval-e4 MODELS="gpt-5-mini,qwen-2.5-72b" N=100
 
 python scripts/analyze_results.py \
   --env phishing-detection \
@@ -1267,8 +1267,8 @@ cp .env.example .env
 set -a && source .env && set +a
 
 # Run baseline evaluation (E1)
-make eval-e1 MODELS="gpt-4o-mini" N=10  # Quick test
-make eval-e1 MODELS="gpt-4o-mini,gpt-4o" N=100  # Full baseline
+make eval-e1 MODELS="gpt-5-mini" N=10  # Quick test
+make eval-e1 MODELS="gpt-5-mini,gpt-4o" N=100  # Full baseline
 
 # Analyze results
 python scripts/analyze_results.py \

@@ -221,7 +221,7 @@ Milestones include go/no-go reviews at the ends of Phases 1, 3, and 5.
 
 ## 9. Next Steps
 
-1. Provision credentials, confirm `make setup` success, and run a smoke test with `make eval-e1 MODELS="gpt-4o-mini" N=2`.
+1. Provision credentials, confirm `make setup` success, and run a smoke test with `make eval-e1 MODELS="gpt-5-mini" N=2`.
 2. Stand up evaluation job templates (one per environment) in the internal orchestrator.
 3. Kick off baseline data pulls from the highlighted Hugging Face datasets; log provenance in `docs/data-sources.md`.
 4. Draft detailed SOPs for synthetic data pipelines; review with security & legal stakeholders before execution.

@@ -155,15 +155,20 @@ The evaluation scripts support both OpenAI models and 200+ non-OpenAI models via
 **E1 (network-logs):**
 
 ```bash
-# OpenAI models with default HuggingFace dataset
-make eval-e1 MODELS="gpt-4.1-mini,gpt-4o-mini" N=10
+# Build datasets first (one-time setup)
+make data-e1        # Build primary IoT-23 dataset (N=1800)
+make data-e1-ood    # Build OOD datasets (CIC-IDS-2017, UNSW-NB15, N=600 each)
+
+# Run evaluations with locally-built datasets
+make eval-e1 MODELS="gpt-5-mini,gpt-5-mini" N=10  # Uses default: iot23-train-dev-test-v1.jsonl
 
 # Mix of OpenAI and non-OpenAI models (requires both API keys)
-make eval-e1 MODELS="gpt-4.1-mini,qwen-2.5-7b,llama-3.1-8b" N=100
+make eval-e1 MODELS="gpt-5-mini,qwen-2.5-7b,llama-3.1-8b" N=100
 
-# Use locally-built datasets (from make data-e1, make data-e1-ood)
-make eval-e1 MODELS="gpt-4o-mini" N=1800 DATASET="iot23-train-dev-test-v1.jsonl"
-make eval-e1 MODELS="gpt-4o-mini" N=600 DATASET="cic-ids-2017-ood-v1.jsonl"
+# Select specific dataset
+make eval-e1 MODELS="gpt-5-mini" N=1800 DATASET="iot23-train-dev-test-v1.jsonl"  # Primary
+make eval-e1 MODELS="gpt-5-mini" N=600 DATASET="cic-ids-2017-ood-v1.jsonl"       # OOD
+make eval-e1 MODELS="gpt-5-mini" N=600 DATASET="unsw-nb15-ood-v1.jsonl"          # OOD
 ```
 
 Artifacts: `outputs/evals/sv-env-network-logs--{model}/<run_id>/{metadata.json,results.jsonl}`
@@ -171,21 +176,33 @@ Artifacts: `outputs/evals/sv-env-network-logs--{model}/<run_id>/{metadata.json,r
 **E2 (config-verification):**
 
 ```bash
-# Multi-turn evaluation with tool calling (uses locally-built datasets by default)
-make eval-e2 MODELS="gpt-4o-mini,qwen-2.5-7b" N=2 INCLUDE_TOOLS=true
+# Build datasets first (one-time setup, requires source repos)
+make clone-e2-sources  # Clone K8s/Terraform repos to scripts/data/sources/
+make data-e2-local     # Build E2 datasets (N=444 K8s + N=115 Terraform)
 
-# Select specific dataset (combined, k8s-labeled-v1.jsonl, terraform-labeled-v1.jsonl, or builtin)
-make eval-e2 MODELS="gpt-4o-mini" N=50 DATASET="k8s-labeled-v1.jsonl"
-make eval-e2 MODELS="gpt-4o-mini" N=50 DATASET="terraform-labeled-v1.jsonl"
+# Run evaluations with locally-built datasets
+make eval-e2 MODELS="gpt-5-mini,qwen-2.5-7b" N=2 INCLUDE_TOOLS=true  # Default: combined
+
+# Select specific dataset
+make eval-e2 MODELS="gpt-5-mini" N=50 DATASET="k8s-labeled-v1.jsonl"        # K8s only
+make eval-e2 MODELS="gpt-5-mini" N=50 DATASET="terraform-labeled-v1.jsonl"  # Terraform only
+make eval-e2 MODELS="gpt-5-mini" N=2 DATASET="builtin"                      # Test fixtures
 ```
 
 Artifacts: `outputs/evals/sv-env-config-verification--{model}/<run_id>/{metadata.json,results.jsonl}`
 
 **Dataset Selection:**
 
-Both E1 and E2 track which dataset was used in `metadata.json`:
-- **E1**: Supports HuggingFace dataset IDs, local `.jsonl` files (relative to `env/data/` or absolute paths)
-- **E2**: Supports locally-built datasets (`combined`, `k8s-labeled-v1.jsonl`, `terraform-labeled-v1.jsonl`, or `builtin` for test fixtures)
+Both E1 and E2 require locally-built datasets and track which dataset was used in `metadata.json`:
+- **E1**: Local `.jsonl` files built with `make data-e1` (relative to `env/data/` or absolute paths)
+  - `iot23-train-dev-test-v1.jsonl` (N=1800, default)
+  - `cic-ids-2017-ood-v1.jsonl` (N=600, OOD)
+  - `unsw-nb15-ood-v1.jsonl` (N=600, OOD)
+- **E2**: Local `.jsonl` files built with `make data-e2-local`
+  - `combined` (N=559, default - both K8s and Terraform)
+  - `k8s-labeled-v1.jsonl` (N=444)
+  - `terraform-labeled-v1.jsonl` (N=115)
+  - `builtin` (test fixtures)
 
 **Model Name Resolution (Automatic):**
 

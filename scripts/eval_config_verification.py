@@ -9,7 +9,7 @@ This script properly handles the ToolEnv's multi-turn nature, allowing models to
 
 Usage:
   python scripts/eval_config_verification.py \
-    --models gpt-4o-mini \
+    --models gpt-5-mini \
     --num-examples 2 \
     --include-tools true \
     --max-turns 5
@@ -275,7 +275,7 @@ def main() -> None:
     parser.add_argument(
         "--models",
         required=True,
-        help="Comma-separated list of model ids (e.g., gpt-4o-mini)",
+        help="Comma-separated list of model ids (e.g., gpt-5-mini)",
     )
     parser.add_argument(
         "--num-examples",
@@ -287,7 +287,11 @@ def main() -> None:
         "--dataset",
         type=str,
         default="builtin",
-        help="Dataset name (currently only 'builtin' is supported for E2)",
+        help=(
+            "Local dataset to load. Build datasets with 'make data-e2-local'. "
+            "Options: builtin (fixtures), k8s-labeled-v1.jsonl (N=444), "
+            "terraform-labeled-v1.jsonl (N=115), combined (N=559)"
+        ),
     )
     parser.add_argument(
         "--include-tools",

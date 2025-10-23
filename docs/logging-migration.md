@@ -136,7 +136,7 @@ from sv_env_config_verification import load_environment
 
 logger = build_rollout_logger({"enabled": True})
 env = load_environment(logger=logger, include_tools=True)
-results = env.evaluate(client, "gpt-4o-mini", num_examples=10)
+results = env.evaluate(client, "gpt-5-mini", num_examples=10)
 ```
 
 **After:**
@@ -146,7 +146,7 @@ from sv_env_config_verification import load_environment
 
 # No logger needed - Weave traces automatically
 env = load_environment(include_tools=True)
-results = env.evaluate(client, "gpt-4o-mini", num_examples=10)
+results = env.evaluate(client, "gpt-5-mini", num_examples=10)
 ```
 
 ### Scenario 2: Production Monitoring

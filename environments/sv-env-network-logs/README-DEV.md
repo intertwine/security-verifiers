@@ -20,7 +20,7 @@ This will install all necessary dependencies for running the environment and its
 Use the Make target to evaluate E1 across multiple models and capture artifacts under outputs/evals/:
 
 ```bash
-make eval-e1 MODELS="gpt-5-mini,gpt-4.1-mini" N=10
+make eval-e1 MODELS="gpt-5-mini,gpt-5-mini" N=10
 ```
 
 This runs scripts/eval_network_logs.py which loads the environment via load_environment(max_examples=N), calls OpenAI chat completions for each example, computes reward_accuracy, reward_calibration, reward_asymmetric_cost, and format rewards, and saves:

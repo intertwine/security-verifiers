@@ -53,7 +53,7 @@ env = vf.load_environment("intertwine/sv-env-redteam-defense")
 # Evaluate a defensive model
 results = env.evaluate(
     client=vf.OpenAIClient(),
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     num_examples=10
 )
 
@@ -68,7 +68,7 @@ Use the verifiers CLI:
 ```bash
 # Basic evaluation
 vf-eval intertwine/sv-env-redteam-defense \
-  --model gpt-4o-mini \
+  --model gpt-5-mini \
   --num-examples 10
 ```
 
@@ -133,7 +133,7 @@ weave.init(project="redteam-defense")
 env = vf.load_environment("intertwine/sv-env-redteam-defense")
 results = env.evaluate(
     client=vf.OpenAIClient(),
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     num_examples=50
 )
 
@@ -167,7 +167,7 @@ env = vf.load_environment("intertwine/sv-env-redteam-defense")
 # Evaluate defensive capabilities
 results = env.evaluate(
     client=vf.OpenAIClient(),
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     num_examples=100,
     seed=42
 )

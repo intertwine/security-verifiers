@@ -23,7 +23,7 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 from sv_shared import weave_init  # type: ignore  # noqa: F401, E402
 
 import verifiers as vf
-from datasets import Dataset, load_dataset
+from datasets import Dataset
 
 from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
     JsonClassificationParser,
@@ -41,39 +41,8 @@ class NetworkLogParser(JsonClassificationParser):
         super().__init__(allowed_labels=["Benign", "Malicious", "Abstain"])
 
 
-def transform_dataset(raw_dataset: Dataset, max_examples: int | None) -> Dataset:
-    """Transform raw dataset to SingleTurnEnv format."""
-
-    def transform_example(example):
-        # The IoT-23 dataset has many columns. We'll create a simple
-        # string representation of the most relevant ones for the prompt.
-        # This can be refined to be more descriptive.
-        prompt_text = (
-            f"Log Entry: id.orig_h={example.get('id.orig_h')}, "
-            f"id.orig_p={example.get('id.orig_p')}, "
-            f"id.resp_h={example.get('id.resp_h')}, "
-            f"id.resp_p={example.get('id.resp_p')}, "
-            f"proto={example.get('proto')}, "
-            f"service={example.get('service')}, "
-            f"detailed-label={example.get('detailed-label')}"
-        )
-
-        # The 'label' column is 'Malicious' or 'Benign'
-        return {
-            "question": prompt_text,
-            "answer": example.get("label", "Benign"),
-        }
-
-    transformed = raw_dataset.map(transform_example)
-
-    if max_examples and len(transformed) > max_examples:
-        transformed = transformed.select(range(max_examples))
-
-    return transformed
-
-
 def load_environment(
-    dataset_name: str = "19kmunz/iot-23-preprocessed-minimumcolumns",
+    dataset_name: str = "iot23-train-dev-test-v1.jsonl",
     max_examples: int = 1000,
     logger: RolloutLogger | None = None,
 ) -> vf.SingleTurnEnv:
@@ -83,66 +52,67 @@ def load_environment(
     inspects a network log entry and determines whether it is malicious or benign.
 
     Args:
-        dataset_name: HuggingFace dataset name or local file path (absolute or relative to env root).
-                     Supported formats: HF dataset IDs, .jsonl files
+        dataset_name: Local JSONL file path (absolute or relative to env root).
+                     Build datasets with `make data-e1` before use.
+                     Available datasets:
+                     - iot23-train-dev-test-v1.jsonl (primary, N=1800)
+                     - cic-ids-2017-ood-v1.jsonl (OOD, N=600)
+                     - unsw-nb15-ood-v1.jsonl (OOD, N=600)
         max_examples: Maximum number of examples to use from the dataset.
         logger: Optional rollout logger for instrumenting environment metadata.
 
     Returns:
         A Verifiers SingleTurnEnv configured for the task.
     """
-    try:
-        # Check if dataset_name is a local file path
-        dataset_path = None
-        if dataset_name.endswith(".jsonl") or dataset_name.endswith(".json"):
-            # Try as absolute path first
-            candidate = Path(dataset_name)
+    import json
+
+    env_root = Path(__file__).parent
+
+    # Determine dataset path
+    dataset_path = None
+    if dataset_name.endswith(".jsonl") or dataset_name.endswith(".json"):
+        # Try as absolute path first
+        candidate = Path(dataset_name)
+        if candidate.is_file():
+            dataset_path = candidate
+        else:
+            # Try relative to environment root
+            candidate = env_root / "data" / dataset_name
             if candidate.is_file():
                 dataset_path = candidate
-            else:
-                # Try relative to environment root
-                env_root = Path(__file__).parent
-                candidate = env_root / "data" / dataset_name
-                if candidate.is_file():
-                    dataset_path = candidate
 
-        if dataset_path:
-            # Load from local JSONL file
-            print(f"Loading local dataset from {dataset_path}")
-            import json
+    if dataset_path:
+        # Load from local JSONL file
+        print(f"Loading local dataset from {dataset_path}")
+        examples = []
+        with open(dataset_path, "r") as f:
+            for line in f:
+                if line.strip():
+                    example = json.loads(line)
+                    # Normalize field names: our build scripts use "prompt" but env expects "question"
+                    if "prompt" in example and "question" not in example:
+                        example["question"] = example["prompt"]
+                    examples.append(example)
+        dataset = Dataset.from_list(examples)
 
-            examples = []
-            with open(dataset_path, "r") as f:
-                for line in f:
-                    if line.strip():
-                        example = json.loads(line)
-                        # Normalize field names: our build scripts use "prompt" but env expects "question"
-                        if "prompt" in example and "question" not in example:
-                            example["question"] = example["prompt"]
-                        examples.append(example)
-            dataset = Dataset.from_list(examples)
-
-            # Local JSONL files from make data-e1 are already in the correct format
-            # Just apply max_examples limit, don't transform
-            if max_examples and len(dataset) > max_examples:
-                dataset = dataset.select(range(max_examples))
+        # Local JSONL files from make data-e1 are already in the correct format
+        # Just apply max_examples limit
+        if max_examples and len(dataset) > max_examples:
+            dataset = dataset.select(range(max_examples))
+    else:
+        # Dataset not found - use synthetic fixtures for testing
+        if dataset_name == "synthetic" or dataset_name.startswith("test"):
+            print(f"Using synthetic test dataset (requested: {dataset_name})")
         else:
-            # Load from HuggingFace Hub
-            # The `load_dataset` function with a `split` argument returns a `Dataset` object.
-            # We assert the type to satisfy the linter and ensure correctness.
-            dataset = load_dataset(dataset_name, split="train")
-            assert isinstance(dataset, Dataset), "Loaded dataset is not of type Dataset"
-            # HF datasets need transformation from raw format to question/answer format
-            dataset = transform_dataset(dataset, max_examples)
-    except (
-        FileNotFoundError,
-        ConnectionError,
-        ValueError,
-        ImportError,
-        AssertionError,
-    ) as e:
-        print(f"Failed to load dataset '{dataset_name}': {e}")
-        print("Falling back to a synthetic dataset.")
+            raise FileNotFoundError(
+                f"Dataset '{dataset_name}' not found. "
+                f"Expected at: {env_root / 'data' / dataset_name}\n"
+                f"Build datasets with: make data-e1\n"
+                f"Available datasets:\n"
+                f"  - iot23-train-dev-test-v1.jsonl (primary, N=1800)\n"
+                f"  - cic-ids-2017-ood-v1.jsonl (OOD, N=600)\n"
+                f"  - unsw-nb15-ood-v1.jsonl (OOD, N=600)"
+            )
 
         def _create_synthetic_dataset():
             """Create a synthetic dataset for testing purposes."""
@@ -222,7 +192,8 @@ def load_environment(
             return Dataset.from_list(examples)
 
         dataset = _create_synthetic_dataset()
-        dataset_name = f"synthetic::{dataset_name}"
+        original_name = dataset_name
+        dataset_name = f"synthetic::{original_name}"
 
     parser = NetworkLogParser()
 

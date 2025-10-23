@@ -20,7 +20,7 @@ This will install all necessary dependencies for running the environment and its
 Use the Make target to evaluate E2 across multiple models and capture artifacts under outputs/evals/:
 
 ```bash
-make eval-e2 MODELS="gpt-5-mini,gpt-4.1-mini" N=2 INCLUDE_TOOLS=true
+make eval-e2 MODELS="gpt-5-mini,gpt-5-mini" N=2 INCLUDE_TOOLS=true
 ```
 
 This runs scripts/eval_config_verification.py which loads the environment via load_environment(max_examples=N, include_tools=INCLUDE_TOOLS), calls OpenAI chat completions for each example, computes both reward_config_auditing and format rewards, and saves:

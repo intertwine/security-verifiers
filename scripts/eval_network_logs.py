@@ -9,7 +9,7 @@ Reproducible evaluator for sv-env-network-logs (E1).
 
 Usage:
   python scripts/eval_network_logs.py \
-    --models gpt-5-mini,gpt-4.1-mini \
+    --models gpt-5-mini,gpt-5-mini \
     --num-examples 10
 """
 
@@ -99,14 +99,19 @@ def main() -> None:
     parser.add_argument(
         "--models",
         required=True,
-        help="Comma-separated list of model ids (e.g., gpt-5-mini,gpt-4.1-mini)",
+        help="Comma-separated list of model ids (e.g., gpt-5-mini,gpt-5-mini)",
     )
     parser.add_argument("--num-examples", type=int, default=10, help="Number of examples to evaluate")
     parser.add_argument(
         "--dataset",
         type=str,
-        default="19kmunz/iot-23-preprocessed-minimumcolumns",
-        help="HuggingFace dataset name or path to dataset file",
+        default="iot23-train-dev-test-v1.jsonl",
+        help=(
+            "Local JSONL dataset file (absolute or relative to env root). "
+            "Build datasets with 'make data-e1' before use. "
+            "Available: iot23-train-dev-test-v1.jsonl (N=1800), "
+            "cic-ids-2017-ood-v1.jsonl (N=600), unsw-nb15-ood-v1.jsonl (N=600)"
+        ),
     )
     parser.add_argument("--temperature", type=float, default=0.2, help="Sampling temperature")
     parser.add_argument("--max-tokens", type=int, default=2048, help="Max tokens per completion")

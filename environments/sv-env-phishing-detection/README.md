@@ -53,7 +53,7 @@ env = vf.load_environment("intertwine/sv-env-phishing-detection", include_tools=
 # Evaluate a model
 results = env.evaluate(
     client=vf.OpenAIClient(),
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     num_examples=10
 )
 
@@ -68,12 +68,12 @@ Use the verifiers CLI:
 ```bash
 # Basic evaluation with tools
 vf-eval intertwine/sv-env-phishing-detection \
-  --model gpt-4o-mini \
+  --model gpt-5-mini \
   --num-examples 10
 
 # Without tools (content analysis only)
 vf-eval intertwine/sv-env-phishing-detection \
-  --model gpt-4o-mini \
+  --model gpt-5-mini \
   --num-examples 10 \
   --include-tools false
 ```
@@ -148,7 +148,7 @@ weave.init(project="phishing-detection")
 env = vf.load_environment("intertwine/sv-env-phishing-detection", include_tools=True)
 results = env.evaluate(
     client=vf.OpenAIClient(),
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     num_examples=50
 )
 
@@ -182,7 +182,7 @@ env = vf.load_environment("intertwine/sv-env-phishing-detection", include_tools=
 # Evaluate with focus on reducing false negatives
 results = env.evaluate(
     client=vf.OpenAIClient(),
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     num_examples=200,
     seed=42
 )

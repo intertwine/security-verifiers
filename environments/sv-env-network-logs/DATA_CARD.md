@@ -170,7 +170,7 @@ After building datasets, run evaluations:
 
 ```bash
 # Evaluate on E1 with multiple models
-make eval-e1 MODELS="gpt-4o-mini,gpt-4.1-mini" N=300
+make eval-e1 MODELS="gpt-5-mini,gpt-5-mini" N=300
 ```
 
 **Artifacts:**

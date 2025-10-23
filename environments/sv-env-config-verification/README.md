@@ -100,7 +100,7 @@ env = vf.load_environment("intertwine/sv-env-config-verification", include_tools
 # Evaluate a model
 results = env.evaluate(
     client=vf.OpenAIClient(),
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     num_examples=10
 )
 
@@ -115,12 +115,12 @@ Use the verifiers CLI:
 ```bash
 # Basic evaluation
 vf-eval intertwine/sv-env-config-verification \
-  --model gpt-4o-mini \
+  --model gpt-5-mini \
   --num-examples 10
 
 # Evaluation without tools (model must detect issues directly)
 vf-eval intertwine/sv-env-config-verification \
-  --model gpt-4o-mini \
+  --model gpt-5-mini \
   --num-examples 10 \
   --include-tools false
 ```
@@ -203,7 +203,7 @@ weave.init(project="config-security")
 env = vf.load_environment("intertwine/sv-env-config-verification", include_tools=True)
 results = env.evaluate(
     client=vf.OpenAIClient(),
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     num_examples=50
 )
 
@@ -241,7 +241,7 @@ env = vf.load_environment("intertwine/sv-env-config-verification", include_tools
 for use_tools in [True, False]:
     results = env.evaluate(
         client=vf.OpenAIClient(),
-        model="gpt-4o-mini",
+        model="gpt-5-mini",
         num_examples=100,
         include_tools=use_tools,
         seed=42
@@ -261,7 +261,7 @@ All E2 evaluation scripts support early stopping to prevent wasted API costs on 
 ```bash
 # Multi-turn evaluation (default: stop after 3 consecutive errors)
 python scripts/eval_config_verification.py \
-  --models "gpt-4o-mini" \
+  --models "gpt-5-mini" \
   --num-examples 100 \
   --max-consecutive-errors 3
 
@@ -273,7 +273,7 @@ python scripts/eval_config_verification.py \
 
 # Single-turn evaluation with custom threshold
 python scripts/eval_config_verification_singleturn.py \
-  --models "gpt-4o-mini" \
+  --models "gpt-5-mini" \
   --num-examples 100 \
   --max-consecutive-errors 5
 ```
@@ -282,10 +282,10 @@ python scripts/eval_config_verification_singleturn.py \
 
 ```bash
 # Use default threshold (3 errors)
-make eval-e2 MODELS="gpt-4o-mini" N=100
+make eval-e2 MODELS="gpt-5-mini" N=100
 
 # Custom threshold
-make eval-e2 MODELS="gpt-4o-mini" N=100 MAX_CONSECUTIVE_ERRORS=5
+make eval-e2 MODELS="gpt-5-mini" N=100 MAX_CONSECUTIVE_ERRORS=5
 
 # Disable early stopping
 make eval-e2 MODELS="test-model" N=50 MAX_CONSECUTIVE_ERRORS=0

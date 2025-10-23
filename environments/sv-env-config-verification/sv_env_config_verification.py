@@ -292,7 +292,11 @@ def _load_examples(
     for jsonl_file in jsonl_files:
         jsonl_path = data_dir / jsonl_file
         if not jsonl_path.exists():
-            print(f"Warning: Dataset file not found: {jsonl_path}")
+            print(
+                f"Warning: Dataset file not found: {jsonl_path}\n"
+                f"Build datasets with: make data-e2-local\n"
+                f"(Requires: make clone-e2-sources first)"
+            )
             continue
 
         print(f"Loading E2 dataset from {jsonl_path}")
@@ -329,11 +333,11 @@ def load_environment(
     """Load the configuration auditing environment.
 
     Args:
-        dataset_name: Dataset to load. Options:
+        dataset_name: Local dataset to load. Build datasets with 'make data-e2-local'. Options:
             - "builtin" or "fixtures": Hardcoded fixtures (for testing)
-            - "k8s-labeled-v1.jsonl": Kubernetes labeled dataset
-            - "terraform-labeled-v1.jsonl": Terraform labeled dataset
-            - "combined" or "all": Both k8s and terraform datasets
+            - "k8s-labeled-v1.jsonl": Kubernetes labeled dataset (N=444)
+            - "terraform-labeled-v1.jsonl": Terraform labeled dataset (N=115)
+            - "combined" or "all": Both k8s and terraform datasets (N=559)
         max_examples: Maximum number of examples to load from the dataset.
         logger: Optional rollout logger to capture dataset metadata.
         include_tools: Whether to include security tools (can be disabled for testing).

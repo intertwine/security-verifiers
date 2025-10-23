@@ -226,7 +226,7 @@ Same pattern as E1, simplified because no async:
    ```makefile
    eval-e1: venv
        @if [ -z "$(MODELS)" ]; then \
-           $(ECHO) "$(RED)Error: Provide MODELS=\"gpt-5-mini,gpt-4.1-mini\"$(NC)"; \
+           $(ECHO) "$(RED)Error: Provide MODELS=\"gpt-5-mini,gpt-5-mini\"$(NC)"; \
            exit 1; \
        fi
        @N=$${N:-10}; \

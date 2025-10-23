@@ -11,7 +11,7 @@
 
 ## 2. Model Portfolio and Schedule
 
-- **Closed-source:** `gpt-5` (flagship unified model with improved reasoning and tool routing[^1]), `gpt-4.1-mini`, `gpt-4o-mini`, `Claude Sonnet 4.5` (latest coding-optimized Claude tier with extended context and safety tooling[^2][^3]). Run monthly baselines and quarterly RLFT (via Prime or Vertex endpoints, depending on provider SLAs).
+- **Closed-source:** `gpt-5` (flagship unified model with improved reasoning and tool routing[^1]), `gpt-5-mini`, `gpt-5-mini`, `Claude Sonnet 4.5` (latest coding-optimized Claude tier with extended context and safety tooling[^2][^3]). Run monthly baselines and quarterly RLFT (via Prime or Vertex endpoints, depending on provider SLAs).
 - **Open-source base models:** `Qwen3-72B` and `Qwen3-235B-A22B` (Apache-2.0, hybrid reasoning modes[^4]), `Llama-3.1-8B`, `Llama-3-70B`, `Mixtral-8x22B` (for MoE comparisons). Serve via vLLM on A100s; nightly regression evals on unmodified checkpoints.
 - **Intermediate checkpoints:** Track SFT-only, RLFT stage-1 (single environment), RLFT stage-2 (multi-environment curriculum), attacker/defender co-training cycles.
 - **Evaluation cadence:**
