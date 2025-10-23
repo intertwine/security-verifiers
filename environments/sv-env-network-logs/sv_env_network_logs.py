@@ -83,7 +83,8 @@ def load_environment(
     inspects a network log entry and determines whether it is malicious or benign.
 
     Args:
-        dataset_name: HuggingFace dataset name for network logs.
+        dataset_name: HuggingFace dataset name or local file path (absolute or relative to env root).
+                     Supported formats: HF dataset IDs, .jsonl files
         max_examples: Maximum number of examples to use from the dataset.
         logger: Optional rollout logger for instrumenting environment metadata.
 
@@ -91,11 +92,39 @@ def load_environment(
         A Verifiers SingleTurnEnv configured for the task.
     """
     try:
-        # The `load_dataset` function with a `split` argument returns a `Dataset` object.
-        # We assert the type to satisfy the linter and ensure correctness.
-        dataset = load_dataset(dataset_name, split="train")
-        assert isinstance(dataset, Dataset), "Loaded dataset is not of type Dataset"
-        dataset = transform_dataset(dataset, max_examples)
+        # Check if dataset_name is a local file path
+        dataset_path = None
+        if dataset_name.endswith(".jsonl") or dataset_name.endswith(".json"):
+            # Try as absolute path first
+            candidate = Path(dataset_name)
+            if candidate.is_file():
+                dataset_path = candidate
+            else:
+                # Try relative to environment root
+                env_root = Path(__file__).parent
+                candidate = env_root / "data" / dataset_name
+                if candidate.is_file():
+                    dataset_path = candidate
+
+        if dataset_path:
+            # Load from local JSONL file
+            print(f"Loading local dataset from {dataset_path}")
+            import json
+
+            examples = []
+            with open(dataset_path, "r") as f:
+                for line in f:
+                    if line.strip():
+                        examples.append(json.loads(line))
+            dataset = Dataset.from_list(examples)
+            dataset = transform_dataset(dataset, max_examples)
+        else:
+            # Load from HuggingFace Hub
+            # The `load_dataset` function with a `split` argument returns a `Dataset` object.
+            # We assert the type to satisfy the linter and ensure correctness.
+            dataset = load_dataset(dataset_name, split="train")
+            assert isinstance(dataset, Dataset), "Loaded dataset is not of type Dataset"
+            dataset = transform_dataset(dataset, max_examples)
     except (
         FileNotFoundError,
         ConnectionError,

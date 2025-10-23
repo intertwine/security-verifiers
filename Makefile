@@ -24,6 +24,9 @@ PYTHON := python3.12
 VENV := .venv
 ACTIVATE := . $(VENV)/bin/activate
 
+# Ensure uv uses Python 3.12 for all operations
+export UV_PYTHON := python3.12
+
 # ---------- Colors (portable) ----------
 # Use NO_COLOR=1 to disable
 ifdef NO_COLOR
@@ -368,21 +371,24 @@ eval-e1: venv
 		exit 1; \
 	fi
 	@N=$${N:-10}; \
+	DATASET=$${DATASET:-19kmunz/iot-23-preprocessed-minimumcolumns}; \
 	MAX_ERRORS=$${MAX_CONSECUTIVE_ERRORS:-3}; \
-	$(ECHO) "$(YELLOW)Evaluating E1 (network-logs) for models: $(MODELS) (N=$$N, max_errors=$$MAX_ERRORS)$(NC)"; \
+	$(ECHO) "$(YELLOW)Evaluating E1 (network-logs) for models: $(MODELS) (N=$$N, dataset=$$DATASET, max_errors=$$MAX_ERRORS)$(NC)"; \
 	$(ACTIVATE) && set -a && source .env && set +a && \
-	python scripts/eval_network_logs.py --models "$(MODELS)" --num-examples $$N --max-consecutive-errors $$MAX_ERRORS
+	python scripts/eval_network_logs.py --models "$(MODELS)" --num-examples $$N --dataset "$$DATASET" --max-consecutive-errors $$MAX_ERRORS
 
 eval-e2: venv
 	@if [ -z "$(MODELS)" ]; then \
 		$(ECHO) "$(RED)Error: Provide MODELS=\"gpt-5-mini,gpt-4.1-mini\"$(NC)"; \
 		exit 1; \
 	fi
-	@N=$${N:-2}; INCLUDE_TOOLS=$${INCLUDE_TOOLS:-true}; \
+	@N=$${N:-2}; \
+	DATASET=$${DATASET:-combined}; \
+	INCLUDE_TOOLS=$${INCLUDE_TOOLS:-true}; \
 	MAX_ERRORS=$${MAX_CONSECUTIVE_ERRORS:-3}; \
-	$(ECHO) "$(YELLOW)Evaluating E2 (config-verification) for models: $(MODELS) (N=$$N, INCLUDE_TOOLS=$$INCLUDE_TOOLS, max_errors=$$MAX_ERRORS)$(NC)"; \
+	$(ECHO) "$(YELLOW)Evaluating E2 (config-verification) for models: $(MODELS) (N=$$N, dataset=$$DATASET, INCLUDE_TOOLS=$$INCLUDE_TOOLS, max_errors=$$MAX_ERRORS)$(NC)"; \
 	$(ACTIVATE) && set -a && source .env && set +a && \
-	python scripts/eval_config_verification.py --models "$(MODELS)" --num-examples $$N --include-tools $$INCLUDE_TOOLS --max-consecutive-errors $$MAX_ERRORS
+	python scripts/eval_config_verification.py --models "$(MODELS)" --num-examples $$N --dataset "$$DATASET" --include-tools $$INCLUDE_TOOLS --max-consecutive-errors $$MAX_ERRORS
 
 # Data building targets (production - private, not committed)
 data-e1: venv

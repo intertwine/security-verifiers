@@ -69,7 +69,8 @@ coverage.xml
 .DS_Store
 
 # Python version managers
-.python-version
+# Note: We commit .python-version to enforce Python 3.12 due to pydantic-core compatibility
+# .python-version
 
 # Environment variables
 .env

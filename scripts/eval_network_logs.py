@@ -102,8 +102,14 @@ def main() -> None:
         help="Comma-separated list of model ids (e.g., gpt-5-mini,gpt-4.1-mini)",
     )
     parser.add_argument("--num-examples", type=int, default=10, help="Number of examples to evaluate")
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default="19kmunz/iot-23-preprocessed-minimumcolumns",
+        help="HuggingFace dataset name or path to dataset file",
+    )
     parser.add_argument("--temperature", type=float, default=0.2, help="Sampling temperature")
-    parser.add_argument("--max-tokens", type=int, default=512, help="Max tokens per completion")
+    parser.add_argument("--max-tokens", type=int, default=2048, help="Max tokens per completion")
     parser.add_argument(
         "--max-consecutive-errors",
         type=int,
@@ -116,7 +122,7 @@ def main() -> None:
     models = parse_models(args.models)
 
     # Load environment
-    env = load_environment(max_examples=args.num_examples)
+    env = load_environment(dataset_name=args.dataset, max_examples=args.num_examples)
     dataset = env.dataset  # type: ignore[attr-defined]
     # Convert Dataset to list for iteration
     if hasattr(dataset, "to_list"):
@@ -149,6 +155,7 @@ def main() -> None:
             "environment": "sv-env-network-logs",
             "model": model,
             "effective_model": effective_model,  # Track the actual model name used (e.g., OpenRouter path)
+            "dataset": args.dataset,
             "timestamp": ts,
             "num_examples": len(dataset),
             "temperature": args.temperature,

@@ -54,6 +54,11 @@ make deploy E=name      # build + push to Environments Hub (requires prime login
 make eval-e1 MODELS="gpt-4.1-mini,qwen3-14b" N=10  # "qwen3-14b" → "qwen/qwen3-14b" automatically
 make eval-e2 MODELS="gpt-4o-mini,llama-3.1-8b" N=2 INCLUDE_TOOLS=true  # Multi-turn eval with tool calling
 
+# Dataset selection (E1: HF datasets or local .jsonl; E2: locally-built datasets)
+make eval-e1 MODELS="gpt-4o-mini" N=1800 DATASET="iot23-train-dev-test-v1.jsonl"  # E1 local dataset
+make eval-e2 MODELS="gpt-4o-mini" N=50 DATASET="k8s-labeled-v1.jsonl"  # E2 k8s only
+make eval-e2 MODELS="gpt-4o-mini" N=10 DATASET="combined"  # E2 both k8s + terraform (default)
+
 # Early failure detection (prevents wasted API costs on misconfigured models)
 make eval-e1 MODELS="gpt-4.1-mini" N=100 MAX_CONSECUTIVE_ERRORS=5  # Stop after 5 consecutive errors
 make eval-e2 MODELS="invalid-model" N=10 MAX_CONSECUTIVE_ERRORS=0  # Disable early stopping (never stop)

@@ -284,6 +284,12 @@ def main() -> None:
         help="Number of examples to evaluate (max 2 in builtin dataset)",
     )
     parser.add_argument(
+        "--dataset",
+        type=str,
+        default="builtin",
+        help="Dataset name (currently only 'builtin' is supported for E2)",
+    )
+    parser.add_argument(
         "--include-tools",
         type=str,
         default="true",
@@ -296,7 +302,12 @@ def main() -> None:
         help="Maximum number of turns for tool interactions",
     )
     parser.add_argument("--temperature", type=float, default=None, help="Sampling temperature (optional)")
-    parser.add_argument("--max-tokens", type=int, default=None, help="Max tokens per completion (optional)")
+    parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=4096,
+        help="Max tokens per completion (E2 needs more for tool interactions)",
+    )
     parser.add_argument(
         "--max-consecutive-errors",
         type=int,
@@ -311,7 +322,9 @@ def main() -> None:
 
     # Load environment
     print(f"Loading environment (tools={'enabled' if include_tools else 'disabled'})...")
-    env = load_environment(max_examples=args.num_examples, include_tools=include_tools)
+    env = load_environment(
+        dataset_name=args.dataset, max_examples=args.num_examples, include_tools=include_tools
+    )
     dataset = env.dataset  # type: ignore[attr-defined]
 
     # Convert Dataset to list for iteration
@@ -360,6 +373,7 @@ def main() -> None:
             "evaluation_type": "multi-turn",
             "model": model,
             "effective_model": effective_model,  # Track the actual model name used (e.g., OpenRouter path)
+            "dataset": args.dataset,
             "timestamp": ts,
             "num_examples": len(dataset),
             "include_tools": include_tools,

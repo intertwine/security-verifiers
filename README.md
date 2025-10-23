@@ -155,11 +155,15 @@ The evaluation scripts support both OpenAI models and 200+ non-OpenAI models via
 **E1 (network-logs):**
 
 ```bash
-# OpenAI models
+# OpenAI models with default HuggingFace dataset
 make eval-e1 MODELS="gpt-4.1-mini,gpt-4o-mini" N=10
 
 # Mix of OpenAI and non-OpenAI models (requires both API keys)
 make eval-e1 MODELS="gpt-4.1-mini,qwen-2.5-7b,llama-3.1-8b" N=100
+
+# Use locally-built datasets (from make data-e1, make data-e1-ood)
+make eval-e1 MODELS="gpt-4o-mini" N=1800 DATASET="iot23-train-dev-test-v1.jsonl"
+make eval-e1 MODELS="gpt-4o-mini" N=600 DATASET="cic-ids-2017-ood-v1.jsonl"
 ```
 
 Artifacts: `outputs/evals/sv-env-network-logs--{model}/<run_id>/{metadata.json,results.jsonl}`
@@ -167,11 +171,21 @@ Artifacts: `outputs/evals/sv-env-network-logs--{model}/<run_id>/{metadata.json,r
 **E2 (config-verification):**
 
 ```bash
-# Multi-turn evaluation with tool calling
+# Multi-turn evaluation with tool calling (uses locally-built datasets by default)
 make eval-e2 MODELS="gpt-4o-mini,qwen-2.5-7b" N=2 INCLUDE_TOOLS=true
+
+# Select specific dataset (combined, k8s-labeled-v1.jsonl, terraform-labeled-v1.jsonl, or builtin)
+make eval-e2 MODELS="gpt-4o-mini" N=50 DATASET="k8s-labeled-v1.jsonl"
+make eval-e2 MODELS="gpt-4o-mini" N=50 DATASET="terraform-labeled-v1.jsonl"
 ```
 
 Artifacts: `outputs/evals/sv-env-config-verification--{model}/<run_id>/{metadata.json,results.jsonl}`
+
+**Dataset Selection:**
+
+Both E1 and E2 track which dataset was used in `metadata.json`:
+- **E1**: Supports HuggingFace dataset IDs, local `.jsonl` files (relative to `env/data/` or absolute paths)
+- **E2**: Supports locally-built datasets (`combined`, `k8s-labeled-v1.jsonl`, `terraform-labeled-v1.jsonl`, or `builtin` for test fixtures)
 
 **Model Name Resolution (Automatic):**
 

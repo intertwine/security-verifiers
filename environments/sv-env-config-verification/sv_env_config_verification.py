@@ -229,35 +229,99 @@ def reward_config_auditing(
     return final_reward(violations_pred, oracle, post_patch=post)
 
 
-def _load_examples(max_examples: int | None = None) -> List[Dict[str, Any]]:
-    fixtures = [
-        {
-            "type": "k8s",
-            "path": DATASET_ROOT / "fixtures" / "k8s" / "bad_pod.yaml",
-            "oracle": DATASET_ROOT / "oracle" / "bad_pod.json",
-        },
-        {
-            "type": "tf",
-            "path": DATASET_ROOT / "fixtures" / "tf" / "bad.tf",
-            "oracle": DATASET_ROOT / "oracle" / "bad_tf.json",
-        },
-    ]
-    items: List[Dict[str, Any]] = []
-    for item in fixtures[: max_examples if max_examples else None]:
-        question = Path(item["path"]).read_text(encoding="utf-8")
-        oracle = json.loads(Path(item["oracle"]).read_text(encoding="utf-8"))
-        answer_obj = {
-            "oracle": oracle,
-            "fixture_path": str(item["path"]),
-            "fixture_type": item["type"],
-        }
-        # Store answer as JSON string for compatibility with recent verifiers schemas
-        items.append({"question": question, "answer": json.dumps(answer_obj)})
-    return items
+def _load_examples(
+    dataset_name: str = "builtin",
+    max_examples: int | None = None,
+) -> List[Dict[str, Any]]:
+    """Load examples from JSONL datasets or builtin fixtures.
+
+    Args:
+        dataset_name: Dataset to load. Options:
+            - "builtin" or "fixtures": Use hardcoded fixtures (for testing)
+            - "k8s-labeled-v1.jsonl": Kubernetes labeled dataset
+            - "terraform-labeled-v1.jsonl": Terraform labeled dataset
+            - "combined" or "all": Both k8s and terraform datasets
+            - Any .jsonl filename in the data/ directory
+        max_examples: Maximum number of examples to load (None = all)
+
+    Returns:
+        List of dataset items with 'question' and 'answer' fields
+    """
+    data_dir = Path(__file__).resolve().parent / "data"
+
+    # Handle builtin fixtures (for backward compatibility and testing)
+    if dataset_name in ("builtin", "fixtures"):
+        fixtures = [
+            {
+                "type": "k8s",
+                "path": DATASET_ROOT / "fixtures" / "k8s" / "bad_pod.yaml",
+                "oracle": DATASET_ROOT / "oracle" / "bad_pod.json",
+            },
+            {
+                "type": "tf",
+                "path": DATASET_ROOT / "fixtures" / "tf" / "bad.tf",
+                "oracle": DATASET_ROOT / "oracle" / "bad_tf.json",
+            },
+        ]
+        items: List[Dict[str, Any]] = []
+        for item in fixtures[: max_examples if max_examples else None]:
+            question = Path(item["path"]).read_text(encoding="utf-8")
+            oracle = json.loads(Path(item["oracle"]).read_text(encoding="utf-8"))
+            answer_obj = {
+                "oracle": oracle,
+                "fixture_path": str(item["path"]),
+                "fixture_type": item["type"],
+            }
+            # Store answer as JSON string for compatibility with recent verifiers schemas
+            items.append({"question": question, "answer": json.dumps(answer_obj)})
+        return items
+
+    # Load from JSONL datasets
+    items = []
+
+    # Determine which files to load
+    if dataset_name in ("combined", "all"):
+        jsonl_files = ["k8s-labeled-v1.jsonl", "terraform-labeled-v1.jsonl"]
+    elif dataset_name.endswith(".jsonl"):
+        jsonl_files = [dataset_name]
+    else:
+        # Try appending .jsonl
+        jsonl_files = [f"{dataset_name}.jsonl"]
+
+    # Load each JSONL file
+    for jsonl_file in jsonl_files:
+        jsonl_path = data_dir / jsonl_file
+        if not jsonl_path.exists():
+            print(f"Warning: Dataset file not found: {jsonl_path}")
+            continue
+
+        print(f"Loading E2 dataset from {jsonl_path}")
+        with open(jsonl_path, "r") as f:
+            for line in f:
+                if line.strip():
+                    item = json.loads(line)
+                    # Convert from build format to environment format
+                    # Build format: {"prompt": "<config>", "info": {...}, "meta": {...}}
+                    # Env format: {"question": "<config>", "answer": "<json-string>"}
+                    items.append(
+                        {
+                            "question": item.get("prompt", ""),
+                            "answer": json.dumps(item.get("info", {})),
+                        }
+                    )
+
+                    if max_examples and len(items) >= max_examples:
+                        return items
+
+    if not items:
+        print(f"Warning: No data loaded from {dataset_name}, falling back to fixtures")
+        return _load_examples("builtin", max_examples)
+
+    return items[:max_examples] if max_examples else items
 
 
 def load_environment(
-    dataset_name: str = "builtin",  # pylint: disable=unused-argument
+    dataset_name: str = "builtin",
     max_examples: int = 100,
     logger: RolloutLogger | None = None,
     include_tools: bool = True,
@@ -265,13 +329,17 @@ def load_environment(
     """Load the configuration auditing environment.
 
     Args:
-        dataset_name: Placeholder dataset name for compatibility.
-        max_examples: Maximum number of fixtures to surface in the dataset.
+        dataset_name: Dataset to load. Options:
+            - "builtin" or "fixtures": Hardcoded fixtures (for testing)
+            - "k8s-labeled-v1.jsonl": Kubernetes labeled dataset
+            - "terraform-labeled-v1.jsonl": Terraform labeled dataset
+            - "combined" or "all": Both k8s and terraform datasets
+        max_examples: Maximum number of examples to load from the dataset.
         logger: Optional rollout logger to capture dataset metadata.
         include_tools: Whether to include security tools (can be disabled for testing).
     """
 
-    dataset = Dataset.from_list(_load_examples(max_examples))
+    dataset = Dataset.from_list(_load_examples(dataset_name, max_examples))
     parser = ConfigVerificationParser()
     rubric = vf.Rubric(
         funcs=[reward_config_auditing, parser.get_format_reward_func()],
