@@ -1,5 +1,12 @@
 """Shared components for Security Verifiers environments."""
 
+from .dataset_loader import (
+    DEFAULT_E1_HF_REPO,
+    DEFAULT_E2_HF_REPO,
+    HF_DATASET_MAP,
+    DatasetSource,
+    load_dataset_with_fallback,
+)
 from .parsers import JsonClassificationParser
 from .rewards import (
     reward_accuracy,
@@ -28,4 +35,9 @@ __all__ = [
     "DEFAULT_ROLLOUT_LOGGING_CONFIG",
     "build_rollout_logger",
     "initialize_weave_if_enabled",
+    "DatasetSource",
+    "load_dataset_with_fallback",
+    "HF_DATASET_MAP",
+    "DEFAULT_E1_HF_REPO",
+    "DEFAULT_E2_HF_REPO",
 ]

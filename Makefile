@@ -9,7 +9,7 @@ help setup venv install install-dev install-all install-linux check-tools \
 \
 test test-env test-cov lint lint-fix format check quick-test quick-fix quick-check \
 \
-build build-env deploy ci cd \
+build build-env deploy hub-validate hub-deploy hub-push-datasets hub-test-datasets ci cd \
 \
 eval eval-e1 eval-e2 e1 e2 e3 e4 e5 e6 \
 \
@@ -68,10 +68,18 @@ help:
 	@$(ECHO) "  make build-env E=x  - Build specific environment wheel"
 	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)Deployment:$(NC)"
-	@$(ECHO) "  make deploy E=x     - Deploy environment to Hub (requires prime login)"
-	@$(ECHO) "  make eval E=x       - Evaluate environment locally"
+	@$(ECHO) "  make deploy E=x           - Deploy environment to Hub (requires prime login)"
+	@$(ECHO) "  make hub-validate E=x     - Validate environment for Hub deployment"
+	@$(ECHO) "  make hub-deploy E=x       - Deploy with validation (recommended)"
+	@$(ECHO) "  make eval E=x             - Evaluate environment locally"
 	@$(ECHO) "  make eval-e1 MODELS=... N=10                     - Reproducible E1 evals (network-logs)"
 	@$(ECHO) "  make eval-e2 MODELS=... N=2 INCLUDE_TOOLS=true  - Reproducible E2 evals (config-verification)"
+	@$(ECHO) ""
+	@$(ECHO) "$(YELLOW)Hub Dataset Management:$(NC)"
+	@$(ECHO) "  make hub-push-datasets    - Push datasets to your HuggingFace repositories"
+	@$(ECHO) "  make hub-test-datasets    - Test loading datasets from your HF repos"
+	@$(ECHO) "  (Requires: HF_TOKEN, E1_HF_REPO, E2_HF_REPO environment variables)"
+	@$(ECHO) "  See: docs/user-dataset-guide.md"
 	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)Data Building (Production - Private):$(NC)"
 	@$(ECHO) "  make data-e1        - Build E1 IoT-23 dataset (LIMIT=1800, full mode)"
@@ -279,6 +287,73 @@ deploy: venv install-dev
 		prime login && \
 		prime env push -v PUBLIC )
 	@$(ECHO) "$(GREEN)✓ sv-env-$(E) deployed to Hub$(NC)"
+
+# Validate environment for Hub deployment
+hub-validate: venv
+	@if [ -z "$(E)" ]; then \
+		$(ECHO) "$(RED)Error: Specify environment with E=name$(NC)"; \
+		$(ECHO) "Example: make hub-validate E=network-logs"; \
+		exit 1; \
+	fi
+	@$(ECHO) "$(YELLOW)Validating sv-env-$(E) for Hub deployment...$(NC)"
+	@$(ECHO) "$(CYAN)Running tests...$(NC)"
+	@$(MAKE) test-env E=$(E)
+	@$(ECHO) "$(CYAN)Running linters...$(NC)"
+	@$(MAKE) lint
+	@$(ECHO) "$(CYAN)Building wheel...$(NC)"
+	@$(MAKE) build-env E=$(E)
+	@$(ECHO) "$(GREEN)✓ sv-env-$(E) validation complete$(NC)"
+
+# Deploy environment with validation
+hub-deploy: venv
+	@if [ -z "$(E)" ]; then \
+		$(ECHO) "$(RED)Error: Specify environment with E=name$(NC)"; \
+		$(ECHO) "Example: make hub-deploy E=network-logs"; \
+		exit 1; \
+	fi
+	@$(ECHO) "$(YELLOW)Deploying sv-env-$(E) with validation...$(NC)"
+	@$(MAKE) hub-validate E=$(E)
+	@$(ECHO) "$(CYAN)Deploying to Hub...$(NC)"
+	@$(MAKE) deploy E=$(E)
+	@$(ECHO) "$(GREEN)✓ sv-env-$(E) deployed successfully!$(NC)"
+
+# Push user datasets to HuggingFace Hub
+hub-push-datasets: venv
+	@$(ECHO) "$(YELLOW)Pushing datasets to HuggingFace Hub...$(NC)"
+	@if [ -z "$$HF_TOKEN" ]; then \
+		$(ECHO) "$(RED)Error: HF_TOKEN not set$(NC)"; \
+		$(ECHO) "Set it in .env file or: export HF_TOKEN=hf_your_token_here"; \
+		exit 1; \
+	fi
+	@if [ -z "$$E1_HF_REPO" ]; then \
+		$(ECHO) "$(RED)Error: E1_HF_REPO not set$(NC)"; \
+		$(ECHO) "Set it in .env file or: export E1_HF_REPO=your-org/security-verifiers-e1-private"; \
+		exit 1; \
+	fi
+	@if [ -z "$$E2_HF_REPO" ]; then \
+		$(ECHO) "$(RED)Error: E2_HF_REPO not set$(NC)"; \
+		$(ECHO) "Set it in .env file or: export E2_HF_REPO=your-org/security-verifiers-e2-private"; \
+		exit 1; \
+	fi
+	@$(ACTIVATE) && uv run python scripts/push_user_datasets.py
+	@$(ECHO) "$(GREEN)✓ Datasets pushed to HuggingFace Hub$(NC)"
+
+# Test dataset loading from Hub
+hub-test-datasets: venv
+	@$(ECHO) "$(YELLOW)Testing dataset loading from HuggingFace Hub...$(NC)"
+	@if [ -z "$$HF_TOKEN" ]; then \
+		$(ECHO) "$(RED)Error: HF_TOKEN not set$(NC)"; \
+		exit 1; \
+	fi
+	@$(ECHO) "$(CYAN)Testing E1 dataset loading...$(NC)"
+	@$(ACTIVATE) && uv run python -c "from sv_env_network_logs import load_environment; \
+		env = load_environment(dataset_source='hub', max_examples=10); \
+		print(f'✓ E1: Loaded {len(env.dataset)} examples')"
+	@$(ECHO) "$(CYAN)Testing E2 dataset loading...$(NC)"
+	@$(ACTIVATE) && uv run python -c "from sv_env_config_verification import load_environment; \
+		env = load_environment(dataset_source='hub', max_examples=10); \
+		print(f'✓ E2: Loaded {len(env.dataset)} examples')"
+	@$(ECHO) "$(GREEN)✓ Hub dataset loading tests passed$(NC)"
 
 # Evaluate environment locally
 eval: venv

@@ -24,6 +24,53 @@ This environment implements calibrated classification with abstention support an
 
 The public metadata repo includes detailed model cards explaining the privacy rationale and dataset composition.
 
+### Dataset Loading Strategies
+
+This environment supports **multi-tiered dataset loading** for flexibility across different deployment scenarios:
+
+1. **Local datasets** (built with `make data-e1`)
+2. **HuggingFace Hub** (with `HF_TOKEN` authentication)
+3. **Synthetic fixtures** (for testing without data dependencies)
+
+#### Loading Modes
+
+```python
+import verifiers as vf
+
+# Auto mode (default): Try local → hub → synthetic
+env = vf.load_environment("sv-env-network-logs")
+
+# Local only: Require local dataset
+env = vf.load_environment("sv-env-network-logs", dataset_source="local")
+
+# Hub only: Load from HuggingFace
+env = vf.load_environment("sv-env-network-logs", dataset_source="hub")
+
+# Synthetic only: Use test fixtures (no data needed)
+env = vf.load_environment("sv-env-network-logs", dataset_source="synthetic")
+```
+
+#### Using Your Own HuggingFace Repository
+
+If you've built and pushed datasets to your own HuggingFace repository:
+
+```python
+import os
+
+# Configure custom repository
+os.environ["HF_TOKEN"] = "hf_your_token_here"
+os.environ["E1_HF_REPO"] = "your-org/security-verifiers-e1-private"
+
+# Load from your repository
+env = vf.load_environment(
+    "sv-env-network-logs",
+    dataset_source="hub",
+    max_examples=100
+)
+```
+
+**See [docs/user-dataset-guide.md](../../docs/user-dataset-guide.md) for instructions on building and pushing datasets to your own HuggingFace repository.**
+
 ## Installation
 
 Install the environment using the Prime CLI:

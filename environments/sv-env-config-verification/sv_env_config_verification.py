@@ -30,8 +30,10 @@ from datasets import Dataset
 from pydantic import BaseModel, ConfigDict
 
 from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
+    DatasetSource,
     RolloutLogger,
     get_response_text,
+    load_dataset_with_fallback,
 )
 
 # pylint: disable=wrong-import-position
@@ -229,103 +231,58 @@ def reward_config_auditing(
     return final_reward(violations_pred, oracle, post_patch=post)
 
 
-def _load_examples(
-    dataset_name: str = "builtin",
-    max_examples: int | None = None,
-) -> List[Dict[str, Any]]:
-    """Load examples from JSONL datasets or builtin fixtures.
-
-    Args:
-        dataset_name: Dataset to load. Options:
-            - "builtin" or "fixtures": Use hardcoded fixtures (for testing)
-            - "k8s-labeled-v1.jsonl": Kubernetes labeled dataset
-            - "terraform-labeled-v1.jsonl": Terraform labeled dataset
-            - "combined" or "all": Both k8s and terraform datasets
-            - Any .jsonl filename in the data/ directory
-        max_examples: Maximum number of examples to load (None = all)
+def _create_builtin_fixtures() -> Dataset:
+    """Create builtin test fixtures for E2.
 
     Returns:
-        List of dataset items with 'question' and 'answer' fields
+        Dataset with builtin Kubernetes and Terraform fixtures
     """
-    data_dir = Path(__file__).resolve().parent / "data"
+    fixtures = [
+        {
+            "type": "k8s",
+            "path": DATASET_ROOT / "fixtures" / "k8s" / "bad_pod.yaml",
+            "oracle": DATASET_ROOT / "oracle" / "bad_pod.json",
+        },
+        {
+            "type": "tf",
+            "path": DATASET_ROOT / "fixtures" / "tf" / "bad.tf",
+            "oracle": DATASET_ROOT / "oracle" / "bad_tf.json",
+        },
+    ]
+    items: List[Dict[str, Any]] = []
+    for item in fixtures:
+        question = Path(item["path"]).read_text(encoding="utf-8")
+        oracle = json.loads(Path(item["oracle"]).read_text(encoding="utf-8"))
+        answer_obj = {
+            "oracle": oracle,
+            "fixture_path": str(item["path"]),
+            "fixture_type": item["type"],
+        }
+        # Store answer as JSON string for compatibility with recent verifiers schemas
+        items.append({"question": question, "answer": json.dumps(answer_obj)})
+    return Dataset.from_list(items)
 
-    # Handle builtin fixtures (for backward compatibility and testing)
-    if dataset_name in ("builtin", "fixtures"):
-        fixtures = [
-            {
-                "type": "k8s",
-                "path": DATASET_ROOT / "fixtures" / "k8s" / "bad_pod.yaml",
-                "oracle": DATASET_ROOT / "oracle" / "bad_pod.json",
-            },
-            {
-                "type": "tf",
-                "path": DATASET_ROOT / "fixtures" / "tf" / "bad.tf",
-                "oracle": DATASET_ROOT / "oracle" / "bad_tf.json",
-            },
-        ]
-        items: List[Dict[str, Any]] = []
-        for item in fixtures[: max_examples if max_examples else None]:
-            question = Path(item["path"]).read_text(encoding="utf-8")
-            oracle = json.loads(Path(item["oracle"]).read_text(encoding="utf-8"))
-            answer_obj = {
-                "oracle": oracle,
-                "fixture_path": str(item["path"]),
-                "fixture_type": item["type"],
-            }
-            # Store answer as JSON string for compatibility with recent verifiers schemas
-            items.append({"question": question, "answer": json.dumps(answer_obj)})
-        return items
 
-    # Load from JSONL datasets
-    items = []
+def _convert_e2_format(example: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert E2 build format to environment format.
 
-    # Determine which files to load
-    if dataset_name in ("combined", "all"):
-        jsonl_files = ["k8s-labeled-v1.jsonl", "terraform-labeled-v1.jsonl"]
-    elif dataset_name.endswith(".jsonl"):
-        jsonl_files = [dataset_name]
-    else:
-        # Try appending .jsonl
-        jsonl_files = [f"{dataset_name}.jsonl"]
+    Build format: {"prompt": "<config>", "info": {...}, "meta": {...}}
+    Env format: {"question": "<config>", "answer": "<json-string>"}
+    """
+    if "question" in example and "answer" in example:
+        # Already in correct format
+        return example
 
-    # Load each JSONL file
-    for jsonl_file in jsonl_files:
-        jsonl_path = data_dir / jsonl_file
-        if not jsonl_path.exists():
-            print(
-                f"Warning: Dataset file not found: {jsonl_path}\n"
-                f"Build datasets with: make data-e2-local\n"
-                f"(Requires: make clone-e2-sources first)"
-            )
-            continue
-
-        print(f"Loading E2 dataset from {jsonl_path}")
-        with open(jsonl_path, "r") as f:
-            for line in f:
-                if line.strip():
-                    item = json.loads(line)
-                    # Convert from build format to environment format
-                    # Build format: {"prompt": "<config>", "info": {...}, "meta": {...}}
-                    # Env format: {"question": "<config>", "answer": "<json-string>"}
-                    items.append(
-                        {
-                            "question": item.get("prompt", ""),
-                            "answer": json.dumps(item.get("info", {})),
-                        }
-                    )
-
-                    if max_examples and len(items) >= max_examples:
-                        return items
-
-    if not items:
-        print(f"Warning: No data loaded from {dataset_name}, falling back to fixtures")
-        return _load_examples("builtin", max_examples)
-
-    return items[:max_examples] if max_examples else items
+    # Convert from build format
+    return {
+        "question": example.get("prompt", ""),
+        "answer": json.dumps(example.get("info", {})),
+    }
 
 
 def load_environment(
     dataset_name: str = "builtin",
+    dataset_source: DatasetSource = "auto",
     max_examples: int = 100,
     logger: RolloutLogger | None = None,
     include_tools: bool = True,
@@ -333,17 +290,75 @@ def load_environment(
     """Load the configuration auditing environment.
 
     Args:
-        dataset_name: Local dataset to load. Build datasets with 'make data-e2-local'. Options:
-            - "builtin" or "fixtures": Hardcoded fixtures (for testing)
+        dataset_name: Dataset to load. Available options:
+            - "builtin" or "fixtures": Hardcoded test fixtures (for testing)
             - "k8s-labeled-v1.jsonl": Kubernetes labeled dataset (N=444)
             - "terraform-labeled-v1.jsonl": Terraform labeled dataset (N=115)
             - "combined" or "all": Both k8s and terraform datasets (N=559)
+            - "synthetic": Alias for builtin fixtures
+            - Or any local .jsonl file path (absolute or relative to env/data/)
+        dataset_source: Where to load the dataset from. Options:
+            - "auto" (default): Try local → hub → builtin fixtures
+            - "local": Only load from local JSONL files
+            - "hub": Only load from HuggingFace Hub (requires HF_TOKEN)
+            - "synthetic": Use builtin test fixtures
         max_examples: Maximum number of examples to load from the dataset.
         logger: Optional rollout logger to capture dataset metadata.
         include_tools: Whether to include security tools (can be disabled for testing).
-    """
 
-    dataset = Dataset.from_list(_load_examples(dataset_name, max_examples))
+    Environment Variables:
+        HF_TOKEN: HuggingFace API token (required for Hub datasets)
+        E2_HF_REPO: Custom HF repo for E2 datasets (default: intertwine-ai/security-verifiers-e2-private)
+
+    Returns:
+        A Verifiers ToolEnv configured for the task.
+
+    Examples:
+        # Use auto-loading (local → hub → builtin fallback)
+        env = load_environment()
+
+        # Load from local dataset (requires 'make data-e2-local')
+        env = load_environment(dataset_name="k8s-labeled-v1.jsonl", dataset_source="local")
+
+        # Load from HuggingFace Hub (requires HF_TOKEN)
+        env = load_environment(dataset_source="hub")
+
+        # Use builtin fixtures for quick testing
+        env = load_environment(dataset_source="synthetic")
+
+        # Load from user's own HF repo
+        import os
+        os.environ["E2_HF_REPO"] = "my-org/my-security-verifiers-e2"
+        env = load_environment(dataset_source="hub")
+    """
+    env_root = Path(__file__).resolve().parent
+
+    # Handle "builtin", "fixtures", or "synthetic" as explicit requests for test data
+    if dataset_name in ("builtin", "fixtures", "synthetic") or dataset_source == "synthetic":
+        print(f"Using builtin test fixtures (requested: {dataset_name})")
+        dataset = _create_builtin_fixtures()
+        resolved_name = "synthetic::builtin"
+    else:
+        # Use shared multi-tiered loader for all other cases
+        # Note: E2 has a custom format converter since build scripts produce different schema
+        dataset, resolved_name = load_dataset_with_fallback(
+            dataset_name=dataset_name,
+            env_root=env_root,
+            dataset_source=dataset_source,
+            max_examples=max_examples,
+            field_mapping=None,  # We'll apply format conversion via map
+            synthetic_generator=_create_builtin_fixtures,
+        )
+
+        # Convert E2 build format to environment format
+        dataset = dataset.map(_convert_e2_format)
+
+    # Apply max_examples if not already limited
+    if max_examples and len(dataset) > max_examples:
+        dataset = dataset.select(range(max_examples))
+
+    dataset_name = resolved_name
+
     parser = ConfigVerificationParser()
     rubric = vf.Rubric(
         funcs=[reward_config_auditing, parser.get_format_reward_func()],

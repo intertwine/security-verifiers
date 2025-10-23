@@ -25,6 +25,66 @@ See [EXECUTIVE_SUMMARY.md](EXECUTIVE_SUMMARY.md) for the high-level vision and [
 - **`sv-env-redteam-attack`**: Red-team attack simulator for eliciting unsafe outputs
 - **`sv-env-redteam-defense`**: Adversarial alignment defender balancing helpfulness and harmlessness ([docs](docs/sv-env-redteam-defense.md))
 
+## Prime Intellect Environments Hub
+
+Security Verifiers environments are fully compatible with [Prime Intellect's Environments Hub](https://app.primeintellect.ai/dashboard/environments). Deploy and use environments with flexible dataset loading strategies.
+
+### Quick Start (Hub Deployment)
+
+```bash
+# Build and deploy environment
+make hub-deploy E=network-logs
+
+# Use with vf-eval
+vf-eval your-org/sv-env-network-logs \
+  --model gpt-5-mini \
+  --num-examples 10
+```
+
+### Dataset Loading Strategies
+
+Environments support **multi-tiered dataset loading** for maximum flexibility:
+
+1. **Local datasets** (built with `make data-e1` or `make data-e2-local`)
+2. **HuggingFace Hub** (with `HF_TOKEN` authentication)
+3. **Synthetic fixtures** (for testing without data dependencies)
+
+```python
+import verifiers as vf
+
+# Auto mode (default): Try local → hub → synthetic
+env = vf.load_environment("sv-env-network-logs")
+
+# Explicit modes
+env = vf.load_environment("sv-env-network-logs", dataset_source="local")
+env = vf.load_environment("sv-env-network-logs", dataset_source="hub")
+env = vf.load_environment("sv-env-network-logs", dataset_source="synthetic")
+```
+
+### Using Your Own HuggingFace Datasets
+
+Push datasets to your own HuggingFace repositories for full Hub deployment:
+
+```bash
+# 1. Build datasets locally
+make data-e1 data-e1-ood
+make clone-e2-sources && make data-e2-local
+
+# 2. Set environment variables
+export HF_TOKEN=hf_your_token_here
+export E1_HF_REPO=your-org/security-verifiers-e1-private
+export E2_HF_REPO=your-org/security-verifiers-e2-private
+
+# 3. Push to your repositories
+make hub-push-datasets
+
+# 4. Test loading
+make hub-test-datasets
+```
+
+**See [docs/hub-deployment.md](docs/hub-deployment.md) for complete deployment guide**
+**See [docs/user-dataset-guide.md](docs/user-dataset-guide.md) for dataset management**
+
 ## Repository Structure
 
 - **`environments/`**: Six RL environment packages (each independently installable)
