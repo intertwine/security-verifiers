@@ -19,7 +19,7 @@ version = "0.1.1"
 requires-python = ">=3.12"
 dependencies = [
   "verifiers>=0.1.4",
-  "security-verifiers-utils>=0.1.0",
+  "security-verifiers-utils>=0.1.1",  # v0.1.1+ has correct sv_shared/ package structure
   "datasets>=2.0.0",
   "pandas>=2.0.0",
   "pyyaml>=6.0.0",

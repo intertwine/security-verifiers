@@ -14,11 +14,11 @@ tags = [
   "train",
   "eval",
 ]
-version = "0.1.5"
+version = "0.1.6"
 requires-python = ">=3.12"
 dependencies = [
     "verifiers>=0.1.4",
-    "security-verifiers-utils>=0.1.0",
+    "security-verifiers-utils>=0.1.1",  # v0.1.1+ has correct sv_shared/ package structure
 ]
 
 [project.entry-points."verifiers.environments"]
