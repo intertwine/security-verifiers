@@ -168,7 +168,7 @@ install: venv
 # Install development tools
 install-dev: venv
 	@$(ECHO) "$(YELLOW)Installing development tools...$(NC)"
-	@$(ACTIVATE) && uv pip install pytest pytest-cov ruff build pre-commit verifiers prime
+	@$(ACTIVATE) && uv pip install pytest pytest-cov ruff build twine pre-commit verifiers prime
 	@$(ECHO) "$(GREEN)✓ Development tools installed$(NC)"
 
 # Install everything (alias)
@@ -342,16 +342,16 @@ build-utils: venv install-dev
 pypi-publish-utils: venv install-dev
 	@$(ECHO) "$(YELLOW)Publishing security-verifiers-utils to PyPI...$(NC)"
 	@$(ECHO) "$(RED)⚠️  This will publish to production PyPI!$(NC)"
-	@$(ECHO) -n "Continue? [y/N] " && read ans && [ $${ans:-N} = y ]
+	@$(ECHO) -n "Continue? [y/N] " && read ans && ( [ "$${ans}" = "y" ] || [ "$${ans}" = "Y" ] )
 	@$(MAKE) build-utils
-	@$(ACTIVATE) && twine upload sv_shared/dist/*
+	@uv run twine upload sv_shared/dist/*
 	@$(ECHO) "$(GREEN)✓ Published to PyPI$(NC)"
 
 # Publish security-verifiers-utils to TestPyPI (testing)
 pypi-publish-utils-test: venv install-dev
 	@$(ECHO) "$(YELLOW)Publishing security-verifiers-utils to TestPyPI...$(NC)"
 	@$(MAKE) build-utils
-	@$(ACTIVATE) && twine upload --repository testpypi sv_shared/dist/*
+	@uv run twine upload --repository testpypi sv_shared/dist/*
 	@$(ECHO) "$(GREEN)✓ Published to TestPyPI$(NC)"
 	@$(ECHO) "$(CYAN)Install with: pip install --index-url https://test.pypi.org/simple/ security-verifiers-utils$(NC)"
 
