@@ -17,7 +17,7 @@ data-e1 data-e1-ood data-e1-test data-e2 data-e2-local data-e2-test data-all dat
 hf-e1-meta hf-e2-meta hf-e1-push hf-e2-push hf-e1p-meta hf-e2p-meta hf-e1p-push hf-e2p-push hf-push-all \
 validate-e1-data validate-e2-data validate-data hf-e1p-push-canonical hf-e2p-push-canonical hf-e1p-push-canonical-dry hf-e2p-push-canonical-dry \
 \
-pre-commit clean clean-outputs clean-logs clean-outputs-all clean-all docs info dev watch
+pre-commit clean clean-outputs clean-logs clean-outputs-all clean-all docs info dev watch list-envs
 
 # Default Python version
 PYTHON := python3.12
@@ -125,6 +125,7 @@ help:
 	@$(ECHO) "  make hf-e2p-push-canonical-dry - Dry run E2 canonical push"
 	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)Utilities:$(NC)"
+	@$(ECHO) "  make list-envs      - List all environment names"
 	@$(ECHO) "  make clean          - Remove build artifacts and caches"
 	@$(ECHO) "  make clean-outputs  - Remove outputs/evals artifacts (preserve outputs/logs)"
 	@$(ECHO) "  make clean-logs     - Remove outputs/logs artifacts only"
@@ -797,6 +798,14 @@ watch:
 	}
 	@$(ECHO) "$(YELLOW)Watching for changes...$(NC)"
 	@find . -name "*.py" | entr -c make test
+
+# List environment names (without sv-env- prefix)
+list-envs:
+	@for env in environments/sv-env-*/; do \
+		basename=$$(basename $$env); \
+		name=$${basename#sv-env-}; \
+		$(ECHO) "$$name"; \
+	done
 
 # Print environment info
 info:
