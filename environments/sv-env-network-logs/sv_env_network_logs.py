@@ -14,26 +14,44 @@ and asymmetric cost penalties for missed attacks.
 from __future__ import annotations
 
 from pathlib import Path
-import sys
 
-# Allow importing shared components when running from source
-sys.path.append(str(Path(__file__).resolve().parents[2]))
+try:
+    # Try importing from installed package first
+    from sv_shared import weave_init  # type: ignore  # noqa: F401
+except ImportError:
+    # Fall back to local development import
+    import sys
 
-# Initialize Weave before importing verifiers for automatic tracing
-from sv_shared import weave_init  # type: ignore  # noqa: F401, E402
+    sys.path.append(str(Path(__file__).resolve().parents[2]))
+    from sv_shared import weave_init  # type: ignore  # noqa: F401
 
 import verifiers as vf
 from datasets import Dataset
 
-from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
-    DatasetSource,
-    JsonClassificationParser,
-    RolloutLogger,
-    load_dataset_with_fallback,
-    reward_accuracy,
-    reward_calibration,
-    reward_asymmetric_cost,
-)
+try:
+    from sv_shared import (
+        DatasetSource,
+        JsonClassificationParser,
+        RolloutLogger,
+        load_dataset_with_fallback,
+        reward_accuracy,
+        reward_calibration,
+        reward_asymmetric_cost,
+    )
+except ImportError:
+    # Fall back to local development import
+    import sys
+
+    sys.path.append(str(Path(__file__).resolve().parents[2]))
+    from sv_shared import (  # type: ignore
+        DatasetSource,
+        JsonClassificationParser,
+        RolloutLogger,
+        load_dataset_with_fallback,
+        reward_accuracy,
+        reward_calibration,
+        reward_asymmetric_cost,
+    )
 
 
 class NetworkLogParser(JsonClassificationParser):

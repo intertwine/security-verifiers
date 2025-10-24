@@ -7,9 +7,9 @@ SHELL := /bin/bash
 .PHONY: \
 help setup venv install install-dev install-all install-linux check-tools \
 \
-test test-env test-cov lint lint-fix format check quick-test quick-fix quick-check \
+test test-env test-utils test-cov lint lint-fix format check quick-test quick-fix quick-check \
 \
-build build-env deploy update-version hub-validate hub-deploy hub-push-datasets hub-test-datasets ci cd \
+build build-env build-utils deploy update-version update-utils-version hub-validate hub-deploy hub-push-datasets hub-test-datasets pypi-publish-utils pypi-publish-utils-test ci cd \
 \
 eval eval-e1 eval-e2 e1 e2 e3 e4 e5 e6 \
 \
@@ -65,6 +65,7 @@ help:
 	@$(ECHO) "$(YELLOW)Quality:$(NC)"
 	@$(ECHO) "  make test           - Run all tests"
 	@$(ECHO) "  make test-env E=x   - Test specific environment (e.g., E=network-logs)"
+	@$(ECHO) "  make test-utils     - Test security-verifiers-utils"
 	@$(ECHO) "  make lint           - Run linter checks"
 	@$(ECHO) "  make format         - Auto-format code"
 	@$(ECHO) "  make check          - Run all quality checks (lint + test)"
@@ -72,12 +73,18 @@ help:
 	@$(ECHO) "$(YELLOW)Building:$(NC)"
 	@$(ECHO) "  make build          - Build all environment wheels"
 	@$(ECHO) "  make build-env E=x  - Build specific environment wheel"
+	@$(ECHO) "  make build-utils    - Build security-verifiers-utils wheel"
 	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)Deployment:$(NC)"
-	@$(ECHO) "  make update-version E=x BUMP=patch|minor|major  - Bump semver in pyproject.toml"
+	@$(ECHO) "  make update-version E=x BUMP=patch|minor|major  - Bump semver in environment pyproject.toml"
+	@$(ECHO) "  make update-utils-version BUMP=patch|minor|major - Bump security-verifiers-utils version"
 	@$(ECHO) "  make deploy E=x                                 - Deploy environment to Hub (requires prime login)"
 	@$(ECHO) "  make hub-validate E=x                           - Validate environment for Hub deployment"
 	@$(ECHO) "  make hub-deploy E=x [BUMP=patch|minor|major|none] - Validate + bump version + deploy (default: patch)"
+	@$(ECHO) ""
+	@$(ECHO) "$(YELLOW)PyPI Publishing (security-verifiers-utils):$(NC)"
+	@$(ECHO) "  make pypi-publish-utils-test - Publish to TestPyPI (for testing)"
+	@$(ECHO) "  make pypi-publish-utils      - Publish to PyPI (production)"
 	@$(ECHO) "  make eval E=x             - Evaluate environment locally"
 	@$(ECHO) "  make eval-e1 MODELS=... N=10                     - Reproducible E1 evals (network-logs)"
 	@$(ECHO) "  make eval-e2 MODELS=... N=2 INCLUDE_TOOLS=true  - Reproducible E2 evals (config-verification)"
@@ -234,6 +241,12 @@ test-env: venv
 	@$(ACTIVATE) && uv run pytest environments/sv-env-$(E)/ -q
 	@$(ECHO) "$(GREEN)✓ Tests passed for sv-env-$(E)$(NC)"
 
+# Test security-verifiers-utils
+test-utils: venv
+	@$(ECHO) "$(YELLOW)Testing security-verifiers-utils...$(NC)"
+	@$(ACTIVATE) && uv run pytest sv_shared/ -q
+	@$(ECHO) "$(GREEN)✓ Tests passed for security-verifiers-utils$(NC)"
+
 # Test with coverage
 test-cov: venv
 	@$(ECHO) "$(YELLOW)Running tests with coverage...$(NC)"
@@ -300,6 +313,47 @@ update-version: venv
 		VERSION_CHANGE=$$($(ACTIVATE) && python scripts/bump_version.py environments/sv-env-$(E)/pyproject.toml $(BUMP)); \
 		$(ECHO) "$(GREEN)✓ Version updated: $$VERSION_CHANGE$(NC)"; \
 	fi
+
+# Update security-verifiers-utils version
+update-utils-version: venv
+	@if [ "$(BUMP)" = "none" ]; then \
+		$(ECHO) "$(CYAN)Skipping version bump (BUMP=none)$(NC)"; \
+	else \
+		if [ "$(BUMP)" != "patch" ] && [ "$(BUMP)" != "minor" ] && [ "$(BUMP)" != "major" ]; then \
+			$(ECHO) "$(RED)Error: BUMP must be 'patch', 'minor', 'major', or 'none'$(NC)"; \
+			exit 1; \
+		fi; \
+		$(ECHO) "$(YELLOW)Bumping $(BUMP) version for security-verifiers-utils...$(NC)"; \
+		VERSION_CHANGE=$$($(ACTIVATE) && python scripts/bump_version.py sv_shared/pyproject.toml $(BUMP)); \
+		$(ECHO) "$(GREEN)✓ Version updated: $$VERSION_CHANGE$(NC)"; \
+		$(ECHO) "$(CYAN)Updating version in __init__.py...$(NC)"; \
+		NEW_VERSION=$$(grep '^version = ' sv_shared/pyproject.toml | sed 's/version = "\(.*\)"/\1/'); \
+		sed -i.bak "s/__version__ = \".*\"/__version__ = \"$$NEW_VERSION\"/" sv_shared/__init__.py && rm sv_shared/__init__.py.bak; \
+		$(ECHO) "$(GREEN)✓ __init__.py updated to version $$NEW_VERSION$(NC)"; \
+	fi
+
+# Build security-verifiers-utils package
+build-utils: venv install-dev
+	@$(ECHO) "$(YELLOW)Building security-verifiers-utils wheel...$(NC)"
+	@$(ACTIVATE) && ( cd sv_shared && python -m build --wheel )
+	@$(ECHO) "$(GREEN)✓ Wheel built for security-verifiers-utils$(NC)"
+
+# Publish security-verifiers-utils to PyPI (production)
+pypi-publish-utils: venv install-dev
+	@$(ECHO) "$(YELLOW)Publishing security-verifiers-utils to PyPI...$(NC)"
+	@$(ECHO) "$(RED)⚠️  This will publish to production PyPI!$(NC)"
+	@$(ECHO) -n "Continue? [y/N] " && read ans && [ $${ans:-N} = y ]
+	@$(MAKE) build-utils
+	@$(ACTIVATE) && twine upload sv_shared/dist/*
+	@$(ECHO) "$(GREEN)✓ Published to PyPI$(NC)"
+
+# Publish security-verifiers-utils to TestPyPI (testing)
+pypi-publish-utils-test: venv install-dev
+	@$(ECHO) "$(YELLOW)Publishing security-verifiers-utils to TestPyPI...$(NC)"
+	@$(MAKE) build-utils
+	@$(ACTIVATE) && twine upload --repository testpypi sv_shared/dist/*
+	@$(ECHO) "$(GREEN)✓ Published to TestPyPI$(NC)"
+	@$(ECHO) "$(CYAN)Install with: pip install --index-url https://test.pypi.org/simple/ security-verifiers-utils$(NC)"
 
 # Deploy environment to Hub
 deploy: venv install-dev

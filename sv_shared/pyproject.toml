@@ -1,0 +1,67 @@
+[project]
+name = "security-verifiers-utils"
+version = "0.1.0"
+description = "Shared utilities for Security Verifiers RL environments"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Intertwine AI", email = "hello@intertwine.ai"}
+]
+keywords = [
+    "reinforcement-learning",
+    "security",
+    "verifiers",
+    "rl",
+    "alignment",
+    "utilities"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security",
+]
+
+dependencies = [
+    "verifiers>=0.1.4",
+    "datasets>=2.0.0",
+    "pandas>=2.0.0",
+    "weave>=0.51.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/intertwine/security-verifiers"
+Repository = "https://github.com/intertwine/security-verifiers"
+Issues = "https://github.com/intertwine/security-verifiers/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "ruff>=0.12.11",
+    "build>=1.0.0",
+    "twine>=4.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+[tool.pytest.ini_options]
+python_files = ["*_test.py"]
+testpaths = ["."]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
+
+[tool.ruff]
+line-length = 120

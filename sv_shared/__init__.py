@@ -1,5 +1,7 @@
 """Shared components for Security Verifiers environments."""
 
+__version__ = "0.1.0"
+
 from .dataset_loader import (
     DEFAULT_E1_HF_REPO,
     DEFAULT_E2_HF_REPO,

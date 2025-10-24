@@ -168,9 +168,7 @@ def _load_from_hub(
 
     # Look up dataset metadata
     if dataset_name not in HF_DATASET_MAP:
-        raise ValueError(
-            f"Unknown dataset: {dataset_name}\nAvailable datasets: {', '.join(HF_DATASET_MAP.keys())}"
-        )
+        raise ValueError(f"Unknown dataset: {dataset_name}\nAvailable datasets: {', '.join(HF_DATASET_MAP.keys())}")
 
     metadata = HF_DATASET_MAP[dataset_name]
     hf_repo = _get_hf_repo(metadata["env"])
@@ -292,8 +290,7 @@ def load_dataset_with_fallback(
         # Strategy 3: Fall back to synthetic if available
         if synthetic_generator:
             print(
-                f"Warning: Dataset '{dataset_name}' not found locally or on Hub. "
-                "Using synthetic dataset for testing."
+                f"Warning: Dataset '{dataset_name}' not found locally or on Hub. Using synthetic dataset for testing."
             )
             dataset = synthetic_generator()
             return dataset, f"synthetic::{original_dataset_name}"

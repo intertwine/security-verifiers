@@ -44,15 +44,21 @@ make data-test-all      # Build all test fixtures
 # Build & deploy
 make build                         # build wheels for all envs
 make build-env E=name              # build one env
+make build-utils                   # build security-verifiers-utils wheel
 make update-version E=name         # bump patch version (0.0.n) in pyproject.toml
 make update-version E=name BUMP=minor  # bump minor version (0.n.0)
 make update-version E=name BUMP=major  # bump major version (n.0.0)
+make update-utils-version BUMP=patch|minor|major  # bump security-verifiers-utils version
 make deploy E=name                 # build + push to Environments Hub (requires prime login, team: intertwine)
 make deploy E=name TEAM=your-team  # override team slug for deployment
 make hub-deploy E=name             # validate + bump version (patch) + deploy
 make hub-deploy E=name BUMP=minor  # validate + bump minor version + deploy
 make hub-deploy E=name BUMP=major  # validate + bump major version + deploy
 make hub-deploy E=name BUMP=none   # validate + deploy without version bump
+
+# PyPI publishing (security-verifiers-utils)
+make pypi-publish-utils-test       # publish to TestPyPI (for testing)
+make pypi-publish-utils            # publish to PyPI (production)
 
 # Reproducible evals (artifacts in outputs/evals/...)
 # Supports OpenAI models (gpt-*) and 200+ non-OpenAI models via OpenRouter
