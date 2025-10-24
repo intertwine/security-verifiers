@@ -9,7 +9,7 @@ help setup venv install install-dev install-all install-linux check-tools \
 \
 test test-env test-cov lint lint-fix format check quick-test quick-fix quick-check \
 \
-build build-env deploy hub-validate hub-deploy hub-push-datasets hub-test-datasets ci cd \
+build build-env deploy update-version hub-validate hub-deploy hub-push-datasets hub-test-datasets ci cd \
 \
 eval eval-e1 eval-e2 e1 e2 e3 e4 e5 e6 \
 \
@@ -26,6 +26,12 @@ ACTIVATE := . $(VENV)/bin/activate
 
 # Ensure uv uses Python 3.12 for all operations
 export UV_PYTHON := python3.12
+
+# Team slug for Prime Intellect Hub deployment (can be overridden)
+TEAM ?= intertwine
+
+# Version bump type for deployments (patch, minor, major, or none)
+BUMP ?= patch
 
 # ---------- Colors (portable) ----------
 # Use NO_COLOR=1 to disable
@@ -68,9 +74,10 @@ help:
 	@$(ECHO) "  make build-env E=x  - Build specific environment wheel"
 	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)Deployment:$(NC)"
-	@$(ECHO) "  make deploy E=x           - Deploy environment to Hub (requires prime login)"
-	@$(ECHO) "  make hub-validate E=x     - Validate environment for Hub deployment"
-	@$(ECHO) "  make hub-deploy E=x       - Deploy with validation (recommended)"
+	@$(ECHO) "  make update-version E=x BUMP=patch|minor|major  - Bump semver in pyproject.toml"
+	@$(ECHO) "  make deploy E=x                                 - Deploy environment to Hub (requires prime login)"
+	@$(ECHO) "  make hub-validate E=x                           - Validate environment for Hub deployment"
+	@$(ECHO) "  make hub-deploy E=x [BUMP=patch|minor|major|none] - Validate + bump version + deploy (default: patch)"
 	@$(ECHO) "  make eval E=x             - Evaluate environment locally"
 	@$(ECHO) "  make eval-e1 MODELS=... N=10                     - Reproducible E1 evals (network-logs)"
 	@$(ECHO) "  make eval-e2 MODELS=... N=2 INCLUDE_TOOLS=true  - Reproducible E2 evals (config-verification)"
@@ -274,6 +281,26 @@ build-env: venv install-dev
 	@$(ACTIVATE) && ( cd environments/sv-env-$(E) && python -m build --wheel )
 	@$(ECHO) "$(GREEN)✓ Wheel built for sv-env-$(E)$(NC)"
 
+# Update environment version
+update-version: venv
+	@if [ -z "$(E)" ]; then \
+		$(ECHO) "$(RED)Error: Specify environment with E=name$(NC)"; \
+		$(ECHO) "Example: make update-version E=network-logs"; \
+		$(ECHO) "Example: make update-version E=network-logs BUMP=minor"; \
+		exit 1; \
+	fi
+	@if [ "$(BUMP)" = "none" ]; then \
+		$(ECHO) "$(CYAN)Skipping version bump (BUMP=none)$(NC)"; \
+	else \
+		if [ "$(BUMP)" != "patch" ] && [ "$(BUMP)" != "minor" ] && [ "$(BUMP)" != "major" ]; then \
+			$(ECHO) "$(RED)Error: BUMP must be 'patch', 'minor', 'major', or 'none'$(NC)"; \
+			exit 1; \
+		fi; \
+		$(ECHO) "$(YELLOW)Bumping $(BUMP) version for sv-env-$(E)...$(NC)"; \
+		VERSION_CHANGE=$$($(ACTIVATE) && python scripts/bump_version.py environments/sv-env-$(E)/pyproject.toml $(BUMP)); \
+		$(ECHO) "$(GREEN)✓ Version updated: $$VERSION_CHANGE$(NC)"; \
+	fi
+
 # Deploy environment to Hub
 deploy: venv install-dev
 	@if [ -z "$(E)" ]; then \
@@ -281,11 +308,11 @@ deploy: venv install-dev
 		$(ECHO) "Example: make deploy E=network-logs"; \
 		exit 1; \
 	fi
-	@$(ECHO) "$(YELLOW)Deploying sv-env-$(E) to Environments Hub...$(NC)"
+	@$(ECHO) "$(YELLOW)Deploying sv-env-$(E) to Environments Hub (team: $(TEAM))...$(NC)"
 	@$(ACTIVATE) && ( cd environments/sv-env-$(E) && \
 		python -m build --wheel && \
 		prime login && \
-		prime env push -v PUBLIC )
+		prime env push -v PUBLIC --team $(TEAM) )
 	@$(ECHO) "$(GREEN)✓ sv-env-$(E) deployed to Hub$(NC)"
 
 # Validate environment for Hub deployment
@@ -309,10 +336,14 @@ hub-deploy: venv
 	@if [ -z "$(E)" ]; then \
 		$(ECHO) "$(RED)Error: Specify environment with E=name$(NC)"; \
 		$(ECHO) "Example: make hub-deploy E=network-logs"; \
+		$(ECHO) "Example: make hub-deploy E=network-logs BUMP=minor"; \
+		$(ECHO) "Example: make hub-deploy E=network-logs BUMP=none (skip version bump)"; \
 		exit 1; \
 	fi
 	@$(ECHO) "$(YELLOW)Deploying sv-env-$(E) with validation...$(NC)"
 	@$(MAKE) hub-validate E=$(E)
+	@$(ECHO) "$(CYAN)Updating version...$(NC)"
+	@$(MAKE) update-version E=$(E) BUMP=$(BUMP)
 	@$(ECHO) "$(CYAN)Deploying to Hub...$(NC)"
 	@$(MAKE) deploy E=$(E)
 	@$(ECHO) "$(GREEN)✓ sv-env-$(E) deployed successfully!$(NC)"
