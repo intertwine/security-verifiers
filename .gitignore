@@ -78,6 +78,7 @@ coverage.xml
 # Outputs (evaluation artifacts, logs, etc.)
 outputs/*
 !outputs/.gitkeep
+!outputs/evals/README.md
 .env-metadata.json
 
 # Data sources (cloned repositories for dataset building)

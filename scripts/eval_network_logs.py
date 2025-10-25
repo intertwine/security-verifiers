@@ -6,6 +6,7 @@ Reproducible evaluator for sv-env-network-logs (E1).
 - Writes artifacts under outputs/evals/sv-env-network-logs--<model>/<run_id>/
   - metadata.json
   - results.jsonl
+  - summary.json (aggregated metrics: Acc, ECE, FN%, FP%, Abstain%)
 
 Usage:
   python scripts/eval_network_logs.py \
@@ -31,6 +32,7 @@ os.environ.setdefault("PYTHONPATH", str(REPO_ROOT))
 
 # Import eval utilities (must be before environment imports to avoid circular deps)
 from eval_utils import EarlyStopError, ErrorTracker  # noqa: E402
+from generate_e1_eval_report import analyze_run  # noqa: E402
 from model_router import get_client_for_model  # noqa: E402
 
 # Initialize Weave before importing environments for automatic tracing
@@ -275,6 +277,15 @@ def main() -> None:
                 continue
 
         print(f"✓ Saved artifacts for {model} -> {run_dir}")
+
+        # Generate summary.json with aggregated metrics
+        print("  Generating summary.json...")
+        summary = analyze_run(run_dir, write_summary=True)
+        if summary:
+            print(
+                f"  ✓ Summary: Acc={summary['Acc']:.4f}, ECE={summary['ECE']:.4f}, "
+                f"FN%={summary['FN%']:.2f}, FP%={summary['FP%']:.2f}, Abstain%={summary['Abstain%']:.2f}"
+            )
 
 
 if __name__ == "__main__":

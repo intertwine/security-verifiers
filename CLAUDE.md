@@ -70,6 +70,12 @@ make pypi-publish-utils            # publish to PyPI (production)
 make eval-e1 MODELS="gpt-5-mini,qwen3-14b" N=10  # "qwen3-14b" → "qwen/qwen3-14b" automatically
 make eval-e2 MODELS="gpt-5-mini,llama-3.1-8b" N=2 INCLUDE_TOOLS=true  # Multi-turn eval with tool calling
 
+# Generate E1 (network-logs) evaluation metrics report (Acc, ECE, FN%, FP%, Abstain%)
+# Note: Also writes summary.json to each run directory automatically
+make report-network-logs                      # Analyze all non-archived runs (auto-timestamped output)
+make report-network-logs RUN_IDS="id1 id2"    # Analyze specific run IDs
+make report-network-logs OUTPUT="path.json"   # Custom output path
+
 # Dataset selection
 # E1 supports: local .jsonl files (relative to env/data/ or absolute paths). Build with 'make data-e1'.
 # E2 supports: locally-built datasets from make data-e2-local (k8s, terraform, or combined)

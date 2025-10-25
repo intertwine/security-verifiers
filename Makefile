@@ -11,7 +11,7 @@ test test-env test-utils test-cov lint lint-fix format check quick-test quick-fi
 \
 build build-env build-utils deploy update-version update-utils-version hub-validate hub-deploy hub-push-datasets hub-test-datasets pypi-publish-utils pypi-publish-utils-test ci cd \
 \
-eval eval-e1 eval-e2 e1 e2 e3 e4 e5 e6 \
+eval eval-e1 eval-e2 report-network-logs e1 e2 e3 e4 e5 e6 \
 \
 data-e1 data-e1-ood data-e1-test data-e2 data-e2-local data-e2-test data-all data-test-all clone-e2-sources \
 hf-e1-meta hf-e2-meta hf-e1-push hf-e2-push hf-e1p-meta hf-e2p-meta hf-e1p-push hf-e2p-push hf-push-all \
@@ -85,9 +85,12 @@ help:
 	@$(ECHO) "$(YELLOW)PyPI Publishing (security-verifiers-utils):$(NC)"
 	@$(ECHO) "  make pypi-publish-utils-test - Publish to TestPyPI (for testing)"
 	@$(ECHO) "  make pypi-publish-utils      - Publish to PyPI (production)"
-	@$(ECHO) "  make eval E=x             - Evaluate environment locally"
+	@$(ECHO) ""
+	@$(ECHO) "$(YELLOW)Evaluation:$(NC)"
+	@$(ECHO) "  make eval E=x                                    - Evaluate environment locally"
 	@$(ECHO) "  make eval-e1 MODELS=... N=10                     - Reproducible E1 evals (network-logs)"
 	@$(ECHO) "  make eval-e2 MODELS=... N=2 INCLUDE_TOOLS=true  - Reproducible E2 evals (config-verification)"
+	@$(ECHO) "  make report-network-logs [RUN_IDS=\"id1 id2\"]    - Generate E1 metrics report (JSON)"
 	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)Hub Dataset Management:$(NC)"
 	@$(ECHO) "  make hub-push-datasets    - Push datasets to your HuggingFace repositories"
@@ -550,6 +553,33 @@ eval-e2: venv
 	$(ECHO) "$(YELLOW)Evaluating E2 (config-verification) for models: $(MODELS) (N=$$N, dataset=$$DATASET, INCLUDE_TOOLS=$$INCLUDE_TOOLS, max_errors=$$MAX_ERRORS)$(NC)"; \
 	$(ACTIVATE) && set -a && source .env && set +a && \
 	python scripts/eval_config_verification.py --models "$(MODELS)" --num-examples $$N --dataset "$$DATASET" --include-tools $$INCLUDE_TOOLS --max-consecutive-errors $$MAX_ERRORS
+
+# Generate E1 (network-logs) evaluation report from results
+report-network-logs: venv
+	@EVAL_DIR=$${EVAL_DIR:-outputs/evals}; \
+	OUTPUT=$${OUTPUT}; \
+	RUN_IDS=$${RUN_IDS}; \
+	$(ECHO) "$(YELLOW)Generating E1 (network-logs) evaluation report...$(NC)"; \
+	if [ -n "$$RUN_IDS" ]; then \
+		$(ECHO) "  Run IDs: $$RUN_IDS"; \
+		if [ -n "$$OUTPUT" ]; then \
+			$(ACTIVATE) && uv run python scripts/generate_e1_eval_report.py \
+				--eval-dir "$$EVAL_DIR" --output "$$OUTPUT" --run-ids $$RUN_IDS --pretty; \
+		else \
+			$(ACTIVATE) && uv run python scripts/generate_e1_eval_report.py \
+				--eval-dir "$$EVAL_DIR" --run-ids $$RUN_IDS --pretty; \
+		fi; \
+	else \
+		$(ECHO) "  Analyzing all non-archived runs in $$EVAL_DIR"; \
+		if [ -n "$$OUTPUT" ]; then \
+			$(ACTIVATE) && uv run python scripts/generate_e1_eval_report.py \
+				--eval-dir "$$EVAL_DIR" --output "$$OUTPUT" --pretty; \
+		else \
+			$(ACTIVATE) && uv run python scripts/generate_e1_eval_report.py \
+				--eval-dir "$$EVAL_DIR" --pretty; \
+		fi; \
+	fi
+	@$(ECHO) "$(GREEN)✓ Report generated$(NC)"
 
 # Data building targets (production - private, not committed)
 data-e1: venv
