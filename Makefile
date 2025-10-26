@@ -581,6 +581,32 @@ report-network-logs: venv
 	fi
 	@$(ECHO) "$(GREEN)✓ Report generated$(NC)"
 
+report-config-verification: venv
+	@EVAL_DIR=$${EVAL_DIR:-outputs/evals}; \
+	OUTPUT=$${OUTPUT}; \
+	RUN_IDS=$${RUN_IDS}; \
+	$(ECHO) "$(YELLOW)Generating E2 (config-verification) evaluation report...$(NC)"; \
+	if [ -n "$$RUN_IDS" ]; then \
+		$(ECHO) "  Run IDs: $$RUN_IDS"; \
+		if [ -n "$$OUTPUT" ]; then \
+			$(ACTIVATE) && uv run python scripts/generate_e2_eval_report.py \
+				--eval-dir "$$EVAL_DIR" --output "$$OUTPUT" --run-ids $$RUN_IDS --pretty; \
+		else \
+			$(ACTIVATE) && uv run python scripts/generate_e2_eval_report.py \
+				--eval-dir "$$EVAL_DIR" --run-ids $$RUN_IDS --pretty; \
+		fi; \
+	else \
+		$(ECHO) "  Analyzing all non-archived runs in $$EVAL_DIR"; \
+		if [ -n "$$OUTPUT" ]; then \
+			$(ACTIVATE) && uv run python scripts/generate_e2_eval_report.py \
+				--eval-dir "$$EVAL_DIR" --output "$$OUTPUT" --pretty; \
+		else \
+			$(ACTIVATE) && uv run python scripts/generate_e2_eval_report.py \
+				--eval-dir "$$EVAL_DIR" --pretty; \
+		fi; \
+	fi
+	@$(ECHO) "$(GREEN)✓ Report generated$(NC)"
+
 # Data building targets (production - private, not committed)
 data-e1: venv
 	@LIMIT=$${LIMIT:-1800}; \

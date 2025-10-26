@@ -218,44 +218,46 @@ The build script generates the following files in `environments/sv-env-config-ve
 
 ### Kubernetes Dataset (v1.1 - October 2025)
 
-| Metric | Value |
-|--------|-------|
-| Total files scanned | 444 (after validation filtering) |
-| Files with violations | 255 (57.4%) |
-| Total violations detected | 1503 |
-| Avg violations per file | 3.4 |
-| **Violation breakdown:** ||
-| KubeLinter | 1062 (70.7%) |
-| Semgrep | 441 (29.3%) |
-| **Severity distribution:** ||
-| Medium | 1062 |
-| WARNING | 247 |
-| INFO | 194 |
-| **Content validation** | 100% valid K8s manifests |
+| Metric                     | Value                                                    |
+| -------------------------- | -------------------------------------------------------- |
+| Total files scanned        | 444 (after validation filtering)                         |
+| Files with violations      | 255 (57.4%)                                              |
+| Total violations detected  | 1503                                                     |
+| Avg violations per file    | 3.4                                                      |
+| **Violation breakdown:**   |                                                          |
+| KubeLinter                 | 1062 (70.7%)                                             |
+| Semgrep                    | 441 (29.3%)                                              |
+| **Severity distribution:** |                                                          |
+| Medium                     | 1062                                                     |
+| WARNING                    | 247                                                      |
+| INFO                       | 194                                                      |
+| **Content validation**     | 100% valid K8s manifests                                 |
 | **Filtering improvements** | Removed 18 non-manifest files (LICENSE, README, scripts) |
 
 ### Terraform Dataset (v1.1 - October 2025)
 
-| Metric | Value |
-|--------|-------|
-| Total files scanned | 115 (after validation filtering) |
-| Files with violations | 4 (3.5%) |
-| Total violations detected | 4 |
-| Avg violations per file | 0.03 |
-| **Violation breakdown:** ||
-| Semgrep | 4 (100%) |
-| **Severity distribution:** ||
-| WARNING | 4 |
-| **Content validation** | 0 empty files, all valid HCL |
+| Metric                     | Value                                                   |
+| -------------------------- | ------------------------------------------------------- |
+| Total files scanned        | 115 (after validation filtering)                        |
+| Files with violations      | 4 (3.5%)                                                |
+| Total violations detected  | 4                                                       |
+| Avg violations per file    | 0.03                                                    |
+| **Violation breakdown:**   |                                                         |
+| Semgrep                    | 4 (100%)                                                |
+| **Severity distribution:** |                                                         |
+| WARNING                    | 4                                                       |
+| **Content validation**     | 0 empty files, all valid HCL                            |
 | **Filtering improvements** | Removed 145 invalid files (empty vars, non-HCL content) |
 
 **Quality Improvements (v1.1 - October 2025):**
 
 - ✅ **K8s filtering:** Added content validation for K8s API markers (apiVersion, kind, metadata, spec)
+
   - Filtered 462 → 444 files (removed 18 non-manifests)
   - 100% valid K8s YAML (was 96.3%)
 
 - ✅ **Terraform filtering:** Added HCL content validation before scanning
+
   - Filtered 260 → 115 files (removed 145 empty/invalid files)
   - 0 empty prompts (was 39 empty files)
   - All files contain valid HCL blocks (resource, module, data, variable, output, provider)
@@ -266,6 +268,7 @@ The build script generates the following files in `environments/sv-env-config-ve
   - opa: 1.8.0
 
 **Note on Terraform violation rate:** The low violation rate (3.5%) reflects high-quality source repositories (terraform-aws-modules). This is expected for production-grade modules. For more violations, consider:
+
 - Adding custom OPA policies for organization-specific rules
 - Using `tflint` or `checkov` in addition to Semgrep
 - Sourcing from less mature repositories

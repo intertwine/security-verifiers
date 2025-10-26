@@ -76,6 +76,12 @@ make report-network-logs                      # Analyze all non-archived runs (a
 make report-network-logs RUN_IDS="id1 id2"    # Analyze specific run IDs
 make report-network-logs OUTPUT="path.json"   # Custom output path
 
+# Generate E2 (config-verification) evaluation metrics report (MeanReward, FormatSuccess%, AvgTools, AvgTurns)
+# Note: Also writes summary.json to each run directory automatically
+make report-config-verification                      # Analyze all non-archived runs (auto-timestamped output)
+make report-config-verification RUN_IDS="id1 id2"    # Analyze specific run IDs
+make report-config-verification OUTPUT="path.json"   # Custom output path
+
 # Dataset selection
 # E1 supports: local .jsonl files (relative to env/data/ or absolute paths). Build with 'make data-e1'.
 # E2 supports: locally-built datasets from make data-e2-local (k8s, terraform, or combined)
