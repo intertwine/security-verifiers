@@ -443,6 +443,7 @@ def load_environment(
             parser.get_format_reward_func(),
         ],
         weights=[1.0, 0.2],  # Safety is paramount while format is supportive
+        parser=parser,  # Pass parser to rubric so reward functions can access it
     )
 
     if logger and logger.enabled:

@@ -17,7 +17,7 @@ tags = [
 version = "0.2.0"
 requires-python = ">=3.12"
 dependencies = [
-  "verifiers>=0.1.4",
+  "verifiers>=0.1.6.post0",
   "security-verifiers-utils>=0.1.2",  # v0.1.2+ includes E1 answer type coercion fix
   "datasets>=2.0.0",
   "pandas>=2.0.0",

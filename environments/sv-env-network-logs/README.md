@@ -115,6 +115,38 @@ Before using this environment, you need to configure API keys for model inferenc
 
 ## Usage
 
+### With Prime CLI (Recommended)
+
+The easiest way to evaluate models on this environment is using the Prime CLI:
+
+```bash
+# Install the environment
+prime env install intertwine/sv-env-network-logs
+
+# Run evaluation with default dataset (1000 examples from HuggingFace)
+prime env eval sv-env-network-logs \
+  -a '{"dataset_name":"intertwine-ai/security-verifiers-e1","max_examples":100}'
+
+# Run with specific dataset split
+prime env eval sv-env-network-logs \
+  -a '{"dataset_name":"intertwine-ai/security-verifiers-e1","max_examples":100}' \
+  --num-examples 10
+
+# Use synthetic dataset for quick testing (no HF_TOKEN required)
+prime env eval sv-env-network-logs \
+  -a '{"dataset_source":"synthetic"}' \
+  --num-examples 5
+```
+
+**Note**: By default, Prime uses meta-llama/llama-3.1-70b-instruct. Specify a different model with `--model`:
+
+```bash
+prime env eval sv-env-network-logs \
+  -a '{"dataset_name":"intertwine-ai/security-verifiers-e1"}' \
+  --model gpt-4o-mini \
+  --num-examples 10
+```
+
 ### With Verifiers Library
 
 ```python

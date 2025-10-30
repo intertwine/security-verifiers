@@ -204,6 +204,7 @@ def load_environment(
             reward_asymmetric_cost,
         ],
         weights=[1.0, 0.1, 0.2, 0.5],
+        parser=parser,  # Pass parser to rubric so reward functions can access it
     )
 
     if logger and logger.enabled:

@@ -143,6 +143,38 @@ source ~/.bashrc
 
 ## Usage
 
+### With Prime CLI (Recommended)
+
+The easiest way to evaluate models on this environment is using the Prime CLI:
+
+```bash
+# Install the environment
+prime env install intertwine/sv-env-config-verification
+
+# Run evaluation with default dataset (combined K8s + Terraform)
+prime env eval sv-env-config-verification \
+  -a '{"dataset_name":"intertwine-ai/security-verifiers-e2","max_examples":50}'
+
+# Run with specific dataset (K8s only)
+prime env eval sv-env-config-verification \
+  -a '{"dataset_name":"k8s-labeled-v1.jsonl","max_examples":20}' \
+  --num-examples 10
+
+# Use synthetic dataset for quick testing (no external dependencies)
+prime env eval sv-env-config-verification \
+  -a '{"dataset_source":"synthetic","include_tools":true}' \
+  --num-examples 3
+```
+
+**Note**: By default, Prime uses meta-llama/llama-3.1-70b-instruct. Specify a different model with `--model`:
+
+```bash
+prime env eval sv-env-config-verification \
+  -a '{"dataset_name":"intertwine-ai/security-verifiers-e2"}' \
+  --model gpt-4o \
+  --num-examples 10
+```
+
 ### With Verifiers Library
 
 ```python
