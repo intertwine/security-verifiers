@@ -14,7 +14,7 @@ tags = [
   "train",
   "eval",
 ]
-version = "0.1.6"
+version = "0.2.0"
 requires-python = ">=3.12"
 dependencies = [
     "verifiers>=0.1.4",
