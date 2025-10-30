@@ -5,20 +5,20 @@
   "rego_dir": "environments/sv-env-config-verification/policies",
   "datasets": {
     "k8s": {
-      "files_scanned": 462,
-      "total_items": 462,
+      "files_scanned": 444,
+      "total_items": 444,
       "with_violations": 255
     },
     "terraform": {
-      "files_scanned": 260,
-      "total_items": 260,
+      "files_scanned": 217,
+      "total_items": 217,
       "with_violations": 4
     }
   },
   "tools": {
     "kube-linter": "0.7.6",
-    "semgrep": "1.137.0",
-    "opa": "Version: 1.8.0"
+    "semgrep": "1.141.1",
+    "opa": "Version: 1.9.0"
   },
   "patch_verified": null
 }
