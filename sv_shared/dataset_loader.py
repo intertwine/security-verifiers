@@ -28,9 +28,9 @@ from typing import Callable, Dict, Literal, Optional
 
 from datasets import Dataset
 
-# Default HuggingFace repositories (intertwine's private repos)
-DEFAULT_E1_HF_REPO = "intertwine-ai/security-verifiers-e1-private"
-DEFAULT_E2_HF_REPO = "intertwine-ai/security-verifiers-e2-private"
+# Default HuggingFace repositories (intertwine's repos)
+DEFAULT_E1_HF_REPO = "intertwine-ai/security-verifiers-e1"
+DEFAULT_E2_HF_REPO = "intertwine-ai/security-verifiers-e2"
 
 # Mapping of dataset names to HuggingFace dataset names and splits
 HF_DATASET_MAP = {
@@ -140,6 +140,31 @@ def _load_local_jsonl(
     return Dataset.from_list(examples)
 
 
+def _coerce_e1_answer_to_string(example: dict) -> dict:
+    """Coerce E1 answer field from int to string.
+
+    HuggingFace datasets use ClassLabel which returns int values (0, 1).
+    Verifiers environments expect string values ("Benign", "Malicious").
+
+    Args:
+        example: Dataset example with 'answer' field
+
+    Returns:
+        Example with answer coerced to string
+    """
+    if "answer" in example:
+        value = example["answer"]
+        if isinstance(value, int):
+            # ClassLabel: 0 = Benign, 1 = Malicious
+            example["answer"] = "Malicious" if value == 1 else "Benign"
+        elif isinstance(value, bool):
+            example["answer"] = "Malicious" if value else "Benign"
+        elif not isinstance(value, str):
+            # Fallback for any other type
+            example["answer"] = str(value)
+    return example
+
+
 def _load_from_hub(
     dataset_name: str,
     max_examples: Optional[int] = None,
@@ -177,7 +202,7 @@ def _load_from_hub(
     print(f"Loading dataset from HuggingFace Hub: {hf_repo} (split: {split})")
 
     try:
-        from datasets import load_dataset
+        from datasets import Features, Value, load_dataset
 
         # Load dataset with authentication
         dataset = load_dataset(
@@ -189,6 +214,25 @@ def _load_from_hub(
         # Apply max_examples limit
         if max_examples and len(dataset) > max_examples:
             dataset = dataset.select(range(max_examples))
+
+        # Coerce E1 answer types from ClassLabel (int) to string
+        # This requires both mapping the values AND updating the Features schema
+        if metadata["env"] == "e1":
+            # Get current features and update answer field to be a string
+            old_features = dataset.features
+            new_features = Features(
+                {
+                    "prompt": old_features["prompt"],
+                    "answer": Value("string"),  # Change from ClassLabel to string
+                    "meta": old_features["meta"],
+                }
+            )
+
+            # Map with updated features to prevent re-casting
+            dataset = dataset.map(
+                _coerce_e1_answer_to_string,
+                features=new_features,
+            )
 
         # Apply field mapping if provided
         if field_mapping:

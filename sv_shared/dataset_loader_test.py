@@ -142,20 +142,32 @@ class TestLoadFromHub:
 
     @patch("datasets.load_dataset")
     def test_load_e1_dataset(self, mock_load_dataset: MagicMock) -> None:
-        """Test loading E1 dataset from Hub."""
+        """Test loading E1 dataset from Hub with answer coercion."""
         mock_dataset = MagicMock(spec=Dataset)
         mock_dataset.__len__ = MagicMock(return_value=100)
+        # Mock the features attribute
+        mock_dataset.features = {
+            "prompt": MagicMock(),
+            "answer": MagicMock(),
+            "meta": MagicMock(),
+        }
+        # Mock the map method to return a new mock (simulating the coercion)
+        mock_mapped_dataset = MagicMock(spec=Dataset)
+        mock_dataset.map.return_value = mock_mapped_dataset
         mock_load_dataset.return_value = mock_dataset
 
         with patch.dict(os.environ, {"HF_TOKEN": "test_token"}):
             result = _load_from_hub("iot23-train-dev-test-v1.jsonl")
 
-        assert result is mock_dataset
+        # Verify the result is the mapped dataset (after answer coercion)
+        assert result is mock_mapped_dataset
         mock_load_dataset.assert_called_once_with(
             DEFAULT_E1_HF_REPO,
             split="train",
             token="test_token",
         )
+        # Verify map was called for E1 answer coercion
+        assert mock_dataset.map.called
 
     @patch("datasets.load_dataset")
     def test_load_e2_dataset(self, mock_load_dataset: MagicMock) -> None:

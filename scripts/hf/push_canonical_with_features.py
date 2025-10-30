@@ -43,7 +43,7 @@ except ImportError:
     sys.exit(1)
 
 try:
-    from datasets import ClassLabel, Dataset, Features, Value
+    from datasets import Dataset, Features, Value
 except ImportError:
     print("Error: datasets not installed. Run: uv add datasets")
     sys.exit(1)
@@ -53,7 +53,7 @@ except ImportError:
 E1_FEATURES = Features(
     {
         "prompt": Value("string"),
-        "answer": ClassLabel(names=["Benign", "Malicious"]),
+        "answer": Value("string"),  # Keep as string to match JSONL format (Benign/Malicious)
         "meta": {
             "source": Value("string"),
             "scenario": Value("string"),
