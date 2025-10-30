@@ -1,6 +1,6 @@
 [project]
 name = "security-verifiers-utils"
-version = "0.1.1"
+version = "0.1.2"
 description = "Shared utilities for Security Verifiers RL environments"
 readme = "README.md"
 requires-python = ">=3.12"
