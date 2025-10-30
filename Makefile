@@ -339,6 +339,7 @@ update-utils-version: venv
 # Build security-verifiers-utils package
 build-utils: venv install-dev
 	@$(ECHO) "$(YELLOW)Building security-verifiers-utils wheel...$(NC)"
+	@rm -rf sv_shared/dist/*
 	@$(ACTIVATE) && ( cd sv_shared && python -m build --wheel )
 	@$(ECHO) "$(GREEN)✓ Wheel built for security-verifiers-utils$(NC)"
 
