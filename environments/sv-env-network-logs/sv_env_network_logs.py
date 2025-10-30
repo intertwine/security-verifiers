@@ -182,13 +182,14 @@ def load_environment(
         return Dataset.from_list(log_patterns)
 
     # Load dataset using shared multi-tiered loader
-    # Field mapping: build scripts use "prompt", environment expects "question"
+    # Datasets now use "question" field directly (not "prompt")
+    # Verifiers will convert "question" → "prompt" (list of messages) when message_type="chat"
     dataset, resolved_name = load_dataset_with_fallback(
         dataset_name=dataset_name,
         env_root=env_root,
         dataset_source=dataset_source,
         max_examples=max_examples,
-        field_mapping={"prompt": "question"},
+        field_mapping=None,
         synthetic_generator=_create_synthetic_dataset,
     )
     dataset_name = resolved_name

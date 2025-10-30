@@ -60,9 +60,11 @@ except ImportError:
 
 
 # ========== E1 Features ==========
+# Note: We use "question" instead of "prompt" because Verifiers will convert
+# "question" to "prompt" (list of messages) when message_type="chat"
 E1_FEATURES = Features(
     {
-        "prompt": Value("string"),
+        "question": Value("string"),
         "answer": Value("string"),  # Keep as string to match JSONL format (Benign/Malicious)
         "meta": {
             "source": Value("string"),
@@ -76,9 +78,10 @@ E1_FEATURES = Features(
 
 # ========== E2 Features ==========
 # Note: For list of dicts, HF uses [dict_schema] syntax (not Sequence)
+# Note: We use "question" instead of "prompt" for consistency with E1
 E2_FEATURES = Features(
     {
-        "prompt": Value("string"),
+        "question": Value("string"),
         "info": {
             "violations": [
                 {

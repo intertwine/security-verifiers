@@ -96,7 +96,7 @@ def to_item(row, source: str, split="ood", force_malicious=False):
         answer = norm_label(str(label_val))
 
     return {
-        "prompt": prompt,
+        "question": prompt,
         "answer": answer,
         "meta": {
             "source": source,

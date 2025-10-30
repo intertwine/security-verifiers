@@ -200,6 +200,34 @@ class TestLoadFromHub:
 
         mock_select.assert_called_once()
 
+    @patch("datasets.load_dataset")
+    def test_load_with_hf_repo_name(self, mock_load_dataset: MagicMock) -> None:
+        """Test loading with direct HuggingFace repo name (e.g., 'org/repo')."""
+        mock_dataset = MagicMock(spec=Dataset)
+        mock_dataset.__len__ = MagicMock(return_value=100)
+        # Mock E1-style features (has "answer", not "violations")
+        mock_dataset.features = {
+            "prompt": MagicMock(),
+            "answer": MagicMock(),
+            "meta": MagicMock(),
+        }
+        # Mock the map method for E1 answer coercion
+        mock_mapped_dataset = MagicMock(spec=Dataset)
+        mock_dataset.map.return_value = mock_mapped_dataset
+        mock_load_dataset.return_value = mock_dataset
+
+        with patch.dict(os.environ, {"HF_TOKEN": "test_token"}):
+            result = _load_from_hub("intertwine-ai/security-verifiers-e1")
+
+        # Verify it loaded directly from the specified repo with default split
+        mock_load_dataset.assert_called_once_with(
+            "intertwine-ai/security-verifiers-e1",
+            split="train",  # Default split for direct HF repo
+            token="test_token",
+        )
+        # Verify E1 answer coercion was applied
+        assert result is mock_mapped_dataset
+
 
 class TestLoadDatasetWithFallback:
     """Tests for load_dataset_with_fallback function."""

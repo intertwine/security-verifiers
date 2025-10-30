@@ -8,7 +8,7 @@ Output files (under environments/sv-env-network-logs/data/):
 
 Schema per item:
 {
-  "prompt": "<short natural language summary of the flow>",
+  "question": "<short natural language summary of the flow>",
   "answer": "Malicious" | "Benign",
   "meta": {
     "source": "iot23",
@@ -18,6 +18,10 @@ Schema per item:
     "split": "train|dev|test"
   }
 }
+
+Note: We use "question" instead of "prompt" because when message_type="chat",
+Verifiers will automatically convert "question" into a "prompt" field containing
+a list of chat messages. If we include "prompt" as a string, it won't be converted.
 """
 
 import argparse
@@ -214,7 +218,7 @@ def main():
     out = []
     for r, split in paired:
         item = {
-            "prompt": render_prompt(r),
+            "question": render_prompt(r),
             "answer": normalize_label(r),
             "meta": {
                 "source": "iot23",

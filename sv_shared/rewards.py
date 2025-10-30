@@ -4,15 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from .utils import get_response_text
-
 
 def _extract(parser, completion: Any) -> tuple[str, float]:  # noqa: ANN001
     """Helper to extract parsed label and confidence."""
 
-    text = get_response_text(completion)
-    label = parser.parse_answer(text)
-    confidence = parser.parse_confidence(text)
+    label = parser.parse_answer(completion)
+    confidence = parser.parse_confidence(completion)
     return label, confidence
 
 

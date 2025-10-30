@@ -1,5 +1,5 @@
 {
   "kube-linter": "0.7.6",
-  "semgrep": "1.140.0",
+  "semgrep": "1.141.1",
   "opa": "Version: 1.9.0"
 }

@@ -4,7 +4,7 @@ Validate E1 (network logs) canonical JSONL splits with Pydantic.
 
 E1 schema: SingleTurn classification with calibration
 {
-  "prompt": "string",
+  "question": "string",
   "answer": "Malicious | Benign",
   "meta": {
     "source": "string",
@@ -51,7 +51,7 @@ class MetaE1(BaseModel):
 class RowE1(BaseModel):
     """E1 canonical row schema."""
 
-    prompt: str = Field(..., description="Network log prompt")
+    question: str = Field(..., description="Network log question text")
     answer: str = Field(..., description="Classification label")
     meta: MetaE1 = Field(..., description="Sample metadata")
 

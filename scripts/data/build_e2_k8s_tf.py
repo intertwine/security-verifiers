@@ -189,7 +189,7 @@ def emit_items(files: List[Path], lang: str, rego_dir: Path, out_path: Path) -> 
                 issues += semgrep_scan(f, "tf")
             issues += opa_eval_policies(f, rego_dir)
             item = {
-                "prompt": raw,
+                "question": raw,
                 "info": {"violations": issues, "patch": None},
                 "meta": {"lang": lang, "source": str(f), "hash": hashlib(raw)},
             }
@@ -238,7 +238,7 @@ def make_patch_verified(k8s_items_path: Path, patches_dir: Path, out_path: Path,
         if not any(v for v in issues_after if v["tool"] == "opa"):
             kept.append(
                 {
-                    "prompt": "".join(patched),
+                    "question": "".join(patched),
                     "info": {"violations": it["info"]["violations"], "patch": patch_file.read_text()},
                     "meta": {**it["meta"], "patch_source": str(patch_file)},
                 }

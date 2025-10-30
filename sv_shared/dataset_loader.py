@@ -174,6 +174,7 @@ def _load_from_hub(
 
     Args:
         dataset_name: Dataset name (e.g., "iot23-train-dev-test-v1.jsonl")
+                     or HuggingFace repo name (e.g., "intertwine-ai/security-verifiers-e1")
         max_examples: Maximum number of examples to load
         field_mapping: Optional dict to rename fields (e.g., {"prompt": "question"})
 
@@ -191,15 +192,22 @@ def _load_from_hub(
             "3. Or build and push datasets to your own HF repo (see docs/hub-deployment.md)"
         )
 
-    # Look up dataset metadata
-    if dataset_name not in HF_DATASET_MAP:
-        raise ValueError(f"Unknown dataset: {dataset_name}\nAvailable datasets: {', '.join(HF_DATASET_MAP.keys())}")
+    # Check if dataset_name is a HuggingFace repo name (contains "/")
+    # If so, use it directly with default split="train"
+    if "/" in dataset_name:
+        hf_repo = dataset_name
+        split = "train"  # Default split for direct HF repo access
+        print(f"Loading dataset from HuggingFace Hub: {hf_repo} (split: {split})")
+    else:
+        # Look up dataset metadata from map
+        if dataset_name not in HF_DATASET_MAP:
+            raise ValueError(f"Unknown dataset: {dataset_name}\nAvailable datasets: {', '.join(HF_DATASET_MAP.keys())}")
 
-    metadata = HF_DATASET_MAP[dataset_name]
-    hf_repo = _get_hf_repo(metadata["env"])
-    split = metadata["split"]
+        metadata = HF_DATASET_MAP[dataset_name]
+        hf_repo = _get_hf_repo(metadata["env"])
+        split = metadata["split"]
 
-    print(f"Loading dataset from HuggingFace Hub: {hf_repo} (split: {split})")
+        print(f"Loading dataset from HuggingFace Hub: {hf_repo} (split: {split})")
 
     try:
         from datasets import Features, Value, load_dataset
@@ -215,14 +223,26 @@ def _load_from_hub(
         if max_examples and len(dataset) > max_examples:
             dataset = dataset.select(range(max_examples))
 
+        # Auto-detect environment type from dataset features if using direct HF repo
+        is_e1_dataset = "/" in dataset_name  # Direct HF repo, need to detect env type
+        if is_e1_dataset:
+            # Check if dataset has E1-style features (prompt, answer, meta)
+            # E1 datasets have "answer" field, E2 datasets have "violations" field
+            is_e1_dataset = "answer" in dataset.features and "violations" not in dataset.features
+        else:
+            # Use metadata from map
+            is_e1_dataset = metadata["env"] == "e1"
+
         # Coerce E1 answer types from ClassLabel (int) to string
         # This requires both mapping the values AND updating the Features schema
-        if metadata["env"] == "e1":
+        if is_e1_dataset:
             # Get current features and update answer field to be a string
             old_features = dataset.features
+            # Handle both old schema (prompt) and new schema (question)
+            question_field = "question" if "question" in old_features else "prompt"
             new_features = Features(
                 {
-                    "prompt": old_features["prompt"],
+                    question_field: old_features[question_field],
                     "answer": Value("string"),  # Change from ClassLabel to string
                     "meta": old_features["meta"],
                 }

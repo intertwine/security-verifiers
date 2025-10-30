@@ -1,3 +1,0 @@
-{"prompt": "Device workstation-01 observed TCP 80→8080, duration 0.5, bytes 2048, flags [S]. Decide: Malicious or Benign (you may Abstain if unsure).", "answer": "Malicious", "meta": {"source": "synthetic-demo-cic", "hash": "cic-demo001"}}
-{"prompt": "Device server-02 observed TCP 443→443, duration 1.2, bytes 512, flags [SA]. Decide: Malicious or Benign (you may Abstain if unsure).", "answer": "Benign", "meta": {"source": "synthetic-demo-cic", "hash": "cic-demo002"}}
-{"prompt": "Device endpoint-03 observed TCP 22→22, duration 30.0, bytes 16384, flags [SFRA]. Decide: Malicious or Benign (you may Abstain if unsure).", "answer": "Malicious", "meta": {"source": "synthetic-demo-cic", "hash": "cic-demo003"}}

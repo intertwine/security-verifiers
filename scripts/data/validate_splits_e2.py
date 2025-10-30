@@ -68,7 +68,7 @@ class MetaE2(BaseModel):
 class RowE2(BaseModel):
     """E2 canonical row schema."""
 
-    prompt: str = Field(..., description="Raw YAML/HCL configuration")
+    question: str = Field(..., description="Raw YAML/HCL configuration")
     info: InfoE2 = Field(..., description="Detection and patch info")
     meta: MetaE2 = Field(..., description="Sample metadata")
 

@@ -133,22 +133,22 @@ def sample_verify_transformations(
 
             # Check if protocol is in prompt
             proto = source_dict.get("protocol") or source_dict.get("proto") or source_dict.get("Proto") or "?"
-            proto_in_question = str(proto).lower() in local["question"].lower() if proto != "?" else True
+            proto_in_prompt = str(proto).lower() in local["question"].lower() if proto != "?" else True
 
             # Check if ports are in prompt
             sp = source_dict.get("src_port") or source_dict.get("sport") or source_dict.get("id.orig_p")
             dp = source_dict.get("dst_port") or source_dict.get("dport") or source_dict.get("id.resp_p")
 
-            ports_in_question = True
+            ports_in_prompt = True
             if sp is not None and dp is not None:
                 # Arrow format: sp→dp
-                ports_in_question = f"{sp}→{dp}" in local["question"]
+                ports_in_prompt = f"{sp}→{dp}" in local["question"]
 
             verification_results.append(
                 {
                     "sample_index": i,
-                    "protocol_verified": proto_in_question,
-                    "ports_verified": ports_in_question,
+                    "protocol_verified": proto_in_prompt,
+                    "ports_verified": ports_in_prompt,
                     "has_decision_prompt": "Malicious" in local["question"] and "Benign" in local["question"],
                 }
             )
