@@ -786,7 +786,8 @@ hf-e1p-push-canonical: venv
 		--env e1 \
 		--repo "$$HF_ORG/security-verifiers-e1" \
 		--data-dir environments/sv-env-network-logs/data \
-		--push
+		--push \
+		--force || ($(ECHO) "$(RED)✗ E1 canonical push failed$(NC)" && exit 1)
 	@$(ECHO) "$(GREEN)✓ E1 canonical splits pushed$(NC)"
 
 hf-e2p-push-canonical: venv
@@ -796,7 +797,8 @@ hf-e2p-push-canonical: venv
 		--env e2 \
 		--repo "$$HF_ORG/security-verifiers-e2" \
 		--data-dir environments/sv-env-config-verification/data \
-		--push
+		--push \
+		--force || ($(ECHO) "$(RED)✗ E2 canonical push failed$(NC)" && exit 1)
 	@$(ECHO) "$(GREEN)✓ E2 canonical splits pushed$(NC)"
 
 # Dry run canonical pushes (no --push)

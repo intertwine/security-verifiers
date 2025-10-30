@@ -19,11 +19,20 @@ Usage:
         --repo intertwine-ai/security-verifiers-e1 \\
         --data-dir environments/sv-env-network-logs/data
 
-    # Actually push
+    # Actually push (force deletes existing splits to avoid schema conflicts)
     uv run python scripts/hf/push_canonical_with_features.py --env e1 \\
         --repo intertwine-ai/security-verifiers-e1 \\
         --data-dir environments/sv-env-network-logs/data \\
-        --push
+        --push --force
+
+WARNING:
+    The --force flag DELETES AND RECREATES the entire repository to clear
+    cached schema metadata. This is destructive and will remove all existing
+    data, README, and git history. Only use this when you need to change the
+    schema of existing splits.
+
+    This is necessary because HuggingFace caches dataset schema on their servers
+    and won't allow schema changes to existing splits.
 
 Requirements:
     - HF_TOKEN in .env file or environment variable
@@ -44,8 +53,9 @@ except ImportError:
 
 try:
     from datasets import Dataset, Features, Value
+    from huggingface_hub import HfApi
 except ImportError:
-    print("Error: datasets not installed. Run: uv add datasets")
+    print("Error: datasets and huggingface_hub not installed. Run: uv add datasets huggingface_hub")
     sys.exit(1)
 
 
@@ -197,13 +207,23 @@ def prepare_e2_splits(data_dir: Path) -> dict[str, list[dict]]:
     return {k: v for k, v in splits.items() if v}
 
 
-def push_splits(env: str, repo_id: str, data_dir: Path, do_push: bool, token: str | None = None):
-    """Build datasets with explicit Features and push to HF."""
+def push_splits(
+    env: str, repo_id: str, data_dir: Path, do_push: bool, force: bool = False, token: str | None = None
+) -> bool:
+    """Build datasets with explicit Features and push to HF.
+
+    Args:
+        force: If True, delete existing splits before pushing to avoid schema conflicts.
+
+    Returns:
+        True if all operations succeeded, False if any failed.
+    """
     print(f"\n{'=' * 60}")
     print(f"Environment: {env}")
     print(f"Repo: {repo_id}")
     print(f"Data dir: {data_dir}")
     print(f"Push: {do_push}")
+    print(f"Force: {force}")
     print(f"{'=' * 60}\n")
 
     # Prepare splits
@@ -216,7 +236,47 @@ def push_splits(env: str, repo_id: str, data_dir: Path, do_push: bool, token: st
 
     if not splits_data:
         print(f"⚠️  No canonical data found in {data_dir}")
-        return
+        return False
+
+    # Track failures
+    failed_splits = []
+    successful_splits = []
+
+    # Delete and recreate repository if force=True
+    if do_push and force:
+        api = HfApi(token=token)
+        print("⚠️  Force mode: Deleting and recreating repository to clear schema...")
+        try:
+            # Delete the entire repository
+            api.delete_repo(repo_id=repo_id, repo_type="dataset", token=token)
+            print(f"✓ Deleted repository: {repo_id}")
+        except Exception as e:
+            print(f"  (Repository deletion failed or repo doesn't exist: {e})")
+
+        try:
+            # Recreate the repository
+            api.create_repo(repo_id=repo_id, repo_type="dataset", private=True, token=token)
+            print(f"✓ Recreated repository: {repo_id}")
+        except Exception as e:
+            print(f"  (Repository creation failed, may already exist: {e})")
+
+        # Upload README from template
+        try:
+            script_dir = Path(__file__).parent
+            readme_path = script_dir / "templates" / f"{env}_readme.md"
+            if readme_path.exists():
+                api.upload_file(
+                    path_or_fileobj=readme_path,
+                    path_in_repo="README.md",
+                    repo_id=repo_id,
+                    repo_type="dataset",
+                    token=token,
+                )
+                print("✓ Uploaded README.md from template")
+            else:
+                print(f"  (README template not found: {readme_path})")
+        except Exception as e:
+            print(f"  (README upload failed: {e})")
 
     # Build and push each split
     for split, rows in splits_data.items():
@@ -225,6 +285,7 @@ def push_splits(env: str, repo_id: str, data_dir: Path, do_push: bool, token: st
 
         if not rows:
             print(f"⚠️  No rows for split '{split}', skipping")
+            failed_splits.append(split)
             continue
 
         # Create dataset with explicit Features
@@ -237,6 +298,7 @@ def push_splits(env: str, repo_id: str, data_dir: Path, do_push: bool, token: st
 
             print(f"✗ Failed to create dataset: {e}")
             print(f"  Full error:\n{traceback.format_exc()}")
+            failed_splits.append(split)
             continue
 
         # Push to hub
@@ -246,12 +308,18 @@ def push_splits(env: str, repo_id: str, data_dir: Path, do_push: bool, token: st
                     repo_id=repo_id,
                     split=split,
                     token=token,
+                    private=True,  # Ensure repo stays private
                 )
                 print(f"✓ Pushed to {repo_id} split={split}")
+                successful_splits.append(split)
             except Exception as e:
                 print(f"✗ Failed to push: {e}")
+                failed_splits.append(split)
         else:
             print(f"[DRY RUN] Would push {len(rows)} rows to {repo_id} split={split}")
+            successful_splits.append(split)
+
+    return len(failed_splits) == 0
 
 
 def main():
@@ -281,6 +349,11 @@ def main():
         action="store_true",
         help="Actually push to HuggingFace (default: dry run)",
     )
+    ap.add_argument(
+        "--force",
+        action="store_true",
+        help="Delete existing splits before pushing to avoid schema conflicts",
+    )
     args = ap.parse_args()
 
     # Validate data directory exists
@@ -301,21 +374,31 @@ def main():
             sys.exit(1)
 
     # Push splits
-    push_splits(
+    success = push_splits(
         env=args.env,
         repo_id=args.repo,
         data_dir=args.data_dir,
         do_push=args.push,
+        force=args.force,
         token=token,
     )
 
     print(f"\n{'=' * 60}")
-    if args.push:
-        print("✅ Push complete!")
-        print(f"View at: https://huggingface.co/datasets/{args.repo}")
+    if success:
+        if args.push:
+            print("✅ Push complete!")
+            print(f"View at: https://huggingface.co/datasets/{args.repo}")
+        else:
+            print("✓ Dry run complete. Use --push to actually push to HuggingFace.")
     else:
-        print("✓ Dry run complete. Use --push to actually push to HuggingFace.")
+        if args.push:
+            print("❌ Push failed! See errors above.")
+        else:
+            print("❌ Dry run failed! See errors above.")
     print(f"{'=' * 60}\n")
+
+    # Exit with error code if any operations failed
+    sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":

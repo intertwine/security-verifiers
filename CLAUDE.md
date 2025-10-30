@@ -126,10 +126,14 @@ make hf-push-all    # Push all metadata to all repos
 
 # Pydantic validators & canonical push with Features (PRIVATE repos)
 make validate-data            # Validate E1 & E2 splits with Pydantic
-make hf-e1p-push-canonical    # Push E1 canonical splits with explicit Features
-make hf-e2p-push-canonical    # Push E2 canonical splits with explicit Features
+make hf-e1p-push-canonical    # Push E1 canonical splits with explicit Features (uses --force, deletes repo!)
+make hf-e2p-push-canonical    # Push E2 canonical splits with explicit Features (uses --force, deletes repo!)
 make hf-e1p-push-canonical-dry # Dry run E1 canonical push
 make hf-e2p-push-canonical-dry # Dry run E2 canonical push
+
+# WARNING: hf-e1p-push-canonical and hf-e2p-push-canonical use --force flag
+# This DELETES AND RECREATES the entire repository to clear cached schema metadata.
+# Only use when you need to change the schema of existing splits.
 ```
 
 ### Manual equivalents (fallback)
