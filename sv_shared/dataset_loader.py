@@ -211,6 +211,7 @@ def _load_from_hub(
 
     try:
         from datasets import Features, Value, load_dataset
+        from huggingface_hub.utils import GatedRepoError, RepositoryNotFoundError
 
         # Load dataset with authentication
         dataset = load_dataset(
@@ -266,6 +267,42 @@ def _load_from_hub(
             dataset = dataset.map(map_fields)
 
         return dataset
+
+    except GatedRepoError as e:
+        raise ValueError(
+            f"Hugging Face gated dataset '{hf_repo}' requires approved access.\n\n"
+            f"To fix this:\n"
+            f"1. Visit the dataset page: https://huggingface.co/datasets/{hf_repo}\n"
+            f"2. Click 'Request access' and wait for manual approval\n"
+            f"3. Once approved, ensure HF_TOKEN is set:\n"
+            f"   - Add to .env file: HF_TOKEN=hf_your_token_here\n"
+            f"   - Or export it: export HF_TOKEN=hf_your_token_here\n"
+            f"4. Retry your command\n\n"
+            f"Alternative: Build datasets locally with 'make data-e1' or 'make data-e2-local'"
+        ) from e
+
+    except RepositoryNotFoundError as e:
+        token_set = bool(os.environ.get("HF_TOKEN"))
+        if not token_set:
+            raise ValueError(
+                f"Dataset repository '{hf_repo}' not found or requires authentication.\n\n"
+                f"To fix this:\n"
+                f"1. Verify the repository exists: https://huggingface.co/datasets/{hf_repo}\n"
+                f"2. If it's a private dataset, set HF_TOKEN:\n"
+                f"   - Add to .env file: HF_TOKEN=hf_your_token_here\n"
+                f"   - Or export it: export HF_TOKEN=hf_your_token_here\n"
+                f"3. Request access if it's a gated repository\n\n"
+                f"Alternative: Build datasets locally with 'make data-e1' or 'make data-e2-local'"
+            ) from e
+        else:
+            raise ValueError(
+                f"Dataset repository '{hf_repo}' not found.\n\n"
+                f"To fix this:\n"
+                f"1. Verify the repository exists: https://huggingface.co/datasets/{hf_repo}\n"
+                f"2. Check that your HF_TOKEN has access to this repository\n"
+                f"3. Request access if it's a gated repository\n\n"
+                f"Alternative: Build datasets locally with 'make data-e1' or 'make data-e2-local'"
+            ) from e
 
     except Exception as e:
         raise ValueError(

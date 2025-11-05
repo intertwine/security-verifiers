@@ -94,8 +94,9 @@ help:
 	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)Hub Dataset Management:$(NC)"
 	@$(ECHO) "  make hub-push-datasets    - Push datasets to your HuggingFace repositories"
-	@$(ECHO) "  make hub-test-datasets    - Test loading datasets from your HF repos"
+	@$(ECHO) "  make hub-test-datasets    - Test loading datasets from your HF repos (supports gated)"
 	@$(ECHO) "  (Requires: HF_TOKEN, E1_HF_REPO, E2_HF_REPO environment variables)"
+	@$(ECHO) "  (Tip: Enable gating on HF for contamination prevention - see user guide)"
 	@$(ECHO) "  See: docs/user-dataset-guide.md"
 	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)Data Building (Production - Private):$(NC)"
@@ -417,33 +418,27 @@ hub-push-datasets: venv
 	fi
 	@if [ -z "$$E1_HF_REPO" ]; then \
 		$(ECHO) "$(RED)Error: E1_HF_REPO not set$(NC)"; \
-		$(ECHO) "Set it in .env file or: export E1_HF_REPO=your-org/security-verifiers-e1-private"; \
+		$(ECHO) "Set it in .env file or: export E1_HF_REPO=your-org/security-verifiers-e1"; \
 		exit 1; \
 	fi
 	@if [ -z "$$E2_HF_REPO" ]; then \
 		$(ECHO) "$(RED)Error: E2_HF_REPO not set$(NC)"; \
-		$(ECHO) "Set it in .env file or: export E2_HF_REPO=your-org/security-verifiers-e2-private"; \
+		$(ECHO) "Set it in .env file or: export E2_HF_REPO=your-org/security-verifiers-e2"; \
 		exit 1; \
 	fi
 	@$(ACTIVATE) && uv run python scripts/push_user_datasets.py
 	@$(ECHO) "$(GREEN)✓ Datasets pushed to HuggingFace Hub$(NC)"
 
-# Test dataset loading from Hub
+# Test dataset loading from Hub (uses smoke test script with gated error handling)
 hub-test-datasets: venv
 	@$(ECHO) "$(YELLOW)Testing dataset loading from HuggingFace Hub...$(NC)"
-	@if [ -z "$$HF_TOKEN" ]; then \
+	@set -a && [ -f .env ] && . .env && set +a && \
+	if [ -z "$$HF_TOKEN" ]; then \
 		$(ECHO) "$(RED)Error: HF_TOKEN not set$(NC)"; \
+		$(ECHO) "Set it in .env file or: export HF_TOKEN=hf_your_token_here"; \
 		exit 1; \
-	fi
-	@$(ECHO) "$(CYAN)Testing E1 dataset loading...$(NC)"
-	@$(ACTIVATE) && uv run python -c "from sv_env_network_logs import load_environment; \
-		env = load_environment(dataset_source='hub', max_examples=10); \
-		print(f'✓ E1: Loaded {len(env.dataset)} examples')"
-	@$(ECHO) "$(CYAN)Testing E2 dataset loading...$(NC)"
-	@$(ACTIVATE) && uv run python -c "from sv_env_config_verification import load_environment; \
-		env = load_environment(dataset_source='hub', max_examples=10); \
-		print(f'✓ E2: Loaded {len(env.dataset)} examples')"
-	@$(ECHO) "$(GREEN)✓ Hub dataset loading tests passed$(NC)"
+	fi && \
+	$(ACTIVATE) && uv run python scripts/hf/smoke_hub_loading.py
 
 # Evaluate environment locally
 eval: venv

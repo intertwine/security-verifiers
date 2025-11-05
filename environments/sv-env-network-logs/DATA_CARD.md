@@ -63,8 +63,8 @@ Baselines and RLFT calibration improvements (ECE ↓, FN ↓) with small, reprod
 To prevent training contamination (models memorizing evaluation data during pre-training), production datasets are:
 
 - **NOT checked into this repository**
-- **Hosted privately on HuggingFace Hub** with gated access
-- Available for approved research use only
+- **Hosted privately on HuggingFace Hub** with **manual gated access**
+- Available for approved research use only (evaluation only, no training/fine-tuning)
 
 ### Public Metadata
 
@@ -89,11 +89,11 @@ The public metadata repo includes:
 
 **Approval criteria:**
 
-- Legitimate research or educational use
+- Legitimate research or educational use (evaluation only)
 - Understanding of contamination concerns
-- Agreement to usage terms
+- Agreement to evaluation-only usage terms (no training/fine-tuning/redistribution)
 
-We typically respond within 2-3 business days.
+We typically respond within 2-3 business days. Access requests require filling out a brief form with your affiliation, intended use, and research description.
 
 ### For Approved Researchers: Download Private Datasets
 

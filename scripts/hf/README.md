@@ -10,14 +10,14 @@ The HuggingFace Dataset Viewer requires consistent schemas across all rows in a 
 
 All metadata splits use a uniform six-column schema:
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `section` | string | Category (sampling/ood/tools/provenance/notes) |
-| `name` | string | Short identifier key |
-| `description` | string | 1-2 sentence summary |
-| `payload_json` | string | JSON-encoded structured details (minified) |
-| `version` | string | Dataset version (e.g., "v1") |
-| `created_at` | string | ISO-8601 UTC timestamp |
+| Column         | Type   | Description                                    |
+| -------------- | ------ | ---------------------------------------------- |
+| `section`      | string | Category (sampling/ood/tools/provenance/notes) |
+| `name`         | string | Short identifier key                           |
+| `description`  | string | 1-2 sentence summary                           |
+| `payload_json` | string | JSON-encoded structured details (minified)     |
+| `version`      | string | Dataset version (e.g., "v1")                   |
+| `created_at`   | string | ISO-8601 UTC timestamp                         |
 
 All structured content is JSON-encoded inside `payload_json` for stable tabular display.
 
@@ -69,25 +69,25 @@ uv run python scripts/hf/export_metadata_flat.py --env e1 --out build/hf/e1/meta
 
 ## E1 Metadata Sections
 
-| Section | Name | Description |
-|---------|------|-------------|
-| sampling | iot23-train-dev-test | IoT-23 primary dataset sampling |
-| sampling | e1-ood-datasets | OOD datasets (CIC-IDS-2017, UNSW-NB15) |
-| ood | cic-ids-2017-ood | CIC-IDS-2017 OOD details |
-| ood | unsw-nb15-ood | UNSW-NB15 OOD details |
-| provenance | dataset-sources | Original dataset sources and references |
-| notes | privacy-rationale | Training contamination prevention |
+| Section    | Name                 | Description                             |
+| ---------- | -------------------- | --------------------------------------- |
+| sampling   | iot23-train-dev-test | IoT-23 primary dataset sampling         |
+| sampling   | e1-ood-datasets      | OOD datasets (CIC-IDS-2017, UNSW-NB15)  |
+| ood        | cic-ids-2017-ood     | CIC-IDS-2017 OOD details                |
+| ood        | unsw-nb15-ood        | UNSW-NB15 OOD details                   |
+| provenance | dataset-sources      | Original dataset sources and references |
+| notes      | privacy-rationale    | Training contamination prevention       |
 
 ## E2 Metadata Sections
 
-| Section | Name | Description |
-|---------|------|-------------|
-| sampling | e2-k8s-terraform | K8s and Terraform sampling |
-| tools | tool-versions | Pinned security tool versions |
-| tools | tool-descriptions | Tool descriptions and URLs |
-| provenance | dataset-sources | Source repositories |
-| notes | privacy-rationale | Training contamination prevention |
-| notes | multi-turn-performance | Performance with/without tools |
+| Section    | Name                   | Description                       |
+| ---------- | ---------------------- | --------------------------------- |
+| sampling   | e2-k8s-terraform       | K8s and Terraform sampling        |
+| tools      | tool-versions          | Pinned security tool versions     |
+| tools      | tool-descriptions      | Tool descriptions and URLs        |
+| provenance | dataset-sources        | Source repositories               |
+| notes      | privacy-rationale      | Training contamination prevention |
+| notes      | multi-turn-performance | Performance with/without tools    |
 
 ## Example Row
 
@@ -122,6 +122,7 @@ uv run pytest tests/hf/ -v
 ### Phase 1: Build and Validate Datasets Locally
 
 1. **Build canonical datasets:**
+
    ```bash
    # E1 datasets
    make data-e1          # IoT-23 primary dataset
@@ -132,7 +133,8 @@ uv run pytest tests/hf/ -v
    make data-e2-local    # Build from cloned sources
    ```
 
-2. **Validate datasets:**
+1. **Validate datasets:**
+
    ```bash
    # Pydantic validation (schema + types)
    make validate-data
@@ -144,12 +146,14 @@ uv run pytest tests/hf/ -v
 
 ### Phase 2: Build Metadata
 
-3. **Build metadata locally:**
+1. **Build metadata locally:**
+
    ```bash
    make hf-e1-meta hf-e2-meta
    ```
 
-4. **Validate metadata output:**
+1. **Validate metadata output:**
+
    ```bash
    # Check schema consistency
    cat build/hf/e1/meta.jsonl | jq -r 'keys | sort | join(",")' | sort | uniq
@@ -163,33 +167,38 @@ uv run pytest tests/hf/ -v
 
 ### Phase 3: Push to HuggingFace
 
-5. **Set up HuggingFace token:**
+1. **Set up HuggingFace token:**
+
    ```bash
    # Add to .env (required for all HF operations)
    echo "HF_TOKEN=your_token_here" >> .env
    source .env
    ```
 
-6. **Push metadata to public repos (safe, browse-only):**
+1. **Push metadata to public repos (safe, browse-only):**
+
    ```bash
    make hf-e1-push     # → intertwine-ai/security-verifiers-e1-metadata
    make hf-e2-push     # → intertwine-ai/security-verifiers-e2-metadata
    ```
 
-7. **Push canonical splits to private repos (gated access):**
+1. **Push canonical splits to private repos (gated access):**
+
    ```bash
    make hf-e1p-push-canonical  # → intertwine-ai/security-verifiers-e1
    make hf-e2p-push-canonical  # → intertwine-ai/security-verifiers-e2
    ```
 
-8. **Or push everything at once:**
+1. **Or push everything at once:**
+
    ```bash
    make hf-push-all  # Metadata (public) + canonical (private)
    ```
 
 ### Phase 4: Verify Push
 
-9. **Verify datasets load correctly:**
+1. **Verify datasets load correctly:**
+
    ```bash
    uv run python -c "
    from datasets import load_dataset
@@ -213,6 +222,7 @@ uv run pytest tests/hf/ -v
 **Cause:** HuggingFace repos have old JSONL files or README metadata from previous push
 
 **Solution:**
+
 ```bash
 # 1. Remove old data files from HF repo (via Web UI or API)
 # 2. Update README.md to remove dataset_info section
@@ -228,6 +238,7 @@ make hf-e1p-push-canonical  # Re-push with clean state
 **Cause:** HuggingFace needs time to process uploads or README has conflicting metadata
 
 **Solution:**
+
 1. Wait 1-2 minutes for HuggingFace processing
 2. Check README.md doesn't have old `dataset_info` YAML
 3. Force reload: `load_dataset(..., download_mode='force_redownload')`
@@ -239,6 +250,7 @@ make hf-e1p-push-canonical  # Re-push with clean state
 **Cause:** Dataset build scripts have bugs or source data changed
 
 **Solution:**
+
 ```bash
 # Rebuild datasets with fixes
 make data-e1 data-e1-ood data-e2-local

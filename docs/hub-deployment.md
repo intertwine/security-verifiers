@@ -266,9 +266,100 @@ export E2_HF_REPO=your-org/security-verifiers-e2-private
 
 Now when users load environments with `dataset_source="hub"`, they'll use your repositories!
 
+### Enabling Gated Access (Recommended for Private Datasets)
+
+To maintain benchmark integrity and prevent training contamination, we recommend enabling **gated access** on your HuggingFace repositories.
+
+#### What is Gated Access?
+
+Gated datasets require manual approval before users can download them. This ensures:
+- Evaluation-only usage (no training contamination)
+- Track who accesses your datasets
+- Enforce usage terms (e.g., evaluation-only license)
+
+#### Step 1: Enable Gating on HuggingFace
+
+1. Go to your dataset repository (e.g., `https://huggingface.co/datasets/your-org/security-verifiers-e1`)
+2. Click **Settings** → **Gated access**
+3. Enable **"Require users to request access"**
+4. Choose **"Manual approval"** mode
+5. Save settings
+
+#### Step 2: Add Dataset Card with Gating YAML
+
+The repository provides ready-to-use gated dataset card templates:
+
+```bash
+# Copy gated README template to your dataset repo
+cp scripts/hf/templates/e1_readme_gated.md /path/to/your/hf/repo/README.md
+
+# Or for E2
+cp scripts/hf/templates/e2_readme_gated.md /path/to/your/hf/repo/README.md
+```
+
+These templates include:
+- **Gating YAML front-matter**: Pre-configured access request form
+- **Evaluation-only license**: Clear usage restrictions
+- **Access instructions**: How users request and use gated datasets
+- **Dataset documentation**: Complete dataset description
+
+**Key YAML fields**:
+```yaml
+gated: true
+license: other
+license_name: security-verifiers-eval-only
+extra_gated_heading: "Request access (evaluation only)"
+extra_gated_fields:
+  Affiliation: text
+  Intended use:
+    type: select
+    options: ["Evaluation-only", "Other (explain in Notes)"]
+  I agree to EVAL-ONLY license: checkbox
+```
+
+#### Step 3: Test Gated Dataset Loading
+
+The dataset loader automatically handles gated repositories with helpful error messages:
+
+```bash
+# Test loading gated datasets
+make hub-test-datasets
+
+# Or manually test
+export HF_TOKEN=your_token_here
+export E1_HF_REPO=your-org/security-verifiers-e1
+uv run python scripts/hf/smoke_hub_loading.py
+```
+
+**Expected behavior**:
+- ✅ **With approval**: Datasets load successfully
+- ❌ **Without approval**: Clear error message with instructions to request access
+
+**Example error message**:
+```
+Hugging Face gated dataset 'your-org/security-verifiers-e1' requires approved access.
+
+To fix this:
+1. Visit the dataset page: https://huggingface.co/datasets/your-org/security-verifiers-e1
+2. Click 'Request access' and wait for manual approval
+3. Once approved, ensure HF_TOKEN is set:
+   - Add to .env file: HF_TOKEN=hf_your_token_here
+   - Or export it: export HF_TOKEN=hf_your_token_here
+4. Retry your command
+```
+
+#### Step 4: Managing Access Requests
+
+As the repository owner, you'll receive access requests via email. To approve:
+
+1. Go to your dataset **Settings** → **Access requests**
+2. Review request details (affiliation, intended use)
+3. Approve or deny based on evaluation-only terms
+4. Optionally add notes or conditions
+
 ### Using Datasets from the Hub
 
-Once datasets are pushed to HuggingFace:
+Once datasets are pushed to HuggingFace (with or without gating):
 
 ```python
 import os
@@ -276,15 +367,21 @@ import verifiers as vf
 
 # Set HF_TOKEN and custom repo
 os.environ["HF_TOKEN"] = "your_token_here"
-os.environ["E1_HF_REPO"] = "your-org/security-verifiers-e1-private"
+os.environ["E1_HF_REPO"] = "your-org/security-verifiers-e1"
 
-# Load from Hub
+# Load from Hub (works with gated datasets if you have access)
 env = vf.load_environment(
     "sv-env-network-logs",
     dataset_source="hub",
     max_examples=100
 )
 ```
+
+**For users without gated access**, the error message will guide them to:
+1. Request access on the dataset page
+2. Wait for approval
+3. Set HF_TOKEN once approved
+4. Retry loading
 
 ## Building and Deploying Environments
 

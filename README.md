@@ -102,7 +102,8 @@ make hub-test-datasets
 To protect evaluation integrity, production datasets are:
 
 - **NOT included in this repository**
-- **Hosted privately on HuggingFace Hub** with gated access
+- **Hosted privately on HuggingFace Hub** with **manual gated access**
+- Require **access approval** for evaluation-only use (no training/fine-tuning)
 - Only **demo fixtures** (5 small samples) are committed for quick testing
 - **Test fixtures** are generated on-demand for CI
 
@@ -206,7 +207,7 @@ Datasets are written to `environments/sv-env-{name}/data/` with reproducibility 
 
 The evaluation scripts support both OpenAI models and 200+ non-OpenAI models via [OpenRouter](https://openrouter.ai):
 
-- **OpenAI models** (gpt-*, o1-*): Use `OPENAI_API_KEY`
+- **OpenAI models** (gpt-_, o1-_): Use `OPENAI_API_KEY`
 - **Non-OpenAI models** (qwen-2.5-7b, llama-3.1-8b, claude-3.5-sonnet, etc.): Use `OPENROUTER_API_KEY`
   - **Auto-discovery**: Model names are automatically resolved using OpenRouter's live model list
   - **Fuzzy matching**: Shorthand names like `qwen3-14b` automatically map to `qwen/qwen3-14b`
@@ -254,6 +255,7 @@ Artifacts: `outputs/evals/sv-env-config-verification--{model}/<run_id>/{metadata
 **Dataset Selection:**
 
 Both E1 and E2 require locally-built datasets and track which dataset was used in `metadata.json`:
+
 - **E1**: Local `.jsonl` files built with `make data-e1` (relative to `env/data/` or absolute paths)
   - `iot23-train-dev-test-v1.jsonl` (N=1800, default)
   - `cic-ids-2017-ood-v1.jsonl` (N=600, OOD)
@@ -274,6 +276,7 @@ The evaluation scripts use [scripts/model_router.py](scripts/model_router.py) fo
 4. **Future-proof**: New OpenRouter models work automatically without code changes
 
 **Examples:**
+
 - `qwen3-14b` → `qwen/qwen3-14b` (auto-discovered from API)
 - `llama-3.1-8b` → `meta-llama/llama-3.1-8b-instruct` (hardcoded fallback)
 - `qwen/qwen3-14b` → `qwen/qwen3-14b` (full paths work as-is)
@@ -388,13 +391,13 @@ uv run pre-commit run --all-files
 
 ## Environment Specifications
 
-| Environment                  | Type                  | Reward Focus                                   | Key Innovation                            |
-| ---------------------------- | --------------------- | ---------------------------------------------- | ----------------------------------------- |
-| `sv-env-network-logs`        | SingleTurnEnv         | Calibration, abstention, asymmetric costs      | Operational SOC metrics over raw accuracy |
-| `sv-env-phishing-detection`  | SingleTurnEnv         | Evidence-seeking, FN penalties                 | URL heuristics with structured evidence   |
-| `sv-env-config-verification` | ToolEnv               | Machine-verified fixes with patch verification | OPA/Rego/KubeLinter/Semgrep ground truth  |
-| `sv-env-code-vulnerability`  | ToolEnv               | Test-passing, minimal diffs                    | Executable verification loop              |
-| `sv-env-redteam-attack`      | MultiTurnEnv          | Unsafe elicitation success                     | Llama Guard 3 safety scoring              |
+| Environment                  | Type                  | Reward Focus                                   | Key Innovation                                   |
+| ---------------------------- | --------------------- | ---------------------------------------------- | ------------------------------------------------ |
+| `sv-env-network-logs`        | SingleTurnEnv         | Calibration, abstention, asymmetric costs      | Operational SOC metrics over raw accuracy        |
+| `sv-env-phishing-detection`  | SingleTurnEnv         | Evidence-seeking, FN penalties                 | URL heuristics with structured evidence          |
+| `sv-env-config-verification` | ToolEnv               | Machine-verified fixes with patch verification | OPA/Rego/KubeLinter/Semgrep ground truth         |
+| `sv-env-code-vulnerability`  | ToolEnv               | Test-passing, minimal diffs                    | Executable verification loop                     |
+| `sv-env-redteam-attack`      | MultiTurnEnv          | Unsafe elicitation success                     | Llama Guard 3 safety scoring                     |
 | `sv-env-redteam-defense`     | SingleTurnEnv (alpha) | Helpful/harmless balance                       | Synthetic refusal curriculum & safety heuristics |
 
 ## Shared Toolbox

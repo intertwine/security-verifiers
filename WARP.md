@@ -118,20 +118,33 @@ uv run python -m build --wheel environments/sv-env-network-logs
   - cp .env.example .env
   - set -a && source .env && set +a
 - Common vars:
-  - OPENAI_API_KEY (required for OpenAI models: gpt-*, o1-*)
+  - OPENAI_API_KEY (required for OpenAI models: gpt-_, o1-_)
   - OPENROUTER_API_KEY (required for non-OpenAI models: qwen-2.5-7b, llama-3.1-8b, claude-3.5-sonnet, etc.)
-    - Get your key at: https://openrouter.ai/keys
+    - Get your key at: <https://openrouter.ai/keys>
     - Supports 200+ models with unified API
-  - HF_TOKEN (optional for dataset downloads; required for HF metadata pushes)
+  - HF_TOKEN (required for gated dataset access and HF push operations)
+  - E1_HF_REPO, E2_HF_REPO (optional, default: intertwine-ai/security-verifiers-e1, intertwine-ai/security-verifiers-e2)
   - WANDB_API_KEY (required for Weave logging)
   - MAX_CONSECUTIVE_ERRORS (optional, default: 3; set to 0 to disable early stopping)
 - The export_metadata_flat.py and push_canonical_with_features.py scripts automatically load HF_TOKEN from .env using python-dotenv
+
+### Gated Datasets
+
+E1 and E2 datasets are hosted on HuggingFace with **manual gated access** to prevent training contamination:
+
+- Private repos require access approval for evaluation-only use
+- Dataset loader (sv_shared/dataset_loader.py) automatically handles gated access with actionable error messages
+- Users without access see clear instructions to request approval and set HF_TOKEN
+- Multi-tier loading: local → hub (with HF_TOKEN) → synthetic fallback
+- Gated README templates available in scripts/hf/templates/ for user deployments
+- See docs/GATED_DATASETS_IMPLEMENTATION.md for complete implementation details
 
 ## Logging Architecture
 
 Security Verifiers uses a dual-mode logging system:
 
 1. **Primary: Weave Auto-tracing** (enabled by default)
+
    - Automatically traces all Verifiers operations when `weave_init` is imported before `verifiers`
    - Provides comprehensive tracing with zero code changes
    - Configure via environment variables:
@@ -202,6 +215,10 @@ Security Verifiers uses a dual-mode logging system:
 - PRD.md - environment specifications and reward contracts
 - EXECUTIVE_SUMMARY.md - suite-level intent and shared toolbox
 - docs/logging-guide.md - comprehensive logging documentation with examples
+- docs/hub-deployment.md - complete Hub deployment guide with gated dataset setup
+- docs/user-dataset-guide.md - build and push datasets to your own HF repos
+- docs/GATED_DATASETS_IMPLEMENTATION.md - gated datasets implementation details
+- docs/DATASET_EVAL_ONLY_LICENSE.md - evaluation-only license for datasets
 - CLAUDE.md - Claude Code-specific guidance (mirrors this file)
 - WARP.md - this file
 - .github/workflows/ci.yml - CI steps

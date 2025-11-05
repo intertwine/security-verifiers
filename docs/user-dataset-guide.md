@@ -298,7 +298,86 @@ Pushing E1 (Network Logs) datasets...
 
 3. **Preview data** in the Dataset Viewer (may take a few minutes to load)
 
-### Step 7: Test Loading from HuggingFace
+### Step 7: Enable Gated Access (Recommended)
+
+To maintain benchmark integrity and prevent training contamination, enable **gated access** on your HuggingFace repositories.
+
+#### Why Use Gated Access?
+
+- ✅ **Prevents training contamination**: Ensures datasets are evaluation-only
+- ✅ **Track access**: Know who is using your datasets
+- ✅ **Enforce terms**: Require users to agree to evaluation-only license
+- ✅ **Manual approval**: Review each access request
+
+#### How to Enable Gating
+
+1. **Go to your E1 repository settings**:
+   - Visit `https://huggingface.co/datasets/your-org/security-verifiers-e1-private`
+   - Click **Settings** → **Gated access**
+   - Enable **"Require users to request access"**
+   - Choose **"Manual approval"** mode
+   - Save settings
+
+2. **Repeat for E2 repository**:
+   - Visit `https://huggingface.co/datasets/your-org/security-verifiers-e2-private`
+   - Follow same steps
+
+3. **Add gated dataset card** (pre-made templates available):
+   ```bash
+   # Clone your HF repo locally (if not already cloned)
+   git clone https://huggingface.co/datasets/your-org/security-verifiers-e1-private
+
+   # Copy gated README template
+   cp scripts/hf/templates/e1_readme_gated.md security-verifiers-e1-private/README.md
+
+   # Commit and push
+   cd security-verifiers-e1-private
+   git add README.md
+   git commit -m "Add gated access configuration and eval-only license"
+   git push
+
+   # Repeat for E2
+   git clone https://huggingface.co/datasets/your-org/security-verifiers-e2-private
+   cp scripts/hf/templates/e2_readme_gated.md security-verifiers-e2-private/README.md
+   cd security-verifiers-e2-private
+   git add README.md
+   git commit -m "Add gated access configuration and eval-only license"
+   git push
+   ```
+
+4. **Dataset card includes**:
+   - Gating YAML configuration (request form)
+   - Evaluation-only license terms
+   - Access instructions for users
+   - Dataset documentation
+
+5. **Managing access requests**:
+   - You'll receive email notifications for new requests
+   - Review requests at **Settings** → **Access requests**
+   - Approve/deny based on evaluation-only usage
+   - Users will see clear error messages if not approved
+
+#### What Users See Without Access
+
+When users try to load your gated dataset without approval, they'll see:
+
+```
+Hugging Face gated dataset 'your-org/security-verifiers-e1' requires approved access.
+
+To fix this:
+1. Visit the dataset page: https://huggingface.co/datasets/your-org/security-verifiers-e1
+2. Click 'Request access' and wait for manual approval
+3. Once approved, ensure HF_TOKEN is set:
+   - Add to .env file: HF_TOKEN=hf_your_token_here
+   - Or export it: export HF_TOKEN=hf_your_token_here
+4. Retry your command
+
+Alternative: Build datasets locally with 'make data-e1' or 'make data-e2-local'
+```
+
+This provides clear guidance for requesting access while maintaining control over who uses your datasets.
+
+### Step 8: Test Loading from HuggingFace
 
 Create a test script:
 
