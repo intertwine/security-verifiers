@@ -317,7 +317,16 @@ class RolloutLogger:
         """Return locally buffered events matching ``predicate``."""
 
         with self._lock:
-            return [event for event in self._events if predicate(event)]
+            matching_events: list[RolloutLoggingState] = []
+            for event in self._events:
+                try:
+                    if predicate(event):
+                        matching_events.append(event)
+                except Exception:
+                    # Predicates should not crash queries; skip invalid events
+                    continue
+
+            return matching_events
 
     def find_reward_dips(self, threshold: float) -> list[RolloutLoggingState]:
         """Return all logged steps where reward fell below ``threshold``."""

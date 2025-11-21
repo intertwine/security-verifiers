@@ -2,12 +2,14 @@
 """Tests for E1 Pydantic validator."""
 
 import subprocess
+from pathlib import Path
 
 import pytest
 
 
 def test_e1_validator_runs():
     """Test that E1 validator runs successfully on canonical data."""
+    data_dir = Path("environments/sv-env-network-logs/data")
     p = subprocess.run(
         [
             "uv",
@@ -15,7 +17,7 @@ def test_e1_validator_runs():
             "python",
             "scripts/data/validate_splits_e1.py",
             "--dir",
-            "environments/sv-env-network-logs/data",
+            str(data_dir),
         ],
         capture_output=True,
         text=True,
@@ -25,7 +27,9 @@ def test_e1_validator_runs():
     assert p.returncode == 0, f"Validator failed:\nstdout: {p.stdout}\nstderr: {p.stderr}"
 
     # Check output contains expected files
-    assert "iot23-train-dev-test-v1.jsonl" in p.stdout
+    expected_files = sorted(f.name for f in data_dir.glob("*.jsonl"))
+    for filename in expected_files:
+        assert filename in p.stdout
     assert "BAD=0" in p.stdout, "Should have no validation errors"
 
 
