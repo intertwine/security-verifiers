@@ -19,6 +19,15 @@ wheels = [
 ]
 
 [[package]]
+name = "aiofiles"
+version = "25.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/41/c3/534eac40372d8ee36ef40df62ec129bee4fdb5ad9706e58a29be53b2c970/aiofiles-25.1.0.tar.gz", hash = "sha256:a8d728f0a29de45dc521f18f07297428d56992a742f0cd2701ba86e44d23d5b2", size = 46354, upload-time = "2025-10-09T20:51:04.358Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bc/8a/340a1555ae33d7354dbca4faa54948d76d89a27ceef032c8c3bc661d003e/aiofiles-25.1.0-py3-none-any.whl", hash = "sha256:abe311e527c862958650f9438e859c1fa7568a141b22abcd015e120e86a85695", size = 14668, upload-time = "2025-10-09T20:51:03.174Z" },
+]
+
+[[package]]
 name = "aiohappyeyeballs"
 version = "2.6.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1046,7 +1055,7 @@ wheels = [
 
 [[package]]
 name = "openai"
-version = "1.102.0"
+version = "2.8.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
@@ -1058,14 +1067,14 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/07/55/da5598ed5c6bdd9939633854049cddc5cbac0da938dfcfcb3c6b119c16c0/openai-1.102.0.tar.gz", hash = "sha256:2e0153bcd64a6523071e90211cbfca1f2bbc5ceedd0993ba932a5869f93b7fc9", size = 519027, upload-time = "2025-08-26T20:50:29.397Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d5/e4/42591e356f1d53c568418dc7e30dcda7be31dd5a4d570bca22acb0525862/openai-2.8.1.tar.gz", hash = "sha256:cb1b79eef6e809f6da326a7ef6038719e35aa944c42d081807bfa1be8060f15f", size = 602490, upload-time = "2025-11-17T22:39:59.549Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bd/0d/c9e7016d82c53c5b5e23e2bad36daebb8921ed44f69c0a985c6529a35106/openai-1.102.0-py3-none-any.whl", hash = "sha256:d751a7e95e222b5325306362ad02a7aa96e1fab3ed05b5888ce1c7ca63451345", size = 812015, upload-time = "2025-08-26T20:50:27.219Z" },
+    { url = "https://files.pythonhosted.org/packages/55/4f/dbc0c124c40cb390508a82770fb9f6e3ed162560181a85089191a851c59a/openai-2.8.1-py3-none-any.whl", hash = "sha256:c6c3b5a04994734386e8dad3c00a393f56d3b68a27cd2e8acae91a59e4122463", size = 1022688, upload-time = "2025-11-17T22:39:57.675Z" },
 ]
 
 [[package]]
 name = "openai-agents"
-version = "0.2.10"
+version = "0.4.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "griffe" },
@@ -1076,9 +1085,9 @@ dependencies = [
     { name = "types-requests" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2f/8e/99a7ad15bdd48610d2e738aecdcba9bdcca7b60b4a4f8006577e76f651b6/openai_agents-0.2.10.tar.gz", hash = "sha256:8741890b5b5f1513589aebc571776b9a17158a01f6df55ab6402668d2a204a4d", size = 1671208, upload-time = "2025-08-29T14:08:32.274Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2d/8e/71fd262046587a5b2b097aec6ce677f7bb23c81b3129da31942b7a0d0b26/openai_agents-0.4.2.tar.gz", hash = "sha256:281caff839b3ab2cf3bc52110abe93caca004985c41bf07de8e60d03c4a7528e", size = 1925615, upload-time = "2025-10-24T21:46:34.119Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bb/1d/95930498ea971834f808242fb00a5574796c29adf93afb8444a6ec970a73/openai_agents-0.2.10-py3-none-any.whl", hash = "sha256:70618881d190265beefb5dac5ffd7bb99e2bed5907440e468ce03257d8994bf5", size = 178904, upload-time = "2025-08-29T14:08:30.796Z" },
+    { url = "https://files.pythonhosted.org/packages/2c/2e/23dbd9099555a9c7081c2819d00b7e1ee6ddbbd2fba8032f0ca4ddff778f/openai_agents-0.4.2-py3-none-any.whl", hash = "sha256:89fda02002dc0ac90ae177bb2f381a78b73aae329753bffb9276cfbdbfd20dc3", size = 216402, upload-time = "2025-10-24T21:46:32.065Z" },
 ]
 
 [[package]]
@@ -1250,6 +1259,19 @@ wheels = [
 ]
 
 [[package]]
+name = "prime-sandboxes"
+version = "0.2.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiofiles" },
+    { name = "httpx" },
+    { name = "pydantic" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/50/e4c75ab9c4ddc6aa64e7282a50e002a78d1c0901c412c543b397f1db0678/prime_sandboxes-0.2.4-py3-none-any.whl", hash = "sha256:763ba4fa0573567596324ec2518897e5eabcc28c25ffd2f48176a6c4757f42d0", size = 16928, upload-time = "2025-11-13T01:33:55.113Z" },
+]
+
+[[package]]
 name = "propcache"
 version = "0.3.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1361,7 +1383,7 @@ wheels = [
 
 [[package]]
 name = "pydantic"
-version = "2.11.7"
+version = "2.11.10"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-types" },
@@ -1369,9 +1391,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "typing-inspection" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/00/dd/4325abf92c39ba8623b5af936ddb36ffcfe0beae70405d456ab1fb2f5b8c/pydantic-2.11.7.tar.gz", hash = "sha256:d989c3c6cb79469287b1569f7447a17848c998458d49ebe294e975b9baf0f0db", size = 788350, upload-time = "2025-06-14T08:33:17.137Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ae/54/ecab642b3bed45f7d5f59b38443dcb36ef50f85af192e6ece103dbfe9587/pydantic-2.11.10.tar.gz", hash = "sha256:dc280f0982fbda6c38fada4e476dc0a4f3aeaf9c6ad4c28df68a666ec3c61423", size = 788494, upload-time = "2025-10-04T10:40:41.338Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6a/c0/ec2b1c8712ca690e5d61979dee872603e92b8a32f94cc1b72d53beab008a/pydantic-2.11.7-py3-none-any.whl", hash = "sha256:dde5df002701f6de26248661f6835bbe296a47bf73990135c7d07ce741b9623b", size = 444782, upload-time = "2025-06-14T08:33:14.905Z" },
+    { url = "https://files.pythonhosted.org/packages/bd/1f/73c53fcbfb0b5a78f91176df41945ca466e71e9d9d836e5c522abda39ee7/pydantic-2.11.10-py3-none-any.whl", hash = "sha256:802a655709d49bd004c31e865ef37da30b540786a46bfce02333e0e24b5fe29a", size = 444823, upload-time = "2025-10-04T10:40:39.055Z" },
 ]
 
 [[package]]
@@ -1780,7 +1802,7 @@ wheels = [
 
 [[package]]
 name = "security-verifiers-utils"
-version = "0.1.2"
+version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "datasets" },
@@ -1789,7 +1811,7 @@ dependencies = [
     { name = "weave" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/db/79/788fd2a2fe4fb8e4f9417d17e185fde8cb00a3db287e34d5a6bb9011d474/security_verifiers_utils-0.1.2-py3-none-any.whl", hash = "sha256:70d70f2476848badcaf39a1ee737cb9244b54e9d7185f22172966734f123f60c", size = 14914, upload-time = "2025-10-30T02:51:56.393Z" },
+    { url = "https://files.pythonhosted.org/packages/96/24/3ea5f8a903188a08502c8e23dc01c78c1cb8428f8278ecda2c2bdebc7924/security_verifiers_utils-0.2.1-py3-none-any.whl", hash = "sha256:14fad3a3e549350281daa28edcc9b4c5e3f312bfc91fa67c6dd543290d72764e", size = 15555, upload-time = "2025-11-05T03:52:14.402Z" },
 ]
 
 [[package]]
@@ -1886,7 +1908,7 @@ wheels = [
 
 [[package]]
 name = "sv-env-redteam-attack"
-version = "0.1.2"
+version = "0.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "datasets" },
@@ -1908,9 +1930,9 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12.11" },
-    { name = "security-verifiers-utils", specifier = ">=0.1.2" },
+    { name = "security-verifiers-utils", specifier = ">=0.2.1" },
     { name = "transformers", specifier = ">=4.30.0" },
-    { name = "verifiers", specifier = ">=0.1.4" },
+    { name = "verifiers", specifier = ">=0.1.6.post0" },
 ]
 provides-extras = ["dev"]
 
@@ -2072,7 +2094,7 @@ wheels = [
 
 [[package]]
 name = "verifiers"
-version = "0.1.4"
+version = "0.1.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "datasets" },
@@ -2080,14 +2102,16 @@ dependencies = [
     { name = "nest-asyncio" },
     { name = "openai" },
     { name = "openai-agents" },
+    { name = "prime-sandboxes" },
     { name = "pydantic" },
     { name = "requests" },
     { name = "rich" },
     { name = "textual" },
+    { name = "wget" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/91/3e/5aa99c90f6f642ca270111003c63c82b7145e6888a145346d2317ee53e0c/verifiers-0.1.4.tar.gz", hash = "sha256:4e843368c34ffa154fc6343bd0d38a51e48962f278fbe97cce4e3532aabac88c", size = 112825, upload-time = "2025-09-22T06:39:56.664Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/73/4a/53b626c858b7f2344b3cae43cd29362296993b258fe65261a96e094ef890/verifiers-0.1.8.tar.gz", hash = "sha256:936ab4438ae7899eba2efc99f11f96d8a2e55aa9214a5a87d9b8c755075dd9f5", size = 116991, upload-time = "2025-11-19T23:15:16.547Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6c/6f/5ce86ea075ce1a8c46ca863c49942c667474512e6e5631bc13a7ce1e3969/verifiers-0.1.4-py3-none-any.whl", hash = "sha256:1d12e9ae93dbe28d8e97ae12980098404f3fa791a8d06ef13bee8fef6e04faae", size = 102773, upload-time = "2025-09-22T06:39:55.508Z" },
+    { url = "https://files.pythonhosted.org/packages/c2/cb/cdebaa7d368b1f6619f0544fa22b27f0e06e23fb71b4801966ed0001479b/verifiers-0.1.8-py3-none-any.whl", hash = "sha256:0349612c13216a80f9b72dece54ac8dbc6e506a2945fe58b2df766588958573f", size = 106819, upload-time = "2025-11-19T23:15:15.283Z" },
 ]
 
 [[package]]
@@ -2141,6 +2165,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/5c/25/d92f2df41fbadc82c
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2f/26/947895c54838481876bfc3b91e9514218e29b86e3d52a005d542d47fc738/weave-0.52.11-py3-none-any.whl", hash = "sha256:3fbcde407deab4b420401e0f43debeb6f06eb21c645f2a2e869781afc7b4065f", size = 732624, upload-time = "2025-10-23T01:25:06.933Z" },
 ]
+
+[[package]]
+name = "wget"
+version = "3.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/6a/62e288da7bcda82b935ff0c6cfe542970f04e29c756b0e147251b2fb251f/wget-3.2.zip", hash = "sha256:35e630eca2aa50ce998b9b1a127bb26b30dfee573702782aa982f875e3f16061", size = 10857, upload-time = "2015-10-22T15:26:37.51Z" }
 
 [[package]]
 name = "xxhash"

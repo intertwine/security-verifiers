@@ -1755,7 +1755,7 @@ wheels = [
 
 [[package]]
 name = "security-verifiers-utils"
-version = "0.2.0"
+version = "0.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "datasets" },
@@ -1764,7 +1764,7 @@ dependencies = [
     { name = "weave" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3f/61/a5323ea630c11ab89124ea72b6661c495d4f16bb8995fe27564aeb77c502/security_verifiers_utils-0.2.0-py3-none-any.whl", hash = "sha256:290cc05991fd7538e0179303213e8741ccbb7384bd0d51bff652c4126b5a746a", size = 15174, upload-time = "2025-10-30T04:32:58.297Z" },
+    { url = "https://files.pythonhosted.org/packages/96/24/3ea5f8a903188a08502c8e23dc01c78c1cb8428f8278ecda2c2bdebc7924/security_verifiers_utils-0.2.1-py3-none-any.whl", hash = "sha256:14fad3a3e549350281daa28edcc9b4c5e3f312bfc91fa67c6dd543290d72764e", size = 15555, upload-time = "2025-11-05T03:52:14.402Z" },
 ]
 
 [[package]]
@@ -1861,7 +1861,7 @@ wheels = [
 
 [[package]]
 name = "sv-env-config-verification"
-version = "0.2.7"
+version = "0.2.8"
 source = { editable = "." }
 dependencies = [
     { name = "configparser" },
@@ -1888,7 +1888,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pyyaml", specifier = ">=6.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12.11" },
-    { name = "security-verifiers-utils", specifier = ">=0.2.0" },
+    { name = "security-verifiers-utils", specifier = ">=0.2.1" },
     { name = "verifiers", specifier = ">=0.1.6.post0" },
 ]
 provides-extras = ["dev"]
