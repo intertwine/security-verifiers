@@ -58,8 +58,6 @@ def patched_backends(monkeypatch):
 
     yield weave_module, weave_calls, wandb_module, wandb_calls
 
-    monkeypatch.setattr("importlib", "import_module", original_import)
-
 
 def test_rollout_logger_streams_payloads(patched_backends):
     """The logger initialises both backends and forwards rollout events."""

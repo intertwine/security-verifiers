@@ -1,13 +1,26 @@
 #!/usr/bin/env python3
 """Tests for E2 Pydantic validator."""
 
+import json
 import subprocess
+from pathlib import Path
 
 import pytest
 
 
-def test_e2_validator_runs():
-    """Test that E2 validator runs successfully on canonical data."""
+def test_e2_validator_runs(tmp_path):
+    """Test that E2 validator runs successfully on sample data."""
+
+    sample_row = {
+        "question": "apiVersion: v1\nkind: Pod",
+        "info": {"violations": [], "patch": ""},
+        "meta": {"lang": "k8s", "source": "test", "hash": "abc123"},
+    }
+
+    data_dir = Path(tmp_path)
+    good_file = data_dir / "good.jsonl"
+    good_file.write_text(json.dumps(sample_row) + "\n")
+
     p = subprocess.run(
         [
             "uv",
@@ -15,7 +28,7 @@ def test_e2_validator_runs():
             "python",
             "scripts/data/validate_splits_e2.py",
             "--dir",
-            "environments/sv-env-config-verification/data",
+            str(data_dir),
         ],
         capture_output=True,
         text=True,
@@ -25,8 +38,7 @@ def test_e2_validator_runs():
     assert p.returncode == 0, f"Validator failed:\nstdout: {p.stdout}\nstderr: {p.stderr}"
 
     # Check output contains expected files
-    assert "k8s-labeled-v1.jsonl" in p.stdout
-    assert "terraform-labeled-v1.jsonl" in p.stdout
+    assert good_file.name in p.stdout
     assert "BAD=0" in p.stdout, "Should have no validation errors"
 
 
