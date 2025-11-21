@@ -822,7 +822,7 @@ quick-check:
 	@$(MAKE) check
 
 # CI/CD targets
-ci: venv
+ci: install install-dev
 	@$(ECHO) "$(YELLOW)Running CI checks...$(NC)"
 	@$(ACTIVATE) && uv run ruff check . --exit-non-zero-on-fix
 	@$(ACTIVATE) && uv run pytest -q --tb=short
