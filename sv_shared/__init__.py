@@ -31,6 +31,7 @@ def initialize_weave_if_enabled() -> bool:
 
     return _initialize_weave_if_enabled()
 
+
 __all__ = [
     "JsonClassificationParser",
     "reward_accuracy",
