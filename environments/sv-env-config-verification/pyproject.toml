@@ -42,8 +42,18 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build]
 include = [
-  "sv_env_config_verification",
-  "sv_env_config_verification_test.py",
+  "*.py",
+  "adapters/**",
+  "baselines/**",
+  "ci/**",
+  "data/**",
+  "dataset/**",
+  "docker/**",
+  "policies/**",
+  "README.md",
+  "README-DEV.md",
+  "DATA_CARD.md",
+  "uv.lock",
 ]
 
 [tool.pytest.ini_options]

@@ -221,12 +221,14 @@ def reward_config_auditing(
             with tempfile.NamedTemporaryFile("w", delete=False) as tmp:
                 tmp.write(new_text)
                 tmp_path = tmp.name
-            if fixture_type == "k8s":
-                post_findings = kubelinter_lint([tmp_path])
-            else:
-                post_findings = semgrep_scan([tmp_path])
-            post = normalize_findings(post_findings)
-            Path(tmp_path).unlink(missing_ok=True)
+            try:
+                if fixture_type == "k8s":
+                    post_findings = kubelinter_lint([tmp_path])
+                else:
+                    post_findings = semgrep_scan([tmp_path])
+                post = normalize_findings(post_findings)
+            finally:
+                Path(tmp_path).unlink(missing_ok=True)
 
     return final_reward(violations_pred, oracle, post_patch=post)
 

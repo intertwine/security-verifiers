@@ -54,7 +54,12 @@ class TestGetResponseText:
 
     def test_none_input(self) -> None:
         """Test converting None to string."""
-        assert get_response_text(None) == "None"
+        assert get_response_text(None) == ""
+
+    def test_message_with_none_content(self) -> None:
+        """Test extracting text when content is explicitly None."""
+        messages = [{"role": "assistant", "content": None}]
+        assert get_response_text(messages) == ""
 
     def test_dict_input_not_in_list(self) -> None:
         """Test converting dict (not in list) to string."""
@@ -91,6 +96,14 @@ class TestGetResponseText:
             {"role": "assistant", "content": "Dict content"},
         ]
         assert get_response_text(messages) == "Dict content"
+
+    def test_list_with_non_dict_tail(self) -> None:
+        """Test list where last item is not a dict."""
+        messages = [
+            {"role": "assistant", "content": "Dict content"},
+            123,
+        ]
+        assert get_response_text(messages) == "123"
 
 
 if __name__ == "__main__":

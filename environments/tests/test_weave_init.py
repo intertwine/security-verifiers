@@ -17,6 +17,7 @@ def test_weave_init_enabled_by_default(monkeypatch):
 
     # Mock weave module
     mock_weave = MagicMock()
+    mock_weave.get_client.return_value = None
     with patch.dict("sys.modules", {"weave": mock_weave}):
         # Re-import to trigger initialization
         from sv_shared.weave_init import initialize_weave_if_enabled
@@ -33,6 +34,7 @@ def test_weave_init_disabled_via_env(monkeypatch):
     monkeypatch.setenv("WEAVE_DISABLED", "true")
 
     mock_weave = MagicMock()
+    mock_weave.get_client.return_value = None
     with patch.dict("sys.modules", {"weave": mock_weave}):
         from sv_shared.weave_init import initialize_weave_if_enabled
 
@@ -48,6 +50,7 @@ def test_weave_auto_init_can_be_disabled(monkeypatch):
     monkeypatch.setenv("WEAVE_AUTO_INIT", "false")
 
     mock_weave = MagicMock()
+    mock_weave.get_client.return_value = None
     with patch.dict("sys.modules", {"weave": mock_weave}):
         from sv_shared.weave_init import initialize_weave_if_enabled
 
@@ -63,6 +66,7 @@ def test_weave_project_name_from_env(monkeypatch):
     monkeypatch.setenv("WEAVE_PROJECT", "custom-project")
 
     mock_weave = MagicMock()
+    mock_weave.get_client.return_value = None
     with patch.dict("sys.modules", {"weave": mock_weave}):
         from sv_shared.weave_init import initialize_weave_if_enabled
 
@@ -92,6 +96,7 @@ def test_weave_init_is_idempotent(monkeypatch):
     monkeypatch.setattr("sv_shared.weave_init._INITIALIZED", False)
 
     mock_weave = MagicMock()
+    mock_weave.get_client.return_value = None
     with patch.dict("sys.modules", {"weave": mock_weave}):
         from sv_shared.weave_init import initialize_weave_if_enabled
 
@@ -112,6 +117,7 @@ def test_weave_init_handles_initialization_errors(monkeypatch):
     monkeypatch.setattr("sv_shared.weave_init._INITIALIZED", False)
 
     mock_weave = MagicMock()
+    mock_weave.get_client.return_value = None
     mock_weave.init.side_effect = Exception("Connection error")
 
     with patch.dict("sys.modules", {"weave": mock_weave}):
