@@ -64,6 +64,7 @@ coverage.xml
 .vscode/
 .idea/
 .ropeproject/
+.claude/settings.local.json
 
 # macOS
 .DS_Store
