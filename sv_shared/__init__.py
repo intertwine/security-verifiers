@@ -23,7 +23,13 @@ from .rollout_logging import (
     build_rollout_logger,
 )
 from .utils import get_response_text
-from .weave_init import initialize_weave_if_enabled
+
+
+def initialize_weave_if_enabled() -> bool:
+    """Initialize Weave lazily to avoid import-time side effects."""
+    from .weave_init import initialize_weave_if_enabled as _initialize_weave_if_enabled
+
+    return _initialize_weave_if_enabled()
 
 __all__ = [
     "JsonClassificationParser",

@@ -13,9 +13,17 @@ def get_response_text(completion: Any) -> str:
     string for reward functions and parsers.
     """
 
+    if completion is None:
+        return ""
     if isinstance(completion, list):
-        return completion[-1].get("content", "") if completion else ""
-    return str(completion)
+        if not completion:
+            return ""
+        last = completion[-1]
+        if isinstance(last, dict):
+            content = last.get("content")
+            return "" if content is None else str(content)
+        return "" if last is None else str(last)
+    return "" if completion is None else str(completion)
 
 
 __all__ = ["get_response_text"]

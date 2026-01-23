@@ -43,23 +43,72 @@ def apply_patch_to_text(original: str, patch: str) -> str:
         return file_path.read_text(encoding="utf-8")
 
 
-def apply_json_patch(obj: dict, patch_ops: list[dict]) -> dict:
+def apply_json_patch(obj: dict, patch_ops: list[dict]) -> object:
     """Apply a minimal subset of RFC6902 JSON Patch operations."""
 
-    data = copy.deepcopy(obj)
+    def _parse_index(token: str, allow_append: bool = False) -> int | str:
+        if allow_append and token == "-":
+            return token
+        if token.isdigit():
+            return int(token)
+        raise PatchError(f"invalid array index '{token}'")
+
+    data: dict | list = copy.deepcopy(obj)
     for op in patch_ops:
         path = op.get("path", "")
         tokens = [t for t in path.strip("/").split("/") if t]
-        parent = data
-        for t in tokens[:-1]:
-            parent = parent.setdefault(t, {})
-        key = tokens[-1] if tokens else None
-        if op.get("op") in {"add", "replace"}:
-            parent[key] = op.get("value")
-        elif op.get("op") == "remove":
-            parent.pop(key, None)
-        else:  # pragma: no cover - simple set
+        if not tokens:
+            if op.get("op") in {"add", "replace"}:
+                data = op.get("value")
+                continue
+            if op.get("op") == "remove":
+                data = {}
+                continue
             raise PatchError(f"unsupported op {op.get('op')}")
+
+        parent: dict | list = data
+        for t in tokens[:-1]:
+            if isinstance(parent, dict):
+                if t not in parent or parent[t] is None:
+                    parent[t] = {}
+                parent = parent[t]
+            elif isinstance(parent, list):
+                idx = _parse_index(t)
+                if not isinstance(idx, int) or idx >= len(parent):
+                    raise PatchError(f"array index out of range: {t}")
+                parent = parent[idx]
+            else:
+                raise PatchError(f"unsupported container at path segment '{t}'")
+
+        key = tokens[-1]
+        if isinstance(parent, dict):
+            if op.get("op") in {"add", "replace"}:
+                parent[key] = op.get("value")
+            elif op.get("op") == "remove":
+                parent.pop(key, None)
+            else:  # pragma: no cover - simple set
+                raise PatchError(f"unsupported op {op.get('op')}")
+        elif isinstance(parent, list):
+            idx = _parse_index(key, allow_append=op.get("op") == "add")
+            if op.get("op") == "add":
+                if idx == "-":
+                    parent.append(op.get("value"))
+                elif isinstance(idx, int):
+                    if idx > len(parent):
+                        raise PatchError(f"array index out of range: {key}")
+                    parent.insert(idx, op.get("value"))
+            elif op.get("op") == "replace":
+                if not isinstance(idx, int) or idx >= len(parent):
+                    raise PatchError(f"array index out of range: {key}")
+                parent[idx] = op.get("value")
+            elif op.get("op") == "remove":
+                if not isinstance(idx, int) or idx >= len(parent):
+                    raise PatchError(f"array index out of range: {key}")
+                parent.pop(idx)
+            else:  # pragma: no cover - simple set
+                raise PatchError(f"unsupported op {op.get('op')}")
+        else:
+            raise PatchError("unsupported parent container")
     return data
 
 

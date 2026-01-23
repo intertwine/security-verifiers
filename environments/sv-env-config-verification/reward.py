@@ -14,7 +14,7 @@ def score_detection(pred: List[Violation], oracle: List[Violation]) -> Tuple[flo
 
     o_ids = {v.id: SEV_WEIGHT[v.severity] for v in oracle}
     p_ids = {v.id: SEV_WEIGHT[v.severity] for v in pred}
-    tp = sum(SEV_WEIGHT[v.severity] for v in pred if v.id in o_ids)
+    tp = sum(o_ids[v.id] for v in pred if v.id in o_ids)
     fp = sum(SEV_WEIGHT[v.severity] for v in pred if v.id not in o_ids)
     fn = sum(w for vid, w in o_ids.items() if vid not in p_ids)
     precision = tp / (tp + fp) if tp + fp else 0.0

@@ -42,23 +42,31 @@ def initialize_weave_if_enabled() -> bool:
     """
     global _INITIALIZED
 
-    # Check if already initialized
     if _INITIALIZED:
         return True
 
-    # Check if Weave is disabled
     if os.environ.get("WEAVE_DISABLED", "false").lower() == "true":
         _LOGGER.debug("Weave is disabled via WEAVE_DISABLED environment variable")
         return False
 
-    # Check if auto-init is enabled (default: true)
-    auto_init = os.environ.get("WEAVE_AUTO_INIT", "true").lower() == "true"
-    if not auto_init:
-        _LOGGER.debug("Weave auto-initialization is disabled via WEAVE_AUTO_INIT")
-        return False
-
     try:
         import weave
+
+        try:
+            existing_client = weave.get_client()
+        except Exception:  # pragma: no cover - defensive
+            existing_client = None
+
+        if existing_client is not None:
+            _INITIALIZED = True
+            _LOGGER.debug("Weave already initialized externally; skipping auto-init")
+            return True
+
+        # Check if auto-init is enabled (default: true)
+        auto_init = os.environ.get("WEAVE_AUTO_INIT", "true").lower() == "true"
+        if not auto_init:
+            _LOGGER.debug("Weave auto-initialization is disabled via WEAVE_AUTO_INIT")
+            return False
 
         # Get project name from environment or use default
         project_name = os.environ.get("WEAVE_PROJECT", "security-verifiers")

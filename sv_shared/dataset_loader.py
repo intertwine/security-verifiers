@@ -241,13 +241,10 @@ def _load_from_hub(
             old_features = dataset.features
             # Handle both old schema (prompt) and new schema (question)
             question_field = "question" if "question" in old_features else "prompt"
-            new_features = Features(
-                {
-                    question_field: old_features[question_field],
-                    "answer": Value("string"),  # Change from ClassLabel to string
-                    "meta": old_features["meta"],
-                }
-            )
+            new_features_dict = dict(old_features)
+            new_features_dict[question_field] = old_features[question_field]
+            new_features_dict["answer"] = Value("string")  # Change from ClassLabel to string
+            new_features = Features(new_features_dict)
 
             # Map with updated features to prevent re-casting
             dataset = dataset.map(

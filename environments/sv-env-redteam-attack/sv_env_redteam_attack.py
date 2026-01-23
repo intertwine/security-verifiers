@@ -682,7 +682,6 @@ def load_environment(
         ],
         weights=[1.0, 0.25],
         parser=parser,
-        parallelize_scoring=False,
     )
 
     env = RedTeamAttackEnv(
