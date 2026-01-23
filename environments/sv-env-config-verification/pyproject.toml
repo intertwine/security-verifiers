@@ -15,11 +15,11 @@ tags = [
   "train",
   "eval",
 ]
-version = "0.2.8"
+version = "0.2.9"
 requires-python = ">=3.12"
 dependencies = [
   "verifiers>=0.1.9",
-  "security-verifiers-utils>=0.2.1",  # v0.2.1+ works with verifiers>=0.1.9
+  "security-verifiers-utils>=0.2.2",  # v0.2.2 requires verifiers>=0.1.9
   "datasets>=2.0.0",
   "pandas>=2.0.0",
   "pyyaml>=6.0.0",
