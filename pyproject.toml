@@ -10,7 +10,7 @@ requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2",
     "python-dotenv>=1.1.1",
-    "verifiers>=0.1.6.post0",
+    "verifiers>=0.1.9",
     "wandb>=0.22.2",
     "weave>=0.52.10",
 ]
