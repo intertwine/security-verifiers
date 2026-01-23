@@ -69,8 +69,10 @@ def apply_json_patch(obj: dict, patch_ops: list[dict]) -> object:
         parent: dict | list = data
         for t in tokens[:-1]:
             if isinstance(parent, dict):
-                if t not in parent or parent[t] is None:
+                if t not in parent:
                     parent[t] = {}
+                elif parent[t] is None:
+                    raise PatchError(f"cannot traverse null value at path segment '{t}'")
                 parent = parent[t]
             elif isinstance(parent, list):
                 idx = _parse_index(t)
