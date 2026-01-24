@@ -32,6 +32,7 @@ from pydantic import BaseModel, ConfigDict
 from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
     DatasetSource,
     RolloutLogger,
+    extract_json_from_markdown,
     get_response_text,
     load_dataset_with_fallback,
 )
@@ -156,10 +157,18 @@ class ConfigVerificationParser(vf.Parser):
 
     def parse_answer(self, completion: Any) -> Dict[str, Any]:
         text = get_response_text(completion)
+        # Try raw JSON first, then extract from markdown code blocks
         try:
             data = json.loads(text)
+        except json.JSONDecodeError:
+            extracted = extract_json_from_markdown(text)
+            try:
+                data = json.loads(extracted)
+            except json.JSONDecodeError:
+                return {}
+        try:
             violations, patch, confidence = parse_model_output(data)
-        except (json.JSONDecodeError, ValueError):  # pragma: no cover - defensive
+        except ValueError:  # pragma: no cover - defensive
             return {}
         return {
             "violations": [v.__dict__ for v in violations],
@@ -170,10 +179,18 @@ class ConfigVerificationParser(vf.Parser):
     def get_format_reward_func(self):  # pragma: no cover - simple
         def format_reward(completion, answer="", **kwargs):  # pylint: disable=unused-argument
             text = get_response_text(completion)
+            # Try raw JSON first, then extract from markdown code blocks
             try:
                 data = json.loads(text)
+            except json.JSONDecodeError:
+                extracted = extract_json_from_markdown(text)
+                try:
+                    data = json.loads(extracted)
+                except json.JSONDecodeError:
+                    return 0.0
+            try:
                 parse_model_output(data)
-            except (json.JSONDecodeError, ValueError):
+            except ValueError:
                 return 0.0
             return 1.0
 
@@ -193,10 +210,18 @@ def reward_config_auditing(
     """
 
     text = get_response_text(completion)
+    # Try raw JSON first, then extract from markdown code blocks
     try:
         data = json.loads(text)
+    except json.JSONDecodeError:
+        extracted = extract_json_from_markdown(text)
+        try:
+            data = json.loads(extracted)
+        except json.JSONDecodeError:
+            return 0.0
+    try:
         violations_pred, patch, _ = parse_model_output(data)
-    except (json.JSONDecodeError, ValueError, KeyError):
+    except (ValueError, KeyError):
         return 0.0
 
     # Normalize answer to a dict
@@ -268,16 +293,22 @@ def _create_builtin_fixtures() -> Dataset:
 def _convert_e2_format(example: Dict[str, Any]) -> Dict[str, Any]:
     """Convert E2 build format to environment format.
 
-    Build format: {"prompt": "<config>", "info": {...}, "meta": {...}}
-    Env format: {"question": "<config>", "answer": "<json-string>"}
+    Supported input formats:
+        - Build format: {"prompt": "<config>", "info": {...}, "meta": {...}}
+        - Hub format: {"question": "<config>", "info": {...}, "meta": {...}}
+        - Env format: {"question": "<config>", "answer": "<json-string>"}
+
+    Output format: {"question": "<config>", "answer": "<json-string>"}
     """
     if "question" in example and "answer" in example:
         # Already in correct format
         return example
 
-    # Convert from build format
+    # Convert from build/hub format (has "info" instead of "answer")
+    # Hub format uses "question", build format uses "prompt"
+    question = example.get("question") or example.get("prompt", "")
     return {
-        "question": example.get("prompt", ""),
+        "question": question,
         "answer": json.dumps(example.get("info", {})),
     }
 

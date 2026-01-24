@@ -12,21 +12,45 @@ Calculates metrics across all eval runs:
 
 import argparse
 import json
+import sys
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+# Add repo root to path for sv_shared imports when running as script
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+
+from sv_shared.parsers import extract_json_from_markdown  # noqa: E402
+
 
 def parse_completion(completion: str) -> tuple[str | None, float | None]:
-    """Extract label and confidence from completion JSON."""
+    """Extract label and confidence from completion JSON.
+
+    Handles both raw JSON and markdown-wrapped JSON (```json ... ```).
+    """
+    # Try raw JSON first
     try:
         data = json.loads(completion)
         label = data.get("label", "").lower()
         confidence = data.get("confidence", 0.0)
         return label, confidence
     except (json.JSONDecodeError, AttributeError):
-        return None, None
+        pass
+
+    # Try extracting from markdown code blocks
+    extracted = extract_json_from_markdown(completion)
+    if extracted != completion:
+        try:
+            data = json.loads(extracted)
+            label = data.get("label", "").lower()
+            confidence = data.get("confidence", 0.0)
+            return label, confidence
+        except (json.JSONDecodeError, AttributeError):
+            pass
+
+    return None, None
 
 
 def calculate_ece(predictions: list[tuple[str, str, float]], n_bins: int = 10) -> float:
@@ -232,27 +256,30 @@ def main():
         args.output = Path(f"outputs/evals/report-network-logs-{timestamp}.json")
 
     # Find all run directories
+    # Note: OpenRouter models use org/model naming (e.g., qwen/qwen-2.5-7b-instruct)
+    # which creates nested directories, so we use recursive glob to find all metadata.json
     if args.run_ids:
-        # Use specified run IDs
+        # Use specified run IDs - search recursively for matching run_id directories
         run_dirs = []
         for pattern in ["sv-env-network-logs--*"]:
             for model_dir in args.eval_dir.glob(pattern):
-                if not model_dir.is_dir():
+                if not model_dir.is_dir() or model_dir.name == "archived":
                     continue
-                for run_id in args.run_ids:
-                    run_dir = model_dir / run_id
-                    if run_dir.exists():
+                # Search recursively for run_id directories containing metadata.json
+                for metadata_file in model_dir.rglob("metadata.json"):
+                    run_dir = metadata_file.parent
+                    if run_dir.name in args.run_ids:
                         run_dirs.append(run_dir)
     else:
-        # Find all non-archived runs
+        # Find all non-archived runs - search recursively for metadata.json
         run_dirs = []
         for pattern in ["sv-env-network-logs--*"]:
             for model_dir in args.eval_dir.glob(pattern):
-                if model_dir.name == "archived" or not model_dir.is_dir():
+                if not model_dir.is_dir() or model_dir.name == "archived":
                     continue
-                for run_dir in model_dir.iterdir():
-                    if run_dir.is_dir() and (run_dir / "metadata.json").exists():
-                        run_dirs.append(run_dir)
+                # Find all metadata.json files recursively
+                for metadata_file in model_dir.rglob("metadata.json"):
+                    run_dirs.append(metadata_file.parent)
 
     # Analyze each run
     results = []

@@ -168,6 +168,8 @@ def main():
         args.output = Path(f"outputs/evals/report-config-verification-{timestamp}.json")
 
     # Find all run directories
+    # NOTE: OpenRouter models create nested directories (e.g., sv-env-*--qwen/qwen-2.5-7b-instruct/{run_id}/)
+    # so we use recursive glob to find all metadata.json files at any depth
     if args.run_ids:
         # Use specified run IDs
         run_dirs = []
@@ -175,19 +177,22 @@ def main():
             for model_dir in args.eval_dir.glob(pattern):
                 if not model_dir.is_dir():
                     continue
-                for run_id in args.run_ids:
-                    run_dir = model_dir / run_id
-                    if run_dir.exists():
+                # Search recursively for run_id directories containing metadata.json
+                for metadata_file in model_dir.rglob("metadata.json"):
+                    run_dir = metadata_file.parent
+                    if run_dir.name in args.run_ids:
                         run_dirs.append(run_dir)
     else:
-        # Find all non-archived runs
+        # Find all non-archived runs using recursive search
         run_dirs = []
         for pattern in ["sv-env-config-verification--*"]:
             for model_dir in args.eval_dir.glob(pattern):
                 if model_dir.name == "archived" or not model_dir.is_dir():
                     continue
-                for run_dir in model_dir.iterdir():
-                    if run_dir.is_dir() and (run_dir / "metadata.json").exists():
+                # Search recursively for all metadata.json files
+                for metadata_file in model_dir.rglob("metadata.json"):
+                    run_dir = metadata_file.parent
+                    if "archived" not in str(run_dir):
                         run_dirs.append(run_dir)
 
     # Analyze each run

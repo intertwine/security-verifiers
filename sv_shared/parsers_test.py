@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from sv_shared.parsers import JsonClassificationParser
+from sv_shared.parsers import JsonClassificationParser, extract_json_from_markdown
 
 
 class TestJsonClassificationParser:
@@ -126,6 +126,91 @@ class TestJsonClassificationParser:
         completion = []
         assert parser.parse_answer(completion) == ""
         assert parser.parse_confidence(completion) == pytest.approx(0.0)
+
+    def test_parse_answer_markdown_code_block_with_json_tag(self, parser: JsonClassificationParser) -> None:
+        """Test parsing JSON wrapped in ```json code block."""
+        completion = '```json\n{"label": "Malicious", "confidence": 0.85}\n```'
+        assert parser.parse_answer(completion) == "Malicious"
+        assert parser.parse_confidence(completion) == pytest.approx(0.85)
+
+    def test_parse_answer_markdown_code_block_without_tag(self, parser: JsonClassificationParser) -> None:
+        """Test parsing JSON wrapped in ``` code block (no language tag)."""
+        completion = '```\n{"label": "Benign", "confidence": 0.9}\n```'
+        assert parser.parse_answer(completion) == "Benign"
+        assert parser.parse_confidence(completion) == pytest.approx(0.9)
+
+    def test_parse_answer_markdown_with_rationale(self, parser: JsonClassificationParser) -> None:
+        """Test parsing markdown-wrapped JSON with rationale (like gpt-4o-mini output)."""
+        completion = """```json
+{
+  "label": "Abstain",
+  "confidence": 0.5,
+  "rationale": "The log entry indicates a TCP SYN packet which is typically used to initiate a connection."
+}
+```"""
+        assert parser.parse_answer(completion) == "Abstain"
+        assert parser.parse_confidence(completion) == pytest.approx(0.5)
+
+    def test_format_reward_markdown_code_block(self, parser: JsonClassificationParser) -> None:
+        """Test format reward accepts markdown-wrapped JSON."""
+        fmt = parser.get_format_reward_func()
+        completion = '```json\n{"label": "Malicious", "confidence": 0.9}\n```'
+        assert fmt(completion) == 1.0
+
+    def test_raw_json_still_works(self, parser: JsonClassificationParser) -> None:
+        """Test that raw JSON (without markdown) still parses correctly."""
+        completion = '{"label": "Benign", "confidence": 0.75}'
+        assert parser.parse_answer(completion) == "Benign"
+        assert parser.parse_confidence(completion) == pytest.approx(0.75)
+        fmt = parser.get_format_reward_func()
+        assert fmt(completion) == 1.0
+
+
+class TestExtractJsonFromMarkdown:
+    """Tests for extract_json_from_markdown helper."""
+
+    def test_extracts_json_with_language_tag(self) -> None:
+        """Test extraction from ```json block."""
+        text = '```json\n{"key": "value"}\n```'
+        assert extract_json_from_markdown(text) == '{"key": "value"}'
+
+    def test_extracts_json_without_language_tag(self) -> None:
+        """Test extraction from ``` block (no language)."""
+        text = '```\n{"key": "value"}\n```'
+        assert extract_json_from_markdown(text) == '{"key": "value"}'
+
+    def test_returns_original_if_no_code_block(self) -> None:
+        """Test that text without code block is returned unchanged."""
+        text = '{"key": "value"}'
+        assert extract_json_from_markdown(text) == '{"key": "value"}'
+
+    def test_handles_multiline_json(self) -> None:
+        """Test extraction of multiline JSON."""
+        text = """```json
+{
+  "label": "Malicious",
+  "confidence": 0.9,
+  "rationale": "Test"
+}
+```"""
+        result = extract_json_from_markdown(text)
+        assert '"label": "Malicious"' in result
+        assert '"confidence": 0.9' in result
+
+    def test_handles_text_before_code_block(self) -> None:
+        """Test extraction when there's text before the code block."""
+        text = 'Here is my analysis:\n```json\n{"label": "Benign"}\n```'
+        assert extract_json_from_markdown(text) == '{"label": "Benign"}'
+
+    def test_handles_text_after_code_block(self) -> None:
+        """Test extraction when there's text after the code block."""
+        text = '```json\n{"label": "Benign"}\n```\nThis is my reasoning.'
+        assert extract_json_from_markdown(text) == '{"label": "Benign"}'
+
+    def test_case_insensitive_json_tag(self) -> None:
+        """Test that JSON tag is case-insensitive."""
+        text = '```JSON\n{"label": "Benign"}\n```'
+        assert extract_json_from_markdown(text) == '{"label": "Benign"}'
 
 
 if __name__ == "__main__":

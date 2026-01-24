@@ -97,8 +97,17 @@ make report-config-verification RUN_IDS="run_abc123"
 ```
 outputs/evals/sv-env-{name}--{model}/{run_id}/
 ├── metadata.json    # Run config, versions, git SHA
-└── results.jsonl    # Per-example results
+├── results.jsonl    # Per-example results
+└── summary.json     # Aggregated metrics (auto-generated)
 ```
+
+**Note**: OpenRouter models create nested directories:
+```
+outputs/evals/sv-env-network-logs--qwen/qwen-2.5-7b-instruct/{run_id}/
+outputs/evals/sv-env-network-logs--meta-llama/llama-3.1-8b-instruct/{run_id}/
+```
+
+The report scripts use recursive glob to find all runs regardless of nesting depth.
 
 ### Key E1 Metrics (network-logs)
 
@@ -144,3 +153,35 @@ make report-network-logs
 **Rate limits**: Reduce N or use MAX_CONSECUTIVE_ERRORS.
 **Missing API key**: Check `.env` has correct key for model provider.
 **Model not found**: Use full OpenRouter path (e.g., `openai/gpt-5-mini`).
+
+### FormatSuccess% = 0%
+
+If a model shows 0% format success, common causes:
+
+1. **Markdown code blocks**: Many models (gpt-4o-mini, qwen, llama) wrap JSON in ` ```json...``` ` blocks. The parsers handle this automatically via `extract_json_from_markdown()` in `sv_shared/parsers.py`.
+
+2. **Model outputs prose instead of JSON**: Some models explain what they would do rather than returning the required JSON format. This is model behavior, not a parsing bug. Check `results.jsonl` completions.
+
+3. **Empty prompts**: If `prompt` field in results.jsonl is empty, the dataset loading may have failed. Check that:
+   - Hub datasets have correct schema (`question` field)
+   - Local JSONL files exist in `environments/sv-env-*/data/`
+   - `HF_TOKEN` is set for Hub access
+
+### Investigating Failed Runs
+
+```bash
+# Check a specific result file
+cat outputs/evals/sv-env-*--{model}/{run_id}/results.jsonl | head -1 | python -m json.tool
+
+# Look for empty prompts (indicates dataset loading issue)
+grep '"prompt": ""' outputs/evals/sv-env-*--{model}/{run_id}/results.jsonl
+
+# Check completion format
+cat outputs/evals/sv-env-*--{model}/{run_id}/results.jsonl | python -c "
+import json, sys
+for line in sys.stdin:
+    r = json.loads(line)
+    print(f'Index {r[\"index\"]}: format_reward={r[\"rewards\"][\"format_reward\"]}')
+    print(f'  completion: {repr(r[\"completion\"][:100])}...')
+"
+```

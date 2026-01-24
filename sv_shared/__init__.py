@@ -9,7 +9,7 @@ from .dataset_loader import (
     DatasetSource,
     load_dataset_with_fallback,
 )
-from .parsers import JsonClassificationParser
+from .parsers import JsonClassificationParser, extract_json_from_markdown
 from .rewards import (
     reward_accuracy,
     reward_asymmetric_cost,
@@ -34,6 +34,7 @@ def initialize_weave_if_enabled() -> bool:
 
 __all__ = [
     "JsonClassificationParser",
+    "extract_json_from_markdown",
     "reward_accuracy",
     "reward_calibration",
     "reward_asymmetric_cost",

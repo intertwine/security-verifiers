@@ -117,36 +117,59 @@ make validate-data
 
 ## Dataset Schema
 
+> **Note:** Examples below show schema structure only. Actual benchmark data is gated to prevent training contamination. See `plans/ROADMAP-Q1-2026.md` for benchmark integrity policy.
+
 ### E1 Schema (network-logs)
 
+Hub/local JSONL format:
 ```json
 {
-  "id": "unique-id",
-  "log_entry": "192.168.1.1 - GET /api/users ...",
-  "label": "malicious",
-  "attack_type": "botnet",
-  "source": "iot23",
-  "split": "train"
+  "question": "<network log entry - content gated>",
+  "answer": "Benign|Malicious",
+  "meta": {
+    "source": "<dataset source>",
+    "scenario": "<capture scenario>",
+    "attack_family": "<attack type if malicious>",
+    "hash": "<content hash>",
+    "split": "train|dev|test"
+  }
 }
 ```
 
 ### E2 Schema (config-verification)
 
+Hub/local JSONL format:
 ```json
 {
-  "id": "unique-id",
-  "config_content": "apiVersion: v1\nkind: Pod...",
-  "config_type": "kubernetes",
-  "violations": [
-    {
-      "rule_id": "no-latest-tag",
-      "severity": "high",
-      "message": "Image uses :latest tag"
-    }
-  ],
-  "split": "train"
+  "question": "<k8s/terraform config - content gated>",
+  "info": {
+    "violations": [
+      {
+        "tool": "kube-linter|semgrep|opa",
+        "rule_id": "<rule identifier>",
+        "severity": "low|medium|high",
+        "msg": "<violation message>",
+        "loc": "<file:line if available>"
+      }
+    ],
+    "patch": "<optional unified diff>"
+  },
+  "meta": {
+    "lang": "k8s|terraform",
+    "source": "<source repository>",
+    "hash": "<content hash>"
+  }
 }
 ```
+
+### Schema Conversion
+
+When datasets are loaded, the environment converts them to internal format:
+
+- **E1**: `question` → prompt, `answer` → expected label
+- **E2**: `question` → prompt, `info` → `answer` (JSON string with oracle violations)
+
+The conversion happens in `_convert_e2_format()` in `sv_env_config_verification.py`.
 
 ## Dataset Locations
 

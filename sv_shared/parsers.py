@@ -3,12 +3,35 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from typing import Any, Iterable
 
 import verifiers as vf
 
 from .utils import get_response_text
+
+
+def extract_json_from_markdown(text: str) -> str:
+    """Extract JSON content from markdown code blocks.
+
+    Handles formats like:
+        ```json
+        {"key": "value"}
+        ```
+
+        ```
+        {"key": "value"}
+        ```
+
+    Returns the extracted JSON string, or the original text if no code block found.
+    """
+    # Pattern matches ```json or ``` followed by content and closing ```
+    pattern = r"```(?:json)?\s*\n?(.*?)\n?```"
+    match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return text
 
 
 @dataclass
@@ -28,12 +51,25 @@ class JsonClassificationParser(vf.Parser):
 
     def _parse_json(self, completion: Any) -> dict[str, Any]:
         text = get_response_text(completion)
+
+        # Try raw text first (for models that output clean JSON)
         try:
             data = json.loads(text)
             if isinstance(data, dict):
                 return data
         except (json.JSONDecodeError, TypeError):
             pass
+
+        # Try extracting from markdown code blocks (for models like gpt-4o-mini)
+        extracted = extract_json_from_markdown(text)
+        if extracted != text:  # Only retry if extraction changed something
+            try:
+                data = json.loads(extracted)
+                if isinstance(data, dict):
+                    return data
+            except (json.JSONDecodeError, TypeError):
+                pass
+
         return {}
 
     def parse_answer(self, completion: Any) -> str:
@@ -73,4 +109,4 @@ class JsonClassificationParser(vf.Parser):
         return format_reward
 
 
-__all__ = ["JsonClassificationParser"]
+__all__ = ["JsonClassificationParser", "extract_json_from_markdown"]
