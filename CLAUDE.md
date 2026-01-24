@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 
 ## Project focus
 
-A composable suite of six security/alignment RL environments using Prime Intellect's Verifiers with executable, programmatic rewards. See EXECUTIVE_SUMMARY.md and PRD.md for specifications. Current status: E1 and E2 are production-ready; E3-E6 are WIP.
+A composable suite of six security/alignment RL environments using Prime Intellect's Verifiers with executable, programmatic rewards. Current status: E1 and E2 are production-ready; E3-E6 are WIP. See plans/ROADMAP-Q1-2026.md for current priorities.
 
 ## Quick commands (Makefile-backed)
 
@@ -342,14 +342,12 @@ Security Verifiers uses a dual-mode logging system:
 
 ## References
 
-- README.md - repo overview and reproducible evals
-- PRD.md - environment specifications and reward contracts
-- EXECUTIVE_SUMMARY.md - suite-level intent and shared toolbox
-- docs/logging-guide.md - comprehensive logging documentation with examples
-- docs/hub-deployment.md - complete Hub deployment guide with gated dataset setup
-- docs/user-dataset-guide.md - build and push datasets to your own HF repos
-- docs/GATED_DATASETS_IMPLEMENTATION.md - gated datasets implementation details
-- docs/DATASET_EVAL_ONLY_LICENSE.md - evaluation-only license for datasets
+- README.md - repo overview and quick start
+- plans/ROADMAP-Q1-2026.md - current development priorities and work packages
+- docs/getting-started.md - installation and first evaluation
+- docs/development.md - contributing, testing, CI
+- docs/hub-deployment.md - deploy to Prime Intellect Hub
+- docs/datasets.md - dataset access and management
+- docs/logging.md - Weave tracing configuration
 - CLAUDE.md - this file
-- WARP.md - Warp-specific commands (mirrors this guidance)
 - .github/workflows/ci.yml - CI steps
