@@ -19,7 +19,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import subprocess
 import sys
 import time
 import uuid
@@ -31,7 +30,11 @@ sys.path.insert(0, str(REPO_ROOT))
 os.environ.setdefault("PYTHONPATH", str(REPO_ROOT))
 
 # Import eval utilities (must be before environment imports to avoid circular deps)
-from eval_utils import EarlyStopError, ErrorTracker  # noqa: E402
+from eval_utils import (  # noqa: E402
+    EarlyStopError,
+    ErrorTracker,
+    build_base_metadata,
+)
 from generate_e1_eval_report import analyze_run  # noqa: E402
 from model_router import get_client_for_model  # noqa: E402
 
@@ -53,34 +56,6 @@ from sv_shared import (  # noqa: E402
 )  # type: ignore
 
 # OpenAI client is imported in model_router.py
-
-
-# pylint: disable=broad-exception-caught
-def _which(cmd: str) -> str | None:
-    try:
-        res = subprocess.run(
-            ["bash", "-lc", f"command -v {cmd}"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        return res.stdout.strip() or None
-    except Exception:
-        return None
-
-
-def _git_commit() -> str | None:
-    try:
-        res = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True,
-            text=True,
-            check=False,
-            cwd=str(REPO_ROOT),
-        )
-        return res.stdout.strip() or None
-    except Exception:
-        return None
 
 
 def ensure_dir(path: Path) -> None:
@@ -124,6 +99,12 @@ def main() -> None:
         help="Stop evaluation after this many consecutive errors (default: 3). "
         "Set to 0 to disable early stopping.",
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Random seed for reproducibility (default: None, non-deterministic)",
+    )
     args = parser.parse_args()
 
     models = parse_models(args.models)
@@ -158,18 +139,26 @@ def main() -> None:
         meta_path = run_dir / "metadata.json"
         results_path = run_dir / "results.jsonl"
 
-        metadata: Dict[str, Any] = {
-            "environment": "sv-env-network-logs",
-            "model": model,
-            "effective_model": effective_model,  # Track the actual model name used (e.g., OpenRouter path)
-            "dataset": args.dataset,
-            "timestamp": ts,
-            "num_examples": len(dataset),
-            "temperature": args.temperature,
-            "max_tokens": args.max_tokens,
-            "max_consecutive_errors": args.max_consecutive_errors,
-            "git_commit": _git_commit(),
-        }
+        # Resolve dataset path for revision hash
+        env_root = REPO_ROOT / "environments" / "sv-env-network-logs"
+        dataset_path = env_root / "data" / args.dataset
+        if not dataset_path.exists():
+            dataset_path = Path(args.dataset)  # Try absolute path
+
+        metadata = build_base_metadata(
+            environment="sv-env-network-logs",
+            model=model,
+            effective_model=effective_model,
+            dataset=args.dataset,
+            timestamp=ts,
+            num_examples=len(dataset),
+            repo_root=REPO_ROOT,
+            dataset_path=dataset_path if dataset_path.exists() else None,
+            seed=args.seed,
+            temperature=args.temperature,
+            max_tokens=args.max_tokens,
+            max_consecutive_errors=args.max_consecutive_errors,
+        )
         meta_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
         # Initialize error tracker for early stopping

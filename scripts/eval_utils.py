@@ -3,10 +3,158 @@
 Shared utilities for evaluation scripts.
 
 Provides common functionality like early failure detection to prevent
-costly runs with misconfigured models or API keys.
+costly runs with misconfigured models or API keys, and metadata generation
+for reproducibility.
 """
 
 from __future__ import annotations
+
+import hashlib
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
+
+
+def get_git_commit(repo_root: Path | None = None) -> str | None:
+    """Get current git commit hash (short form)."""
+    try:
+        cwd = str(repo_root) if repo_root else None
+        res = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=False,
+            cwd=cwd,
+        )
+        return res.stdout.strip() or None
+    except Exception:
+        return None
+
+
+def get_python_version() -> str:
+    """Get Python version string."""
+    return f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+
+
+def get_package_version(package_name: str) -> str | None:
+    """Get installed package version."""
+    try:
+        from importlib.metadata import version
+
+        return version(package_name)
+    except Exception:
+        return None
+
+
+def get_verifiers_version() -> str | None:
+    """Get verifiers library version."""
+    return get_package_version("verifiers")
+
+
+def get_env_version(env_name: str) -> str | None:
+    """Get environment package version."""
+    # Try hyphenated name first (package name), then underscored (import name)
+    version = get_package_version(env_name)
+    if version is None:
+        version = get_package_version(env_name.replace("-", "_"))
+    if version is None:
+        version = get_package_version(env_name.replace("_", "-"))
+    return version
+
+
+def get_dataset_revision(dataset_path: Path) -> str | None:
+    """
+    Get dataset revision as SHA256 hash of file content.
+
+    For large files, hashes first 1MB + last 1MB + file size for speed.
+    """
+    if not dataset_path.exists():
+        return None
+
+    try:
+        file_size = dataset_path.stat().st_size
+        # For small files (< 10MB), hash entire content
+        if file_size < 10 * 1024 * 1024:
+            content = dataset_path.read_bytes()
+            return f"sha256:{hashlib.sha256(content).hexdigest()[:16]}"
+
+        # For large files, hash first 1MB + last 1MB + size
+        hasher = hashlib.sha256()
+        with open(dataset_path, "rb") as f:
+            hasher.update(f.read(1024 * 1024))  # First 1MB
+            f.seek(-1024 * 1024, 2)  # Last 1MB
+            hasher.update(f.read())
+            hasher.update(str(file_size).encode())
+        return f"sha256:{hasher.hexdigest()[:16]}"
+    except Exception:
+        return None
+
+
+def get_tool_version(cmd: str, args: list[str]) -> str | None:
+    """Get version of a CLI tool."""
+    try:
+        res = subprocess.run([cmd, *args], capture_output=True, text=True, check=False)
+        return (res.stdout or res.stderr).strip() or None
+    except Exception:
+        return None
+
+
+def build_base_metadata(
+    environment: str,
+    model: str,
+    effective_model: str,
+    dataset: str,
+    timestamp: str,
+    num_examples: int,
+    repo_root: Path | None = None,
+    dataset_path: Path | None = None,
+    seed: int | None = None,
+    **extra_fields: Any,
+) -> dict[str, Any]:
+    """
+    Build base metadata dict with all required fields for benchmark integrity.
+
+    Args:
+        environment: Environment name (e.g., "sv-env-network-logs")
+        model: Requested model name
+        effective_model: Actual model name used (may differ for OpenRouter)
+        dataset: Dataset name/identifier
+        timestamp: ISO timestamp
+        num_examples: Number of examples in evaluation
+        repo_root: Repository root for git commit lookup
+        dataset_path: Path to dataset file for revision hash
+        seed: Random seed for reproducibility (None if not used)
+        **extra_fields: Additional metadata fields
+
+    Returns:
+        Metadata dict with all required fields
+    """
+    # Extract env short name for version lookup
+    env_short = environment.replace("sv-env-", "")
+    env_package = f"sv-env-{env_short}"
+
+    metadata: dict[str, Any] = {
+        "environment": environment,
+        "env_version": get_env_version(env_package),
+        "model": model,
+        "effective_model": effective_model,
+        "dataset": dataset,
+        "dataset_revision": get_dataset_revision(dataset_path) if dataset_path else None,
+        "timestamp": timestamp,
+        "num_examples": num_examples,
+        "git_commit": get_git_commit(repo_root),
+        "python_version": get_python_version(),
+        "verifiers_version": get_verifiers_version(),
+    }
+
+    if seed is not None:
+        metadata["seed"] = seed
+
+    # Add any extra fields
+    metadata.update(extra_fields)
+
+    return metadata
 
 
 class EarlyStopError(Exception):

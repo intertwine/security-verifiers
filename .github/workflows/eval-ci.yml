@@ -1,0 +1,187 @@
+name: Evaluation CI
+
+# Run on manual trigger or when eval scripts change
+on:
+  workflow_dispatch:
+    inputs:
+      num_examples:
+        description: 'Number of examples to evaluate'
+        required: false
+        default: '2'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/eval_*.py'
+      - 'environments/sv-env-network-logs/**'
+      - 'environments/sv-env-config-verification/**'
+      - 'sv_shared/**'
+
+# Only run if API key is available (set in repo secrets)
+env:
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+jobs:
+  eval-integrity:
+    runs-on: ubuntu-latest
+    # Skip if no API key (forks won't have secrets)
+    if: github.event_name == 'workflow_dispatch' || github.repository == 'intertwine/security-verifiers'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install security tools (E2 dependencies)
+        run: |
+          source environments/sv-env-config-verification/ci/versions.txt
+
+          # Install kube-linter
+          echo "Installing kube-linter v${KUBELINTER_VERSION}..."
+          curl -sL -o kube-linter.tar.gz https://github.com/stackrox/kube-linter/releases/download/v${KUBELINTER_VERSION}/kube-linter-linux.tar.gz
+          tar -xzf kube-linter.tar.gz
+          sudo mv kube-linter /usr/local/bin/
+
+          # Install OPA
+          echo "Installing OPA v${OPA_VERSION}..."
+          curl -sL -o opa https://openpolicyagent.org/downloads/v${OPA_VERSION}/opa_linux_amd64_static
+          sudo mv opa /usr/local/bin/opa
+          sudo chmod +x /usr/local/bin/opa
+
+          # Install Semgrep
+          echo "Installing Semgrep v${SEMGREP_VERSION}..."
+          python -m pip install "semgrep==${SEMGREP_VERSION}"
+
+      - name: Install uv and dependencies
+        run: |
+          python -m pip install --upgrade pip uv
+          PY=$(python -c 'import sys; print(sys.executable)')
+          uv venv --python="$PY"
+          source .venv/bin/activate
+
+          # Install environments
+          uv pip install -e environments/sv-env-network-logs
+          uv pip install -e environments/sv-env-config-verification
+          uv pip install -e sv_shared
+
+          # Install eval dependencies
+          uv pip install openai
+
+      - name: Check API key availability
+        id: check-key
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "::warning::OPENAI_API_KEY not set, skipping evaluation"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run E1 mini eval (synthetic data)
+        if: steps.check-key.outputs.skip != 'true'
+        run: |
+          source .venv/bin/activate
+          NUM_EXAMPLES="${{ github.event.inputs.num_examples || '2' }}"
+
+          echo "Running E1 evaluation with $NUM_EXAMPLES examples..."
+          python scripts/eval_network_logs.py \
+            --models gpt-4.1-mini \
+            --num-examples "$NUM_EXAMPLES" \
+            --dataset synthetic \
+            --max-consecutive-errors 2
+
+          # Verify output files were created
+          E1_RUN=$(ls -td outputs/evals/sv-env-network-logs--gpt-4.1-mini/*/ | head -1)
+          if [ -f "${E1_RUN}metadata.json" ] && [ -f "${E1_RUN}results.jsonl" ]; then
+            echo "E1 metadata.json:"
+            cat "${E1_RUN}metadata.json"
+            echo ""
+            echo "E1 results.jsonl line count: $(wc -l < ${E1_RUN}results.jsonl)"
+          else
+            echo "ERROR: E1 output files not found"
+            exit 1
+          fi
+
+      - name: Run E2 mini eval (synthetic data)
+        if: steps.check-key.outputs.skip != 'true'
+        run: |
+          source .venv/bin/activate
+          NUM_EXAMPLES="${{ github.event.inputs.num_examples || '2' }}"
+
+          echo "Running E2 evaluation with $NUM_EXAMPLES examples..."
+          python scripts/eval_config_verification.py \
+            --models gpt-4.1-mini \
+            --num-examples "$NUM_EXAMPLES" \
+            --dataset builtin \
+            --include-tools true \
+            --max-turns 3 \
+            --max-consecutive-errors 2
+
+          # Verify output files were created
+          E2_RUN=$(ls -td outputs/evals/sv-env-config-verification--gpt-4.1-mini/*/ | head -1)
+          if [ -f "${E2_RUN}metadata.json" ] && [ -f "${E2_RUN}results.jsonl" ]; then
+            echo "E2 metadata.json:"
+            cat "${E2_RUN}metadata.json"
+            echo ""
+            echo "E2 results.jsonl line count: $(wc -l < ${E2_RUN}results.jsonl)"
+          else
+            echo "ERROR: E2 output files not found"
+            exit 1
+          fi
+
+      - name: Validate metadata schema
+        if: steps.check-key.outputs.skip != 'true'
+        run: |
+          source .venv/bin/activate
+          python -c "
+          import json
+          from pathlib import Path
+
+          required_fields = [
+              'environment', 'model', 'dataset', 'timestamp',
+              'git_commit', 'python_version', 'verifiers_version',
+              'num_examples'
+          ]
+
+          e2_required = required_fields + ['tool_versions', 'include_tools', 'max_turns']
+
+          errors = []
+
+          # Check E1 metadata
+          e1_runs = list(Path('outputs/evals').glob('sv-env-network-logs--*/*/metadata.json'))
+          if e1_runs:
+              with open(e1_runs[0]) as f:
+                  e1_meta = json.load(f)
+              for field in required_fields:
+                  if field not in e1_meta:
+                      errors.append(f'E1 missing field: {field}')
+              print(f'E1 metadata has {len(e1_meta)} fields')
+
+          # Check E2 metadata
+          e2_runs = list(Path('outputs/evals').glob('sv-env-config-verification--*/*/metadata.json'))
+          if e2_runs:
+              with open(e2_runs[0]) as f:
+                  e2_meta = json.load(f)
+              for field in e2_required:
+                  if field not in e2_meta:
+                      errors.append(f'E2 missing field: {field}')
+              print(f'E2 metadata has {len(e2_meta)} fields')
+
+          if errors:
+              for e in errors:
+                  print(f'ERROR: {e}')
+              exit(1)
+          else:
+              print('All required metadata fields present')
+          "
+
+      - name: Upload eval artifacts
+        if: steps.check-key.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-outputs
+          path: outputs/evals/
+          retention-days: 7

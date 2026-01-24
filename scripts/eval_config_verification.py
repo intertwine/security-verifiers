@@ -21,7 +21,6 @@ import argparse
 import asyncio
 import json
 import os
-import subprocess
 import sys
 import tempfile
 import time
@@ -35,7 +34,12 @@ sys.path.insert(0, str(REPO_ROOT))
 os.environ.setdefault("PYTHONPATH", str(REPO_ROOT))
 
 # Import eval utilities (must be before environment imports to avoid circular deps)
-from scripts.eval_utils import EarlyStopError, ErrorTracker  # noqa: E402
+from scripts.eval_utils import (  # noqa: E402
+    EarlyStopError,
+    ErrorTracker,
+    build_base_metadata,
+    get_tool_version,
+)
 
 # Import report generator for summary generation
 from scripts.generate_e2_eval_report import analyze_run  # noqa: E402
@@ -53,30 +57,6 @@ try:
     from openai import OpenAI
 except Exception as exc:  # pragma: no cover
     raise SystemExit(f"The 'openai' package is required: {exc}") from exc
-
-
-def _git_commit() -> str | None:
-    """Get current git commit hash."""
-    try:
-        res = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True,
-            text=True,
-            check=False,
-            cwd=str(REPO_ROOT),
-        )
-        return res.stdout.strip() or None
-    except Exception:
-        return None
-
-
-def _cmd_version(cmd: str, args: List[str]) -> str | None:
-    """Get version of a command."""
-    try:
-        res = subprocess.run([cmd, *args], capture_output=True, text=True, check=False)
-        return (res.stdout or res.stderr).strip() or None
-    except Exception:
-        return None
 
 
 def ensure_dir(path: Path) -> None:
@@ -332,6 +312,12 @@ def main() -> None:
         help="Stop evaluation after this many consecutive errors (default: 3). "
         "Set to 0 to disable early stopping.",
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Random seed for reproducibility (default: None, non-deterministic)",
+    )
     args = parser.parse_args()
 
     models = parse_models(args.models)
@@ -365,9 +351,15 @@ def main() -> None:
     ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
     # Tool versions metadata
-    kube_linter_ver = _cmd_version("kube-linter", ["version"]) or None
-    semgrep_ver = _cmd_version("semgrep", ["--version"]) or None
-    opa_ver = _cmd_version("opa", ["version"]) or None
+    kube_linter_ver = get_tool_version("kube-linter", ["version"])
+    semgrep_ver = get_tool_version("semgrep", ["--version"])
+    opa_ver = get_tool_version("opa", ["version"])
+
+    # Resolve dataset path for revision hash
+    env_root = REPO_ROOT / "environments" / "sv-env-config-verification"
+    dataset_path = env_root / "data" / args.dataset
+    if not dataset_path.exists() and args.dataset not in ("builtin", "fixtures", "synthetic", "combined"):
+        dataset_path = Path(args.dataset)  # Try absolute path
 
     for model in models:
         print(f"\nEvaluating model: {model}")
@@ -385,24 +377,26 @@ def main() -> None:
         meta_path = run_dir / "metadata.json"
         results_path = run_dir / "results.jsonl"
 
-        metadata: Dict[str, Any] = {
-            "environment": "sv-env-config-verification",
-            "evaluation_type": "multi-turn",
-            "model": model,
-            "effective_model": effective_model,  # Track the actual model name used (e.g., OpenRouter path)
-            "dataset": args.dataset,
-            "timestamp": ts,
-            "num_examples": len(dataset),
-            "include_tools": include_tools,
-            "max_turns": args.max_turns,
-            "max_consecutive_errors": args.max_consecutive_errors,
-            "git_commit": _git_commit(),
-            "tool_versions": {
+        metadata = build_base_metadata(
+            environment="sv-env-config-verification",
+            model=model,
+            effective_model=effective_model,
+            dataset=args.dataset,
+            timestamp=ts,
+            num_examples=len(dataset),
+            repo_root=REPO_ROOT,
+            dataset_path=dataset_path if dataset_path.exists() else None,
+            seed=args.seed,
+            evaluation_type="multi-turn",
+            include_tools=include_tools,
+            max_turns=args.max_turns,
+            max_consecutive_errors=args.max_consecutive_errors,
+            tool_versions={
                 "kube_linter": kube_linter_ver,
                 "semgrep": semgrep_ver,
                 "opa": opa_ver,
             },
-        }
+        )
         if args.temperature is not None:
             metadata["temperature"] = args.temperature
         if args.max_tokens is not None:
