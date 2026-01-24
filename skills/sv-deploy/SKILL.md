@@ -152,12 +152,51 @@ vf-install intertwine/sv-env-network-logs
 vf-eval intertwine/sv-env-network-logs --model gpt-5-mini --num-examples 10
 ```
 
+## Coordinated Releases (Shared Utils + Environments)
+
+When updating `security-verifiers-utils` (sv_shared), environments that depend on it need coordinated releases:
+
+```bash
+# 1. Make changes to sv_shared/
+# 2. Sync version in BOTH files (required for PyPI)
+make update-utils-version BUMP=patch  # Updates pyproject.toml AND __init__.py
+
+# 3. Test environments still work
+make test
+
+# 4. Publish to PyPI first
+make pypi-publish-utils
+
+# 5. Then deploy environments that use the new utils
+make hub-deploy E=network-logs
+make hub-deploy E=config-verification
+```
+
+**Important**: The Hub pulls `security-verifiers-utils` from PyPI, so always publish utils before deploying dependent environments.
+
+## Multi-Environment Deployment
+
+Deploy multiple environments efficiently:
+
+```bash
+# Sequential deployment (recommended for first-time)
+make hub-deploy E=network-logs
+make hub-deploy E=config-verification
+make hub-deploy E=code-vulnerability
+
+# Or use direct deploy if already validated
+make deploy E=network-logs && make deploy E=config-verification
+```
+
 ## Troubleshooting
 
 **prime login fails**: Check internet connection, try `prime logout` then `prime login`.
 **Wheel build fails**: Ensure `uv sync` was run in the environment directory.
 **Version conflict**: Check the version in `pyproject.toml` isn't already published.
 **PyPI auth**: Ensure `~/.pypirc` or `TWINE_USERNAME`/`TWINE_PASSWORD` are set.
+**Interactive login prompt**: The first `make deploy` will open browser for authentication and prompt for team selection. This is normal.
+**sv_shared version mismatch**: If PyPI publish fails with "version exists", ensure both `sv_shared/pyproject.toml` and `sv_shared/__init__.py` have matching, new versions.
+**Pre-commit hook fails**: Install pre-commit with `uv pip install pre-commit`.
 
 ## Hub Integration Tests
 
