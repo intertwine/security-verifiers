@@ -325,6 +325,20 @@ Security Verifiers uses a dual-mode logging system:
 - CI
   - .github/workflows/ci.yml installs uv, pins kube-linter version (from E2 ci/versions.txt), runs ruff + pytest (+coverage), and builds wheels on tag/workflow-dispatch.
 
+## Agent Skills
+
+The `skills/` directory contains [Agent Skills](https://agentskills.io/) that provide specialized guidance for common tasks:
+
+| Skill | Use When |
+|-------|----------|
+| `sv-eval` | Running evaluations, generating reports, comparing models |
+| `sv-data` | Building datasets, creating test fixtures, validating data |
+| `sv-deploy` | Deploying to Environments Hub, publishing to PyPI |
+| `sv-hf` | Managing HuggingFace repositories, pushing datasets |
+| `sv-dev` | Testing, linting, formatting, development setup |
+
+Skills are automatically discovered and provide step-by-step guidance for complex workflows.
+
 ## Notes for Claude
 
 - Never run git commit/push from the terminal; the user handles Git operations.
@@ -349,5 +363,6 @@ Security Verifiers uses a dual-mode logging system:
 - docs/hub-deployment.md - deploy to Prime Intellect Hub
 - docs/datasets.md - dataset access and management
 - docs/logging.md - Weave tracing configuration
+- skills/ - agent skills for common workflows (eval, data, deploy, hf, dev)
 - CLAUDE.md - this file
 - .github/workflows/ci.yml - CI steps
