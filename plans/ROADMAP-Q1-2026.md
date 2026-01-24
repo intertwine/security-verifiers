@@ -55,17 +55,13 @@ Updated all environments for verifiers v0.1.9 API compatibility:
 - Fixed `is_completed()` signature (state-only, no messages)
 - Fixed `env_response()` return type (messages only, state modified in place)
 
-### WP0 — Benchmark Integrity Hardening
-**Why:** If evaluation is flaky, nothing else matters. You can't publish curves you don't trust.
+### WP0 — Benchmark Integrity Hardening ✓
+**Status:** Complete
 
-**Definition of Done:**
-- E1 and E2 eval runs complete deterministically enough to compare model variants.
-- All known score-inflation or schema-drop footguns are resolved or blocked behind flags.
-
-**Artifacts:**
-- `VERSIONING.md` (pins core versions + tool versions)
-- `outputs/evals/.../metadata.json` includes: git SHA, dataset revision, sampling params, tool versions
-- A minimal CI job that runs a tiny eval (public mini set) on both E1 and E2
+Implemented comprehensive metadata tracking and CI for reproducible evaluations:
+- `VERSIONING.md` documenting pinned versions for Python, verifiers, tools
+- Enhanced `metadata.json` with env_version, python_version, verifiers_version, dataset_revision, seed
+- CI workflow (`eval-ci.yml`) for minimal E1/E2 eval integrity checks
 
 ### WP1 — Metrics Contracts + Report Generator
 **Why:** SV‑Bench is only as credible as its metric definitions and its ability to generate a report from stored rollouts.
@@ -213,7 +209,7 @@ When comparing two approaches, match:
 ## Q1 Milestone Checklist
 
 - [x] WP-1 complete (verifiers v0.1.9 API compatibility)
-- [ ] WP0 complete (benchmark integrity)
+- [x] WP0 complete (benchmark integrity)
 - [ ] WP1 complete (metrics contracts + report generator)
 - [ ] WP2 complete (baselines + public mini sets)
 - [ ] WP3 complete (canonical RL runs on E1 and E2)
