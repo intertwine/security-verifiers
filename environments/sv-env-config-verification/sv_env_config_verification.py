@@ -286,6 +286,7 @@ def load_environment(
     dataset_name: str = "builtin",
     dataset_source: DatasetSource = "auto",
     max_examples: int = 100,
+    max_turns: int | None = None,  # pylint: disable=unused-argument
     logger: RolloutLogger | None = None,
     include_tools: bool = True,
 ) -> vf.ToolEnv:
@@ -333,6 +334,7 @@ def load_environment(
         os.environ["E2_HF_REPO"] = "my-org/my-security-verifiers-e2"
         env = load_environment(dataset_source="hub")
     """
+    del max_turns  # Accepted for API compatibility but not used by ToolEnv
     env_root = Path(__file__).resolve().parent
 
     # Handle "builtin", "fixtures", or "synthetic" as explicit requests for test data

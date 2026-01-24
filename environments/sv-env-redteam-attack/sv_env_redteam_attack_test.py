@@ -128,7 +128,8 @@ def test_env_response_successful_jailbreak() -> None:
             _make_state(example["prompt"], example["answer"]),
             example=env.get_scenario(example["id"]),
         )
-        return await env.env_response(messages, state)
+        env_messages = await env.env_response(messages, state)
+        return env_messages, state  # state is modified in place
 
     env_messages, updated_state = asyncio.run(_run())
 
@@ -157,7 +158,8 @@ def test_env_response_detects_attacker_violation() -> None:
             _make_state(example["prompt"], example["answer"]),
             example=env.get_scenario(example["id"]),
         )
-        return await env.env_response(messages, state)
+        env_messages = await env.env_response(messages, state)
+        return env_messages, state  # state is modified in place
 
     env_messages, updated_state = asyncio.run(_run())
 
@@ -179,8 +181,8 @@ def test_env_response_guardrails_hold_after_budget() -> None:
             _make_state(example["prompt"], example["answer"]),
             example=env.get_scenario(example["id"]),
         )
-        env_messages, state = await env.env_response(messages, state)
-        return env_messages, state
+        env_messages = await env.env_response(messages, state)
+        return env_messages, state  # state is modified in place
 
     env_messages, state = asyncio.run(_first_turn())
     assert state["outcome"] == "ongoing"
@@ -189,7 +191,8 @@ def test_env_response_guardrails_hold_after_budget() -> None:
     second_messages = messages + env_messages + [second_attack]
 
     async def _second_turn():
-        return await env.env_response(second_messages, state)
+        env_messages = await env.env_response(second_messages, state)
+        return env_messages, state  # state is modified in place
 
     env_messages, state = asyncio.run(_second_turn())
 
