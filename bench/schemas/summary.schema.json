@@ -1,0 +1,161 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/intertwine/security-verifiers/bench/schemas/summary.schema.json",
+  "title": "SV-Bench Summary",
+  "description": "Schema for SV-Bench evaluation summary output",
+  "type": "object",
+  "required": ["environment", "version", "run_id", "timestamp", "model", "n_examples", "metrics"],
+  "properties": {
+    "environment": {
+      "type": "string",
+      "enum": ["sv-env-network-logs", "sv-env-config-verification"],
+      "description": "Environment identifier"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Metrics specification version"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "Unique run identifier"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO8601 timestamp of report generation"
+    },
+    "model": {
+      "type": "string",
+      "description": "Model name/identifier"
+    },
+    "dataset": {
+      "type": "string",
+      "description": "Dataset name/identifier"
+    },
+    "n_examples": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of examples evaluated"
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Environment-specific metrics",
+      "oneOf": [
+        { "$ref": "#/definitions/e1_metrics" },
+        { "$ref": "#/definitions/e2_metrics" }
+      ]
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional run metadata",
+      "properties": {
+        "git_sha": { "type": "string" },
+        "env_version": { "type": "string" },
+        "python_version": { "type": "string" },
+        "verifiers_version": { "type": "string" },
+        "seed": { "type": "integer" }
+      }
+    }
+  },
+  "definitions": {
+    "e1_metrics": {
+      "type": "object",
+      "required": ["detection", "calibration", "cost", "abstention"],
+      "properties": {
+        "detection": {
+          "type": "object",
+          "required": ["tpr", "fpr", "fnr", "precision", "f1", "accuracy"],
+          "properties": {
+            "tpr": { "type": "number", "minimum": 0, "maximum": 1 },
+            "fpr": { "type": "number", "minimum": 0, "maximum": 1 },
+            "fnr": { "type": "number", "minimum": 0, "maximum": 1 },
+            "precision": { "type": "number", "minimum": 0, "maximum": 1 },
+            "f1": { "type": "number", "minimum": 0, "maximum": 1 },
+            "accuracy": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "calibration": {
+          "type": "object",
+          "required": ["ece", "brier"],
+          "properties": {
+            "ece": { "type": "number", "minimum": 0, "maximum": 1 },
+            "brier": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "cost": {
+          "type": "object",
+          "required": ["fn_cost_weight", "fp_cost_weight", "total_cost", "cost_weighted_accuracy"],
+          "properties": {
+            "fn_cost_weight": { "type": "number" },
+            "fp_cost_weight": { "type": "number" },
+            "total_cost": { "type": "number" },
+            "cost_weighted_accuracy": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "abstention": {
+          "type": "object",
+          "required": ["abstain_rate", "accuracy_non_abstained"],
+          "properties": {
+            "abstain_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+            "accuracy_non_abstained": { "type": "number", "minimum": 0, "maximum": 1 },
+            "aurc": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      }
+    },
+    "e2_metrics": {
+      "type": "object",
+      "required": ["finding_quality", "patch", "tool_economy"],
+      "properties": {
+        "finding_quality": {
+          "type": "object",
+          "required": ["precision_weighted", "recall_weighted", "f1_weighted"],
+          "properties": {
+            "precision_weighted": { "type": "number", "minimum": 0, "maximum": 1 },
+            "recall_weighted": { "type": "number", "minimum": 0, "maximum": 1 },
+            "f1_weighted": { "type": "number", "minimum": 0, "maximum": 1 },
+            "precision_unweighted": { "type": "number", "minimum": 0, "maximum": 1 },
+            "recall_unweighted": { "type": "number", "minimum": 0, "maximum": 1 },
+            "f1_unweighted": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "patch": {
+          "type": "object",
+          "properties": {
+            "patch_provided_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+            "patch_success_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+            "patch_fix_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+            "mean_violations_fixed": { "type": "number" },
+            "new_violations_introduced": { "type": "number" }
+          }
+        },
+        "tool_economy": {
+          "type": "object",
+          "properties": {
+            "mean_tool_calls": { "type": "number" },
+            "mean_tool_time_ms": { "type": "number" },
+            "calls_per_finding": { "type": "number" },
+            "tool_distribution": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "calls": { "type": "integer" },
+                  "time_ms": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "episode": {
+          "type": "object",
+          "properties": {
+            "format_valid_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+            "mean_turns": { "type": "number" }
+          }
+        }
+      }
+    }
+  }
+}
