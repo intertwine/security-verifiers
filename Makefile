@@ -261,6 +261,9 @@ test-cov: venv
 lint: venv
 	@$(ECHO) "$(YELLOW)Running linter...$(NC)"
 	@$(ACTIVATE) && uv run ruff check .
+	@$(ACTIVATE) && uv run ruff format --check .
+	@$(ACTIVATE) && uv run pre-commit run trailing-whitespace --all-files
+	@$(ACTIVATE) && uv run pre-commit run end-of-file-fixer --all-files
 
 # Fix linting issues
 lint-fix: venv

@@ -197,13 +197,9 @@ async def run_multiturn_evaluation(
                     function_name = tool_call.function.name
                     function_args = json.loads(tool_call.function.arguments)
 
-                    # Record tool interaction
-                    tool_interactions.append(
-                        {"turn": turn, "tool": function_name, "arguments": function_args}
-                    )
-
                     # Find and call the actual tool
                     tool_result = None
+                    start_time = time.perf_counter()
                     for tool in env.tools:
                         if tool.__name__ == function_name:
                             try:
@@ -225,6 +221,16 @@ async def run_multiturn_evaluation(
 
                     if tool_result is None:
                         tool_result = f"Tool {function_name} not found"
+
+                    duration_ms = (time.perf_counter() - start_time) * 1000
+                    tool_interactions.append(
+                        {
+                            "turn": turn,
+                            "tool": function_name,
+                            "arguments": function_args,
+                            "duration_ms": duration_ms,
+                        }
+                    )
 
                     # Add tool response to conversation
                     messages.append(

@@ -14,9 +14,11 @@ dependencies = [
     "wandb>=0.22.2",
     "weave>=0.52.10",
 ]
+[project.scripts]
+svbench_report = "bench.report:main"
 
 [tool.setuptools]
-packages = []  # This is a monorepo root, no packages to include
+packages = ["bench"]
 
 [tool.ruff]
 target-version = "py312"

@@ -56,9 +56,26 @@
         "verifiers_version": { "type": "string" },
         "seed": { "type": "integer" }
       }
+    },
+    "severity_breakdown": {
+      "type": "object",
+      "description": "Per-severity counts for E2 findings",
+      "properties": {
+        "high": { "$ref": "#/definitions/severity_counts" },
+        "med": { "$ref": "#/definitions/severity_counts" },
+        "low": { "$ref": "#/definitions/severity_counts" }
+      }
     }
   },
   "definitions": {
+    "severity_counts": {
+      "type": "object",
+      "properties": {
+        "total": { "type": "integer", "minimum": 0 },
+        "found": { "type": "integer", "minimum": 0 },
+        "fixed": { "type": "integer", "minimum": 0 }
+      }
+    },
     "e1_metrics": {
       "type": "object",
       "required": ["detection", "calibration", "cost", "abstention"],
@@ -100,6 +117,16 @@
             "abstain_rate": { "type": "number", "minimum": 0, "maximum": 1 },
             "accuracy_non_abstained": { "type": "number", "minimum": 0, "maximum": 1 },
             "aurc": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "confusion_matrix": {
+          "type": "object",
+          "properties": {
+            "tp": { "type": "integer", "minimum": 0 },
+            "tn": { "type": "integer", "minimum": 0 },
+            "fp": { "type": "integer", "minimum": 0 },
+            "fn": { "type": "integer", "minimum": 0 },
+            "abstain": { "type": "integer", "minimum": 0 }
           }
         }
       }

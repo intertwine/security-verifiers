@@ -6,6 +6,7 @@ Generates summary.json and report.md from evaluation rollout results.
 Usage:
     python -m bench.report --env e1 --input outputs/evals/network-logs--gpt-5-mini/run_123/
     python -m bench.report --env e2 --input outputs/evals/config-verification--gpt-5-mini/run_456/
+    uv run svbench_report --env e1 --input outputs/evals/...
 """
 
 from __future__ import annotations
@@ -13,11 +14,345 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import tempfile
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
+from statistics import fmean
 from typing import Any
 
-import numpy as np
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from sv_shared.parsers import extract_json_from_markdown  # noqa: E402
+
+# ============================================================================
+# Helpers
+# ============================================================================
+
+SEV_WEIGHT = {"low": 0.3, "med": 0.6, "high": 1.0}
+TOOL_NAMES = ["opa", "kube-linter", "semgrep"]
+TOOL_NAME_MAP = {
+    "run_opa": "opa",
+    "opa": "opa",
+    "run_kubelinter": "kube-linter",
+    "kube-linter": "kube-linter",
+    "run_semgrep": "semgrep",
+    "semgrep": "semgrep",
+}
+
+
+def _mean(values: list[float]) -> float:
+    return fmean(values) if values else 0.0
+
+
+def _normalize_severity(value: Any) -> str:
+    sev = str(value).lower() if value is not None else "med"
+    return sev if sev in SEV_WEIGHT else "med"
+
+
+def _load_json_from_text(text: str) -> dict[str, Any] | None:
+    if not text:
+        return None
+    try:
+        data = json.loads(text)
+        if isinstance(data, dict):
+            return data
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    extracted = extract_json_from_markdown(text)
+    if extracted != text:
+        try:
+            data = json.loads(extracted)
+            if isinstance(data, dict):
+                return data
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    return None
+
+
+def _normalize_violation_list(raw: Any) -> list[dict[str, Any]]:
+    violations: list[dict[str, Any]] = []
+    if isinstance(raw, list):
+        for item in raw:
+            if not isinstance(item, dict):
+                continue
+            vid = item.get("id") or item.get("rule_id")
+            if not vid:
+                continue
+            violations.append({"id": str(vid), "severity": _normalize_severity(item.get("severity", "med"))})
+    return violations
+
+
+def _parse_e1_completion(completion: str) -> tuple[str | None, float | None]:
+    data = _load_json_from_text(completion)
+    if not data:
+        return None, None
+    label = data.get("label")
+    label_str = label.lower() if isinstance(label, str) else None
+    conf_val = data.get("confidence")
+    try:
+        confidence = float(conf_val)
+    except (TypeError, ValueError):
+        confidence = None
+    return label_str, confidence
+
+
+def _parse_e2_completion(completion: str) -> tuple[list[dict[str, Any]], str, float, bool]:
+    data = _load_json_from_text(completion)
+    if not data:
+        return [], "", 0.0, False
+    violations = _normalize_violation_list(data.get("violations", []))
+    patch = data.get("patch") or ""
+    if not isinstance(patch, str):
+        patch = str(patch)
+    conf_val = data.get("confidence", 0.0)
+    try:
+        confidence = float(conf_val)
+    except (TypeError, ValueError):
+        confidence = 0.0
+    return violations, patch, confidence, True
+
+
+def _parse_e2_answer(answer: Any) -> tuple[list[dict[str, Any]], str | None, str | None]:
+    answer_obj: dict[str, Any] = {}
+    if isinstance(answer, str):
+        try:
+            answer_obj = json.loads(answer)
+        except json.JSONDecodeError:
+            answer_obj = {}
+    elif isinstance(answer, dict):
+        answer_obj = answer
+    oracle = _normalize_violation_list(answer_obj.get("oracle", []))
+    fixture_path = answer_obj.get("fixture_path")
+    fixture_type = answer_obj.get("fixture_type", "k8s")
+    if fixture_type not in ("k8s", "tf"):
+        fixture_type = "k8s"
+    return oracle, fixture_path, fixture_type
+
+
+@lru_cache
+def _load_e2_tooling():
+    try:
+        from sv_env_config_verification.adapters.kubelinter_adapter import kubelinter_lint
+        from sv_env_config_verification.adapters.semgrep_adapter import semgrep_scan
+        from sv_env_config_verification.mapping import normalize_findings
+        from sv_env_config_verification.patching import try_apply_patch
+
+        return try_apply_patch, kubelinter_lint, semgrep_scan, normalize_findings
+    except Exception:
+        env_root = REPO_ROOT / "environments" / "sv-env-config-verification"
+        if env_root.exists() and str(env_root) not in sys.path:
+            sys.path.insert(0, str(env_root))
+        from adapters.kubelinter_adapter import kubelinter_lint  # type: ignore
+        from adapters.semgrep_adapter import semgrep_scan  # type: ignore
+        from mapping import normalize_findings  # type: ignore
+        from patching import try_apply_patch  # type: ignore
+
+        return try_apply_patch, kubelinter_lint, semgrep_scan, normalize_findings
+
+
+def _resolve_fixture_path(fixture_path: str | None) -> Path | None:
+    if not fixture_path:
+        return None
+    path = Path(fixture_path)
+    if path.is_absolute():
+        return path
+    candidate = (REPO_ROOT / path).resolve()
+    return candidate if candidate.exists() else path
+
+
+def _compute_post_patch_violations(
+    patch: str, fixture_path: str | None, fixture_type: str | None, strict: bool
+) -> tuple[bool, list[dict[str, Any]]]:
+    if not patch or not fixture_path:
+        return False, []
+    path = _resolve_fixture_path(fixture_path)
+    if path is None or not path.exists():
+        if strict:
+            raise ValueError(f"Fixture path not found: {fixture_path}")
+        return False, []
+    try:
+        try_apply_patch, kubelinter_lint, semgrep_scan, normalize_findings = _load_e2_tooling()
+    except Exception as exc:
+        if strict:
+            raise ValueError("Unable to load E2 tooling for patch verification") from exc
+        return False, []
+    applied, new_text = try_apply_patch(str(path), patch)
+    if not applied:
+        return False, []
+    with tempfile.NamedTemporaryFile("w", delete=False) as tmp:
+        tmp.write(new_text)
+        tmp_path = Path(tmp.name)
+    try:
+        if (fixture_type or "k8s") == "tf":
+            findings = semgrep_scan([str(tmp_path)])
+        else:
+            findings = kubelinter_lint([str(tmp_path)])
+        post = normalize_findings(findings)
+        post_dicts = [{"id": v.id, "severity": v.severity} for v in post]
+    finally:
+        tmp_path.unlink(missing_ok=True)
+    return True, post_dicts
+
+
+def _normalize_tool_usage(record: dict[str, Any]) -> tuple[int, float, dict[str, dict[str, float]]]:
+    tool_usage = {name: {"calls": 0, "time_ms": 0.0} for name in TOOL_NAMES}
+    explicit = any(
+        record.get(f"{name}_calls") is not None or record.get(f"{name}_time_ms") is not None
+        for name in TOOL_NAMES
+    )
+    if explicit:
+        for name in TOOL_NAMES:
+            tool_usage[name]["calls"] = int(record.get(f"{name}_calls") or 0)
+            tool_usage[name]["time_ms"] = float(record.get(f"{name}_time_ms") or 0.0)
+    else:
+        for interaction in record.get("tool_interactions", []) or []:
+            if not isinstance(interaction, dict):
+                continue
+            name = TOOL_NAME_MAP.get(interaction.get("tool"))
+            if not name:
+                continue
+            tool_usage[name]["calls"] += 1
+            duration = interaction.get("duration_ms")
+            if duration is None:
+                duration = interaction.get("time_ms")
+            tool_usage[name]["time_ms"] += float(duration) if duration else 0.0
+
+    if record.get("tool_calls") is not None:
+        tool_calls = int(record.get("tool_calls") or 0)
+    else:
+        tool_calls = sum(t["calls"] for t in tool_usage.values())
+
+    if record.get("tool_time_ms") is not None:
+        tool_time_ms = float(record.get("tool_time_ms") or 0.0)
+    else:
+        tool_time_ms = sum(t["time_ms"] for t in tool_usage.values())
+
+    return tool_calls, tool_time_ms, tool_usage
+
+
+def _normalize_e1_results(results: list[dict[str, Any]], strict: bool) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for idx, record in enumerate(results):
+        pred = record.get("predicted_label")
+        conf = record.get("confidence")
+        actual = record.get("answer")
+        if (pred is None or conf is None) and record.get("completion") is not None:
+            parsed_label, parsed_conf = _parse_e1_completion(str(record.get("completion") or ""))
+            if pred is None:
+                pred = parsed_label
+            if conf is None:
+                conf = parsed_conf
+
+        if isinstance(actual, dict):
+            actual_label = str(actual.get("label") or actual.get("answer") or "")
+        else:
+            actual_label = str(actual or "")
+
+        pred_label = str(pred or "").lower() if pred is not None else ""
+        actual_label = actual_label.lower()
+
+        if conf is None:
+            if strict:
+                raise ValueError(f"Missing confidence for E1 result at index {idx}")
+            conf_val = 0.0
+        else:
+            conf_val = float(conf)
+
+        if strict and (not pred_label or not actual_label):
+            raise ValueError(f"Missing predicted_label or answer for E1 result at index {idx}")
+
+        normalized.append({"predicted_label": pred_label, "answer": actual_label, "confidence": conf_val})
+    return normalized
+
+
+def _normalize_e2_results(results: list[dict[str, Any]], strict: bool) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for idx, record in enumerate(results):
+        predicted_raw = record.get("predicted_violations")
+        patch = record.get("patch")
+        valid_json = record.get("valid_json")
+        parsed_ok = False
+        if (predicted_raw is None or patch is None or valid_json is None) and record.get(
+            "completion"
+        ) is not None:
+            parsed_violations, parsed_patch, _parsed_conf, parsed_ok = _parse_e2_completion(
+                str(record.get("completion") or "")
+            )
+            if predicted_raw is None:
+                predicted_raw = parsed_violations
+            if patch is None:
+                patch = parsed_patch
+            if valid_json is None:
+                valid_json = parsed_ok
+
+        predicted = _normalize_violation_list(predicted_raw)
+        if patch is None:
+            patch = ""
+        if not isinstance(patch, str):
+            patch = str(patch)
+        if valid_json is None:
+            valid_json = parsed_ok
+
+        oracle_raw = record.get("oracle_violations")
+        fixture_path = record.get("fixture_path")
+        fixture_type = record.get("fixture_type")
+        if oracle_raw is None:
+            oracle, ans_fixture_path, ans_fixture_type = _parse_e2_answer(record.get("answer"))
+            if fixture_path is None:
+                fixture_path = ans_fixture_path
+            if fixture_type is None:
+                fixture_type = ans_fixture_type
+        else:
+            oracle = _normalize_violation_list(oracle_raw)
+            if fixture_path is None or fixture_type is None:
+                _, ans_fixture_path, ans_fixture_type = _parse_e2_answer(record.get("answer"))
+                fixture_path = fixture_path or ans_fixture_path
+                fixture_type = fixture_type or ans_fixture_type
+
+        if strict and oracle_raw is None and record.get("answer") is None:
+            raise ValueError(f"Missing oracle violations for E2 result at index {idx}")
+        if strict and predicted_raw is None and not parsed_ok:
+            raise ValueError(f"Missing predicted violations for E2 result at index {idx}")
+        if strict and patch and not fixture_path:
+            raise ValueError(f"Missing fixture_path for E2 patch at index {idx}")
+
+        patch_applied = record.get("patch_applied")
+        post_patch_raw = record.get("post_patch_violations")
+        if patch_applied is None or post_patch_raw is None:
+            if patch:
+                applied, post = _compute_post_patch_violations(patch, fixture_path, fixture_type, strict)
+                if patch_applied is None:
+                    patch_applied = applied
+                if post_patch_raw is None:
+                    post_patch_raw = post
+            else:
+                patch_applied = bool(patch_applied) if patch_applied is not None else False
+                post_patch_raw = post_patch_raw or []
+
+        post_patch = _normalize_violation_list(post_patch_raw)
+        tool_calls, tool_time_ms, tool_usage = _normalize_tool_usage(record)
+        turns = record.get("turns") or record.get("turns_used") or 1
+
+        normalized.append(
+            {
+                "predicted_violations": predicted,
+                "oracle_violations": oracle,
+                "patch": patch,
+                "patch_applied": bool(patch_applied),
+                "post_patch_violations": post_patch,
+                "tool_calls": tool_calls,
+                "tool_time_ms": tool_time_ms,
+                "tool_usage": tool_usage,
+                "valid_json": bool(valid_json),
+                "turns": int(turns),
+            }
+        )
+    return normalized
 
 
 # ============================================================================
@@ -27,66 +362,56 @@ import numpy as np
 
 def compute_e1_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
     """Compute E1 metrics from rollout results."""
-    
-    # Extract predictions and ground truth
-    predictions = []
-    actuals = []
-    confidences = []
-    
-    for r in results:
-        pred = r.get("predicted_label", "").lower()
-        actual = r.get("answer", "").lower()
-        conf = r.get("confidence", 0.5)
-        
+    predictions: list[str] = []
+    actuals: list[str] = []
+    confidences: list[float] = []
+
+    for record in results:
+        pred = str(record.get("predicted_label", "")).lower()
+        actual = str(record.get("answer", "")).lower()
+        conf_val = record.get("confidence", 0.5)
+        try:
+            conf = float(conf_val)
+        except (TypeError, ValueError):
+            conf = 0.5
+
         if pred and actual:
             predictions.append(pred)
             actuals.append(actual)
             confidences.append(conf)
-    
-    predictions = np.array(predictions)
-    actuals = np.array(actuals)
-    confidences = np.array(confidences, dtype=float)
-    
-    # Separate abstain predictions
-    non_abstain_mask = predictions != "abstain"
-    
-    # Detection metrics (excluding abstain)
-    pred_na = predictions[non_abstain_mask]
-    actual_na = actuals[non_abstain_mask]
-    
-    # Binary classification metrics
-    tp = np.sum((pred_na == "malicious") & (actual_na == "malicious"))
-    tn = np.sum((pred_na == "benign") & (actual_na == "benign"))
-    fp = np.sum((pred_na == "malicious") & (actual_na == "benign"))
-    fn = np.sum((pred_na == "benign") & (actual_na == "malicious"))
-    
+
+    non_abstain_mask = [pred != "abstain" for pred in predictions]
+    pred_na = [pred for pred, keep in zip(predictions, non_abstain_mask) if keep]
+    actual_na = [act for act, keep in zip(actuals, non_abstain_mask) if keep]
+    conf_na = [conf for conf, keep in zip(confidences, non_abstain_mask) if keep]
+
+    tp = sum(1 for pred, act in zip(pred_na, actual_na) if pred == "malicious" and act == "malicious")
+    tn = sum(1 for pred, act in zip(pred_na, actual_na) if pred == "benign" and act == "benign")
+    fp = sum(1 for pred, act in zip(pred_na, actual_na) if pred == "malicious" and act == "benign")
+    fn = sum(1 for pred, act in zip(pred_na, actual_na) if pred == "benign" and act == "malicious")
+
     tpr = tp / (tp + fn) if (tp + fn) > 0 else 0.0
     fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
     fnr = 1.0 - tpr
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-    accuracy = (tp + tn) / len(pred_na) if len(pred_na) > 0 else 0.0
+    accuracy = (tp + tn) / len(pred_na) if pred_na else 0.0
     f1 = 2 * precision * tpr / (precision + tpr) if (precision + tpr) > 0 else 0.0
-    
-    # Calibration metrics (on non-abstain)
-    correct_na = pred_na == actual_na
-    conf_na = confidences[non_abstain_mask]
-    
+
+    correct_na = [pred == act for pred, act in zip(pred_na, actual_na)]
     ece = _compute_ece(correct_na, conf_na)
     brier = _compute_brier(correct_na, conf_na)
-    
-    # Cost metrics
+
     fn_cost_weight = 10.0
     fp_cost_weight = 1.0
     total_cost = fn_cost_weight * fn + fp_cost_weight * fp
     max_cost = len(pred_na) * max(fn_cost_weight, fp_cost_weight)
     cost_weighted_accuracy = 1.0 - (total_cost / max_cost) if max_cost > 0 else 1.0
-    
-    # Abstention metrics
-    n_abstain = np.sum(~non_abstain_mask)
-    abstain_rate = n_abstain / len(predictions) if len(predictions) > 0 else 0.0
+
+    n_abstain = sum(1 for keep in non_abstain_mask if not keep)
+    abstain_rate = n_abstain / len(predictions) if predictions else 0.0
     accuracy_non_abstained = accuracy
     aurc = _compute_aurc(pred_na, actual_na, conf_na)
-    
+
     return {
         "detection": {
             "tpr": float(tpr),
@@ -121,196 +446,261 @@ def compute_e1_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _compute_ece(correct: np.ndarray, confidences: np.ndarray, num_bins: int = 10) -> float:
+def _compute_ece(correct: list[bool], confidences: list[float], num_bins: int = 10) -> float:
     """Compute Expected Calibration Error."""
-    if len(correct) == 0:
+    if not correct:
         return 0.0
-    
-    bins = np.linspace(0, 1, num_bins + 1)
+
+    bins = [i / num_bins for i in range(num_bins + 1)]
     ece = 0.0
-    
+    total = len(correct)
+
     for i in range(num_bins):
-        mask = (confidences >= bins[i]) & (confidences < bins[i + 1])
-        if mask.sum() > 0:
-            bin_acc = correct[mask].mean()
-            bin_conf = confidences[mask].mean()
-            ece += mask.sum() / len(correct) * abs(bin_acc - bin_conf)
-    
+        in_bin = [idx for idx, conf in enumerate(confidences) if conf >= bins[i] and conf < bins[i + 1]]
+        if in_bin:
+            bin_acc = sum(1 for idx in in_bin if correct[idx]) / len(in_bin)
+            bin_conf = sum(confidences[idx] for idx in in_bin) / len(in_bin)
+            ece += len(in_bin) / total * abs(bin_acc - bin_conf)
+
     return ece
 
 
-def _compute_brier(correct: np.ndarray, confidences: np.ndarray) -> float:
+def _compute_brier(correct: list[bool], confidences: list[float]) -> float:
     """Compute Brier score."""
-    if len(correct) == 0:
+    if not correct:
         return 0.0
-    
-    correct_float = correct.astype(float)
-    return float(np.mean((confidences - correct_float) ** 2))
+    correct_float = [1.0 if value else 0.0 for value in correct]
+    return sum((conf - label) ** 2 for conf, label in zip(confidences, correct_float)) / len(correct)
 
 
-def _compute_aurc(predictions: np.ndarray, actuals: np.ndarray, confidences: np.ndarray) -> float:
+def _compute_aurc(predictions: list[str], actuals: list[str], confidences: list[float]) -> float:
     """Compute Area Under Risk-Coverage curve."""
-    if len(predictions) == 0:
+    if not predictions:
         return 0.0
-    
-    thresholds = np.linspace(0, 1, 101)
-    coverages = []
-    risks = []
-    
+
+    thresholds = [i / 100 for i in range(101)]
+    coverages: list[float] = []
+    risks: list[float] = []
+
     for tau in thresholds:
-        mask = confidences >= tau
-        coverage = mask.mean()
+        indices = [idx for idx, conf in enumerate(confidences) if conf >= tau]
+        coverage = len(indices) / len(predictions)
         if coverage > 0:
-            risk = (predictions[mask] != actuals[mask]).mean()
+            risk = sum(1 for idx in indices if predictions[idx] != actuals[idx]) / len(indices)
         else:
             risk = 0.0
         coverages.append(coverage)
         risks.append(risk)
-    
-    return float(np.trapz(risks, coverages))
+
+    aurc = 0.0
+    for i in range(1, len(coverages)):
+        aurc += (coverages[i] - coverages[i - 1]) * (risks[i] + risks[i - 1]) / 2.0
+    return float(aurc)
 
 
 # ============================================================================
 # E2 Metrics: Config Verification
 # ============================================================================
 
-SEV_WEIGHT = {"low": 0.3, "med": 0.6, "high": 1.0}
-
 
 def compute_e2_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
     """Compute E2 metrics from rollout results."""
-    
-    # Aggregate metrics
-    precisions_w, recalls_w, f1s_w = [], [], []
-    precisions_u, recalls_u, f1s_u = [], [], []
-    patch_provided, patch_success = 0, 0
-    violations_fixed = []
-    new_violations = []
-    tool_calls = []
-    tool_times = []
-    tool_usage = {"opa": {"calls": 0, "time_ms": 0}, "kube-linter": {"calls": 0, "time_ms": 0}, "semgrep": {"calls": 0, "time_ms": 0}}
+    precisions_w: list[float] = []
+    recalls_w: list[float] = []
+    f1s_w: list[float] = []
+    precisions_u: list[float] = []
+    recalls_u: list[float] = []
+    f1s_u: list[float] = []
+    patch_provided = 0
+    patch_success = 0
+    patch_fix_rates: list[float] = []
+    violations_fixed: list[int] = []
+    new_violations: list[int] = []
+    tool_calls: list[int] = []
+    tool_times: list[float] = []
+    tool_usage = {name: {"calls": 0, "time_ms": 0.0} for name in TOOL_NAMES}
     format_valid = 0
-    turns = []
-    
-    for r in results:
-        # Finding quality
-        pred_violations = r.get("predicted_violations", [])
-        oracle_violations = r.get("oracle_violations", [])
-        
+    turns: list[int] = []
+
+    for record in results:
+        pred_violations = record.get("predicted_violations", [])
+        oracle_violations = record.get("oracle_violations", [])
+
         p_w, r_w, f1_w = _score_detection_weighted(pred_violations, oracle_violations)
         p_u, r_u, f1_u = _score_detection_unweighted(pred_violations, oracle_violations)
-        
+
         precisions_w.append(p_w)
         recalls_w.append(r_w)
         f1s_w.append(f1_w)
         precisions_u.append(p_u)
         recalls_u.append(r_u)
         f1s_u.append(f1_u)
-        
-        # Patch metrics
-        if r.get("patch"):
+
+        patch = record.get("patch", "")
+        patch_applied = record.get("patch_applied", False)
+        if patch:
             patch_provided += 1
-            if r.get("patch_applied", False):
+            if patch_applied:
                 patch_success += 1
-                post_violations = r.get("post_patch_violations", [])
+                post_violations = record.get("post_patch_violations", [])
                 fixed = _count_violations_fixed(oracle_violations, post_violations)
                 violations_fixed.append(fixed)
-                new = _count_new_violations(oracle_violations, post_violations)
-                new_violations.append(new)
-        
-        # Tool economy
-        calls = r.get("tool_calls", 0)
-        time_ms = r.get("tool_time_ms", 0)
-        tool_calls.append(calls)
-        tool_times.append(time_ms)
-        
-        for tool_name in ["opa", "kube-linter", "semgrep"]:
-            t_calls = r.get(f"{tool_name}_calls", 0)
-            t_time = r.get(f"{tool_name}_time_ms", 0)
-            tool_usage[tool_name]["calls"] += t_calls
-            tool_usage[tool_name]["time_ms"] += t_time
-        
-        # Episode metrics
-        if r.get("valid_json", True):
+                new_violations.append(_count_new_violations(oracle_violations, post_violations))
+                fixed_weight = _count_violations_fixed_weighted(oracle_violations, post_violations)
+                total_weight = _total_violation_weight(oracle_violations)
+                patch_fix_rates.append(fixed_weight / total_weight if total_weight > 0 else 0.0)
+            else:
+                patch_fix_rates.append(0.0)
+
+        tool_calls.append(int(record.get("tool_calls", 0)))
+        tool_times.append(float(record.get("tool_time_ms", 0.0)))
+
+        usage = record.get("tool_usage", {})
+        for name in TOOL_NAMES:
+            tool_usage[name]["calls"] += int(usage.get(name, {}).get("calls", 0))
+            tool_usage[name]["time_ms"] += float(usage.get(name, {}).get("time_ms", 0.0))
+
+        if record.get("valid_json", True):
             format_valid += 1
-        turns.append(r.get("turns", 1))
-    
+        turns.append(int(record.get("turns", 1)))
+
     n = len(results)
     n_findings = sum(len(r.get("predicted_violations", [])) for r in results)
-    
+
     return {
         "finding_quality": {
-            "precision_weighted": float(np.mean(precisions_w)) if precisions_w else 0.0,
-            "recall_weighted": float(np.mean(recalls_w)) if recalls_w else 0.0,
-            "f1_weighted": float(np.mean(f1s_w)) if f1s_w else 0.0,
-            "precision_unweighted": float(np.mean(precisions_u)) if precisions_u else 0.0,
-            "recall_unweighted": float(np.mean(recalls_u)) if recalls_u else 0.0,
-            "f1_unweighted": float(np.mean(f1s_u)) if f1s_u else 0.0,
+            "precision_weighted": _mean(precisions_w),
+            "recall_weighted": _mean(recalls_w),
+            "f1_weighted": _mean(f1s_w),
+            "precision_unweighted": _mean(precisions_u),
+            "recall_unweighted": _mean(recalls_u),
+            "f1_unweighted": _mean(f1s_u),
         },
         "patch": {
             "patch_provided_rate": patch_provided / n if n > 0 else 0.0,
             "patch_success_rate": patch_success / patch_provided if patch_provided > 0 else 0.0,
-            "patch_fix_rate": float(np.mean(violations_fixed)) if violations_fixed else 0.0,
-            "mean_violations_fixed": float(np.mean(violations_fixed)) if violations_fixed else 0.0,
-            "new_violations_introduced": float(np.mean(new_violations)) if new_violations else 0.0,
+            "patch_fix_rate": _mean(patch_fix_rates),
+            "mean_violations_fixed": _mean(violations_fixed),
+            "new_violations_introduced": _mean(new_violations),
         },
         "tool_economy": {
-            "mean_tool_calls": float(np.mean(tool_calls)) if tool_calls else 0.0,
-            "mean_tool_time_ms": float(np.mean(tool_times)) if tool_times else 0.0,
+            "mean_tool_calls": _mean([float(c) for c in tool_calls]),
+            "mean_tool_time_ms": _mean(tool_times),
             "calls_per_finding": sum(tool_calls) / n_findings if n_findings > 0 else 0.0,
             "tool_distribution": tool_usage,
         },
         "episode": {
             "format_valid_rate": format_valid / n if n > 0 else 0.0,
-            "mean_turns": float(np.mean(turns)) if turns else 0.0,
+            "mean_turns": _mean([float(t) for t in turns]),
         },
     }
 
 
-def _score_detection_weighted(pred: list[dict], oracle: list[dict]) -> tuple[float, float, float]:
+def _score_detection_weighted(
+    pred: list[dict[str, Any]], oracle: list[dict[str, Any]]
+) -> tuple[float, float, float]:
     """Weighted precision/recall/F1."""
-    o_ids = {v.get("id", v.get("rule_id", "")): SEV_WEIGHT.get(v.get("severity", "med"), 0.6) for v in oracle}
-    p_ids = {v.get("id", v.get("rule_id", "")): SEV_WEIGHT.get(v.get("severity", "med"), 0.6) for v in pred}
-    
+    o_ids = {
+        v.get("id", v.get("rule_id", "")): SEV_WEIGHT.get(_normalize_severity(v.get("severity")), 0.6)
+        for v in oracle
+        if v.get("id") or v.get("rule_id")
+    }
+    p_ids = {
+        v.get("id", v.get("rule_id", "")): SEV_WEIGHT.get(_normalize_severity(v.get("severity")), 0.6)
+        for v in pred
+        if v.get("id") or v.get("rule_id")
+    }
+
     tp = sum(o_ids.get(vid, 0) for vid in p_ids if vid in o_ids)
-    fp = sum(w for vid, w in p_ids.items() if vid not in o_ids)
-    fn = sum(w for vid, w in o_ids.items() if vid not in p_ids)
-    
+    fp = sum(weight for vid, weight in p_ids.items() if vid not in o_ids)
+    fn = sum(weight for vid, weight in o_ids.items() if vid not in p_ids)
+
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
     f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
-    
+
     return precision, recall, f1
 
 
-def _score_detection_unweighted(pred: list[dict], oracle: list[dict]) -> tuple[float, float, float]:
+def _score_detection_unweighted(
+    pred: list[dict[str, Any]], oracle: list[dict[str, Any]]
+) -> tuple[float, float, float]:
     """Unweighted precision/recall/F1."""
-    o_ids = {v.get("id", v.get("rule_id", "")) for v in oracle}
-    p_ids = {v.get("id", v.get("rule_id", "")) for v in pred}
-    
+    o_ids = {v.get("id", v.get("rule_id", "")) for v in oracle if v.get("id") or v.get("rule_id")}
+    p_ids = {v.get("id", v.get("rule_id", "")) for v in pred if v.get("id") or v.get("rule_id")}
+
     tp = len(p_ids & o_ids)
     fp = len(p_ids - o_ids)
     fn = len(o_ids - p_ids)
-    
+
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
     f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
-    
+
     return precision, recall, f1
 
 
-def _count_violations_fixed(oracle: list[dict], post: list[dict]) -> int:
+def _count_violations_fixed(oracle: list[dict[str, Any]], post: list[dict[str, Any]]) -> int:
     """Count violations fixed by patch."""
-    o_ids = {v.get("id", v.get("rule_id", "")) for v in oracle}
-    p_ids = {v.get("id", v.get("rule_id", "")) for v in post}
+    o_ids = {v.get("id", v.get("rule_id", "")) for v in oracle if v.get("id") or v.get("rule_id")}
+    p_ids = {v.get("id", v.get("rule_id", "")) for v in post if v.get("id") or v.get("rule_id")}
     return len(o_ids - p_ids)
 
 
-def _count_new_violations(oracle: list[dict], post: list[dict]) -> int:
+def _count_violations_fixed_weighted(oracle: list[dict[str, Any]], post: list[dict[str, Any]]) -> float:
+    """Weighted count of oracle violations fixed by patch."""
+    post_ids = {v.get("id", v.get("rule_id", "")) for v in post if v.get("id") or v.get("rule_id")}
+    return sum(
+        SEV_WEIGHT.get(_normalize_severity(v.get("severity")), 0.6)
+        for v in oracle
+        if (v.get("id") or v.get("rule_id")) and (v.get("id", v.get("rule_id", "")) not in post_ids)
+    )
+
+
+def _total_violation_weight(oracle: list[dict[str, Any]]) -> float:
+    return sum(
+        SEV_WEIGHT.get(_normalize_severity(v.get("severity")), 0.6)
+        for v in oracle
+        if v.get("id") or v.get("rule_id")
+    )
+
+
+def _count_new_violations(oracle: list[dict[str, Any]], post: list[dict[str, Any]]) -> int:
     """Count new violations introduced by patch."""
-    o_ids = {v.get("id", v.get("rule_id", "")) for v in oracle}
-    p_ids = {v.get("id", v.get("rule_id", "")) for v in post}
+    o_ids = {v.get("id", v.get("rule_id", "")) for v in oracle if v.get("id") or v.get("rule_id")}
+    p_ids = {v.get("id", v.get("rule_id", "")) for v in post if v.get("id") or v.get("rule_id")}
     return len(p_ids - o_ids)
+
+
+def _compute_severity_breakdown(results: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
+    breakdown = {sev: {"total": 0, "found": 0, "fixed": 0} for sev in SEV_WEIGHT}
+    for record in results:
+        oracle = record.get("oracle_violations", [])
+        predicted = record.get("predicted_violations", [])
+        post = record.get("post_patch_violations", [])
+        oracle_by_id = {v["id"]: v["severity"] for v in oracle if "id" in v}
+        pred_ids = {v["id"] for v in predicted if "id" in v}
+        post_ids = {v["id"] for v in post if "id" in v}
+
+        for violation in oracle:
+            sev = violation.get("severity", "med")
+            sev = _normalize_severity(sev)
+            breakdown[sev]["total"] += 1
+
+        for vid in pred_ids:
+            if vid in oracle_by_id:
+                sev = _normalize_severity(oracle_by_id[vid])
+                breakdown[sev]["found"] += 1
+
+        if record.get("patch_applied"):
+            for violation in oracle:
+                vid = violation.get("id")
+                if not vid or vid in post_ids:
+                    continue
+                sev = _normalize_severity(violation.get("severity", "med"))
+                breakdown[sev]["fixed"] += 1
+
+    return breakdown
 
 
 # ============================================================================
@@ -318,44 +708,48 @@ def _count_new_violations(oracle: list[dict], post: list[dict]) -> int:
 # ============================================================================
 
 
-def load_results(input_path: Path) -> tuple[list[dict], dict]:
+def load_results(input_path: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Load results.jsonl and metadata.json from input path."""
     results_file = input_path / "results.jsonl"
     metadata_file = input_path / "metadata.json"
-    
-    results = []
+
+    results: list[dict[str, Any]] = []
     if results_file.exists():
         with open(results_file) as f:
             for line in f:
                 if line.strip():
                     results.append(json.loads(line))
-    
-    metadata = {}
+
+    metadata: dict[str, Any] = {}
     if metadata_file.exists():
         with open(metadata_file) as f:
             metadata = json.load(f)
-    
+
     return results, metadata
 
 
 def generate_summary(
     env: str,
-    results: list[dict],
-    metadata: dict,
+    results: list[dict[str, Any]],
+    metadata: dict[str, Any],
     run_id: str | None = None,
+    strict: bool = False,
 ) -> dict[str, Any]:
     """Generate summary.json content."""
-    
     if env in ("e1", "network-logs", "sv-env-network-logs"):
         env_name = "sv-env-network-logs"
-        metrics = compute_e1_metrics(results)
+        normalized = _normalize_e1_results(results, strict)
+        metrics = compute_e1_metrics(normalized)
+        severity_breakdown = None
     elif env in ("e2", "config-verification", "sv-env-config-verification"):
         env_name = "sv-env-config-verification"
-        metrics = compute_e2_metrics(results)
+        normalized = _normalize_e2_results(results, strict)
+        metrics = compute_e2_metrics(normalized)
+        severity_breakdown = _compute_severity_breakdown(normalized)
     else:
         raise ValueError(f"Unknown environment: {env}")
-    
-    return {
+
+    summary = {
         "environment": env_name,
         "version": "0.1.0",
         "run_id": run_id or metadata.get("run_id", "unknown"),
@@ -365,7 +759,7 @@ def generate_summary(
         "n_examples": len(results),
         "metrics": metrics,
         "metadata": {
-            "git_sha": metadata.get("git_sha"),
+            "git_sha": metadata.get("git_sha") or metadata.get("git_commit"),
             "env_version": metadata.get("env_version"),
             "python_version": metadata.get("python_version"),
             "verifiers_version": metadata.get("verifiers_version"),
@@ -373,10 +767,14 @@ def generate_summary(
         },
     }
 
+    if severity_breakdown is not None:
+        summary["severity_breakdown"] = severity_breakdown
+
+    return summary
+
 
 def generate_report_md(summary: dict[str, Any]) -> str:
     """Generate human-readable report.md content."""
-    
     lines = [
         f"# SV-Bench Report: {summary['environment']}",
         "",
@@ -389,25 +787,25 @@ def generate_report_md(summary: dict[str, Any]) -> str:
         f"- **Timestamp:** {summary['timestamp']}",
         "",
     ]
-    
+
     metrics = summary["metrics"]
-    
+
     if summary["environment"] == "sv-env-network-logs":
         lines.extend(_format_e1_report(metrics))
     else:
-        lines.extend(_format_e2_report(metrics))
-    
+        lines.extend(_format_e2_report(metrics, summary.get("severity_breakdown")))
+
     return "\n".join(lines)
 
 
-def _format_e1_report(metrics: dict) -> list[str]:
+def _format_e1_report(metrics: dict[str, Any]) -> list[str]:
     """Format E1 metrics as markdown."""
     d = metrics["detection"]
     c = metrics["calibration"]
     cost = metrics["cost"]
     a = metrics["abstention"]
     cm = metrics.get("confusion_matrix", {})
-    
+
     return [
         "## Detection Performance",
         "",
@@ -451,14 +849,14 @@ def _format_e1_report(metrics: dict) -> list[str]:
     ]
 
 
-def _format_e2_report(metrics: dict) -> list[str]:
+def _format_e2_report(metrics: dict[str, Any], severity_breakdown: dict[str, Any] | None) -> list[str]:
     """Format E2 metrics as markdown."""
     fq = metrics["finding_quality"]
     p = metrics["patch"]
     te = metrics["tool_economy"]
     ep = metrics.get("episode", {})
-    
-    return [
+
+    lines = [
         "## Finding Quality",
         "",
         "| Metric | Weighted | Unweighted |",
@@ -485,23 +883,45 @@ def _format_e2_report(metrics: dict) -> list[str]:
         "",
         "| Tool | Calls | Time (ms) |",
         "|------|-------|-----------|",
-    ] + [
-        f"| {tool} | {stats['calls']} | {stats['time_ms']:.0f} |"
-        for tool, stats in te.get("tool_distribution", {}).items()
-    ] + [
-        "",
-        "## Episode Metrics",
-        "",
-        f"- Format Valid Rate: {ep.get('format_valid_rate', 0):.3f}",
-        f"- Mean Turns: {ep.get('mean_turns', 0):.2f}",
-        "",
     ]
-
-
-def main():
-    parser = argparse.ArgumentParser(
-        description="Generate SV-Bench evaluation reports"
+    lines.extend(
+        [
+            f"| {tool} | {stats['calls']} | {stats['time_ms']:.0f} |"
+            for tool, stats in te.get("tool_distribution", {}).items()
+        ]
     )
+    lines.extend(
+        [
+            "",
+            "## Episode Metrics",
+            "",
+            f"- Format Valid Rate: {ep.get('format_valid_rate', 0):.3f}",
+            f"- Mean Turns: {ep.get('mean_turns', 0):.2f}",
+            "",
+        ]
+    )
+
+    if severity_breakdown:
+        lines.extend(
+            [
+                "## Severity Breakdown",
+                "",
+                "| Severity | Total | Found | Fixed |",
+                "|----------|-------|-------|-------|",
+            ]
+        )
+        for sev in ["high", "med", "low"]:
+            stats = severity_breakdown.get(sev, {})
+            lines.append(
+                f"| {sev} | {stats.get('total', 0)} | {stats.get('found', 0)} | {stats.get('fixed', 0)} |"
+            )
+        lines.append("")
+
+    return lines
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Generate SV-Bench evaluation reports")
     parser.add_argument(
         "--env",
         required=True,
@@ -525,39 +945,40 @@ def main():
         action="store_true",
         help="Fail if required fields are missing",
     )
-    
+
     args = parser.parse_args()
-    
+
     input_path = Path(args.input)
     output_path = Path(args.output) if args.output else input_path
-    
+
     if not input_path.exists():
         print(f"Error: Input path does not exist: {input_path}", file=sys.stderr)
         sys.exit(1)
-    
+
     results, metadata = load_results(input_path)
-    
+
     if not results:
         print(f"Error: No results found in {input_path}/results.jsonl", file=sys.stderr)
         sys.exit(1)
-    
+
     print(f"Loaded {len(results)} results from {input_path}")
-    
-    # Generate summary
+
     run_id = input_path.name if input_path.name != "." else None
-    summary = generate_summary(args.env, results, metadata, run_id)
-    
-    # Generate report
+    try:
+        summary = generate_summary(args.env, results, metadata, run_id, strict=args.strict)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+
     report_md = generate_report_md(summary)
-    
-    # Write outputs
+
     output_path.mkdir(parents=True, exist_ok=True)
-    
+
     summary_file = output_path / "summary.json"
     with open(summary_file, "w") as f:
         json.dump(summary, f, indent=2)
     print(f"Wrote {summary_file}")
-    
+
     report_file = output_path / "report.md"
     with open(report_file, "w") as f:
         f.write(report_md)

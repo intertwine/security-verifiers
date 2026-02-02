@@ -1,7 +1,7 @@
 # E2 Config Verification Metrics Specification
 
-**Environment:** `sv-env-config-verification`  
-**Task:** Security auditing of Kubernetes/Terraform configs with tool-grounded verification  
+**Environment:** `sv-env-config-verification`
+**Task:** Security auditing of Kubernetes/Terraform configs with tool-grounded verification
 **Version:** v0.1.0
 
 ---

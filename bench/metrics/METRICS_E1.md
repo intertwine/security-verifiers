@@ -1,7 +1,7 @@
 # E1 Network Logs Metrics Specification
 
-**Environment:** `sv-env-network-logs`  
-**Task:** Binary/ternary classification of network log entries as Malicious, Benign, or Abstain  
+**Environment:** `sv-env-network-logs`
+**Task:** Binary/ternary classification of network log entries as Malicious, Benign, or Abstain
 **Version:** v0.1.0
 
 ---
@@ -182,14 +182,14 @@ The report generator produces a `summary.json` with these fields for E1:
       "abstain_rate": 0.05,
       "accuracy_non_abstained": 0.92,
       "aurc": 0.08
+    },
+    "confusion_matrix": {
+      "tp": 85,
+      "tn": 88,
+      "fp": 10,
+      "fn": 15,
+      "abstain": 5
     }
-  },
-  "confusion_matrix": {
-    "tp": 85,
-    "tn": 88,
-    "fp": 10,
-    "fn": 15,
-    "abstain": 5
   }
 }
 ```
@@ -198,14 +198,14 @@ The report generator produces a `summary.json` with these fields for E1:
 
 ## Report Markdown Format
 
-The `report.md` should include:
+The `report.md` includes:
 
 1. **Header** with run metadata
-2. **Summary table** of key metrics
-3. **Detection performance** section with confusion matrix
-4. **Calibration analysis** with reliability diagram data
-5. **Cost analysis** with asymmetric penalties
-6. **Abstention analysis** with risk-coverage data
+2. **Detection performance** table
+3. **Calibration** table (ECE + Brier)
+4. **Cost analysis** section with asymmetric penalties
+5. **Abstention** section with AURC
+6. **Confusion matrix** counts
 
 ---
 
