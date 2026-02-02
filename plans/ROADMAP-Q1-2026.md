@@ -1,6 +1,6 @@
 # ROADMAP Q1 2026 — Security Verifiers → SV‑Bench v0.1
 
-**Last updated:** 2026-01-24
+**Last updated:** 2026-02-02
 **Primary objective (Q1):** Ship **SV‑Bench v0.1**: a benchmark + training harness demonstrating that **executable security verifiers** can train models (not just evaluate them) with measurable gains in **operationally-relevant security metrics**.
 
 ---
@@ -63,7 +63,8 @@ Implemented comprehensive metadata tracking and CI for reproducible evaluations:
 - Enhanced `metadata.json` with env_version, python_version, verifiers_version, dataset_revision, seed
 - CI workflow (`eval-ci.yml`) for minimal E1/E2 eval integrity checks
 
-### WP1 — Metrics Contracts + Report Generator
+### WP1 — Metrics Contracts + Report Generator ✓
+**Status:** Complete (2026-02-02)
 **Why:** SV‑Bench is only as credible as its metric definitions and its ability to generate a report from stored rollouts.
 
 **Definition of Done:**
@@ -76,6 +77,13 @@ Implemented comprehensive metadata tracking and CI for reproducible evaluations:
 - `bench/metrics/METRICS_E2.md`
 - `bench/report.py` with a stable CLI
 - `bench/schemas/summary.schema.json`
+
+**Completion notes:**
+- `svbench_report` CLI added (entrypoint to `bench.report:main`)
+- Report generator parses raw `results.jsonl` + `metadata.json` and supports strict mode
+- E2 tool economy includes tool call timings (duration_ms) and severity breakdowns
+- Summary schema updated to include confusion matrix + severity breakdowns
+- Tests cover E1/E2 metrics and report generation
 
 **Metric Minimums (v0.1):**
 
@@ -210,7 +218,7 @@ When comparing two approaches, match:
 
 - [x] WP-1 complete (verifiers v0.1.9 API compatibility)
 - [x] WP0 complete (benchmark integrity)
-- [ ] WP1 complete (metrics contracts + report generator)
+- [x] WP1 complete (metrics contracts + report generator)
 - [ ] WP2 complete (baselines + public mini sets)
 - [ ] WP3 complete (canonical RL runs on E1 and E2)
 - [ ] WP4 complete (GRPO vs GDPO-style ablation)

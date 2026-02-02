@@ -8,15 +8,18 @@ version = "0.2.3"
 description = "Security Verifiers monorepo: shared tooling config (no runtime)."
 requires-python = ">=3.12"
 dependencies = [
+    "jsonschema>=4.25.1",
     "pydantic>=2",
     "python-dotenv>=1.1.1",
     "verifiers>=0.1.9",
     "wandb>=0.22.2",
     "weave>=0.52.10",
 ]
+[project.scripts]
+svbench_report = "bench.report:main"
 
 [tool.setuptools]
-packages = []  # This is a monorepo root, no packages to include
+packages = ["bench"]
 
 [tool.ruff]
 target-version = "py312"
