@@ -3,7 +3,10 @@
 import json
 from pathlib import Path
 
+import pytest
 from bench.report import (
+    TOOL_NAME_MAP,
+    TOOL_NAMES,
     _compute_brier,
     _compute_ece,
     compute_e1_metrics,
@@ -48,6 +51,12 @@ class TestE1Metrics:
         assert metrics["detection"]["accuracy"] == 1.0
         assert metrics["confusion_matrix"]["abstain"] == 2
 
+    def test_empty_results(self) -> None:
+        metrics = compute_e1_metrics([])
+
+        assert metrics["detection"]["accuracy"] == 0.0
+        assert metrics["abstention"]["abstain_rate"] == 0.0
+
 
 class TestCalibrationMetrics:
     """Tests for calibration metric functions."""
@@ -58,6 +67,13 @@ class TestCalibrationMetrics:
 
         ece = _compute_ece(correct, confidences, num_bins=10)
         assert ece > 0.8
+
+    def test_ece_includes_confidence_one(self) -> None:
+        correct = [False]
+        confidences = [1.0]
+
+        ece = _compute_ece(correct, confidences, num_bins=10)
+        assert ece >= 0.99
 
     def test_brier_perfect(self) -> None:
         correct = [True, True, False, False]
@@ -110,6 +126,32 @@ class TestE2Metrics:
 
         assert metrics["tool_economy"]["mean_tool_calls"] == 5.0
         assert metrics["tool_economy"]["mean_tool_time_ms"] == 250.0
+
+    def test_patch_fix_rate_global(self) -> None:
+        results = [
+            {
+                "predicted_violations": [],
+                "oracle_violations": [
+                    {"id": "v1", "severity": "high"},
+                    {"id": "v2", "severity": "high"},
+                ],
+                "patch": "diff",
+                "patch_applied": True,
+                "post_patch_violations": [{"id": "v2", "severity": "high"}],
+                "valid_json": True,
+            },
+            {
+                "predicted_violations": [],
+                "oracle_violations": [{"id": "v3", "severity": "low"}],
+                "patch": "diff",
+                "patch_applied": True,
+                "post_patch_violations": [],
+                "valid_json": True,
+            },
+        ]
+        metrics = compute_e2_metrics(results)
+
+        assert metrics["patch"]["patch_fix_rate"] == pytest.approx(1.3 / 2.3, rel=1e-3)
 
 
 class TestReportGeneration:
@@ -164,6 +206,23 @@ class TestReportGeneration:
         assert "Detection Performance" in report_md
         assert "Calibration" in report_md
 
+    def test_strict_mode_missing_fields(self) -> None:
+        with pytest.raises(ValueError):
+            generate_summary("e1", [{"answer": "Malicious"}], {}, strict=True)
+
+        with pytest.raises(ValueError):
+            generate_summary("e2", [{"completion": "{}"}], {}, strict=True)
+
+    def test_malformed_completion_non_strict(self) -> None:
+        summary = generate_summary(
+            "e1",
+            [{"completion": "not json", "answer": "Malicious"}],
+            {},
+            run_id="bad",
+            strict=False,
+        )
+        assert summary["environment"] == "sv-env-network-logs"
+
     def test_load_results_from_files(self, tmp_path: Path) -> None:
         results_data = [{"predicted_label": "Malicious", "answer": "Malicious", "confidence": 0.9}]
         (tmp_path / "results.jsonl").write_text(
@@ -177,3 +236,8 @@ class TestReportGeneration:
 
         assert len(results) == 1
         assert metadata["model"] == "test-model"
+
+
+class TestToolNameMap:
+    def test_all_tool_names_mapped(self) -> None:
+        assert set(TOOL_NAMES).issubset(set(TOOL_NAME_MAP.values()))

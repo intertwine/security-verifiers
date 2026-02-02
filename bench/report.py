@@ -21,6 +21,8 @@ from pathlib import Path
 from statistics import fmean
 from typing import Any
 
+import jsonschema
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -43,16 +45,36 @@ TOOL_NAME_MAP = {
 }
 
 
+@lru_cache
+def _load_summary_schema() -> dict[str, Any]:
+    """Load summary.json schema definition."""
+    schema_path = REPO_ROOT / "bench" / "schemas" / "summary.schema.json"
+    with open(schema_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _validate_summary(summary: dict[str, Any]) -> None:
+    """Validate summary dict against the schema."""
+    schema = _load_summary_schema()
+    try:
+        jsonschema.validate(summary, schema)
+    except jsonschema.ValidationError as exc:
+        raise ValueError(f"Summary schema validation failed: {exc.message}") from exc
+
+
 def _mean(values: list[float]) -> float:
+    """Compute mean of a list, returning 0.0 for empty lists."""
     return fmean(values) if values else 0.0
 
 
 def _normalize_severity(value: Any) -> str:
+    """Normalize severity strings to low/med/high with 'med' fallback."""
     sev = str(value).lower() if value is not None else "med"
     return sev if sev in SEV_WEIGHT else "med"
 
 
 def _load_json_from_text(text: str) -> dict[str, Any] | None:
+    """Attempt to parse JSON from raw text or markdown-wrapped JSON."""
     if not text:
         return None
     try:
@@ -75,6 +97,7 @@ def _load_json_from_text(text: str) -> dict[str, Any] | None:
 
 
 def _normalize_violation_list(raw: Any) -> list[dict[str, Any]]:
+    """Normalize violations to dicts with id + severity fields."""
     violations: list[dict[str, Any]] = []
     if isinstance(raw, list):
         for item in raw:
@@ -88,6 +111,7 @@ def _normalize_violation_list(raw: Any) -> list[dict[str, Any]]:
 
 
 def _parse_e1_completion(completion: str) -> tuple[str | None, float | None]:
+    """Parse E1 completion JSON into label/confidence."""
     data = _load_json_from_text(completion)
     if not data:
         return None, None
@@ -102,6 +126,7 @@ def _parse_e1_completion(completion: str) -> tuple[str | None, float | None]:
 
 
 def _parse_e2_completion(completion: str) -> tuple[list[dict[str, Any]], str, float, bool]:
+    """Parse E2 completion JSON into violations/patch/confidence."""
     data = _load_json_from_text(completion)
     if not data:
         return [], "", 0.0, False
@@ -118,6 +143,7 @@ def _parse_e2_completion(completion: str) -> tuple[list[dict[str, Any]], str, fl
 
 
 def _parse_e2_answer(answer: Any) -> tuple[list[dict[str, Any]], str | None, str | None]:
+    """Parse E2 answer payload for oracle violations and fixture metadata."""
     answer_obj: dict[str, Any] = {}
     if isinstance(answer, str):
         try:
@@ -136,6 +162,7 @@ def _parse_e2_answer(answer: Any) -> tuple[list[dict[str, Any]], str | None, str
 
 @lru_cache
 def _load_e2_tooling():
+    """Load E2 tooling functions with repo fallback."""
     try:
         from sv_env_config_verification.adapters.kubelinter_adapter import kubelinter_lint
         from sv_env_config_verification.adapters.semgrep_adapter import semgrep_scan
@@ -156,6 +183,7 @@ def _load_e2_tooling():
 
 
 def _resolve_fixture_path(fixture_path: str | None) -> Path | None:
+    """Resolve fixture paths relative to repo root if needed."""
     if not fixture_path:
         return None
     path = Path(fixture_path)
@@ -168,6 +196,7 @@ def _resolve_fixture_path(fixture_path: str | None) -> Path | None:
 def _compute_post_patch_violations(
     patch: str, fixture_path: str | None, fixture_type: str | None, strict: bool
 ) -> tuple[bool, list[dict[str, Any]]]:
+    """Apply patch and re-run tools to compute post-patch violations."""
     if not patch or not fixture_path:
         return False, []
     path = _resolve_fixture_path(fixture_path)
@@ -200,6 +229,7 @@ def _compute_post_patch_violations(
 
 
 def _normalize_tool_usage(record: dict[str, Any]) -> tuple[int, float, dict[str, dict[str, float]]]:
+    """Normalize tool usage fields from explicit counters or tool interactions."""
     tool_usage = {name: {"calls": 0, "time_ms": 0.0} for name in TOOL_NAMES}
     explicit = any(
         record.get(f"{name}_calls") is not None or record.get(f"{name}_time_ms") is not None
@@ -236,6 +266,7 @@ def _normalize_tool_usage(record: dict[str, Any]) -> tuple[int, float, dict[str,
 
 
 def _normalize_e1_results(results: list[dict[str, Any]], strict: bool) -> list[dict[str, Any]]:
+    """Normalize E1 records to predicted_label/answer/confidence."""
     normalized: list[dict[str, Any]] = []
     for idx, record in enumerate(results):
         pred = record.get("predicted_label")
@@ -271,6 +302,7 @@ def _normalize_e1_results(results: list[dict[str, Any]], strict: bool) -> list[d
 
 
 def _normalize_e2_results(results: list[dict[str, Any]], strict: bool) -> list[dict[str, Any]]:
+    """Normalize E2 records to prediction/oracle/patch/tool usage fields."""
     normalized: list[dict[str, Any]] = []
     for idx, record in enumerate(results):
         predicted_raw = record.get("predicted_violations")
@@ -456,7 +488,10 @@ def _compute_ece(correct: list[bool], confidences: list[float], num_bins: int = 
     total = len(correct)
 
     for i in range(num_bins):
-        in_bin = [idx for idx, conf in enumerate(confidences) if conf >= bins[i] and conf < bins[i + 1]]
+        if i == num_bins - 1:
+            in_bin = [idx for idx, conf in enumerate(confidences) if conf >= bins[i] and conf <= bins[i + 1]]
+        else:
+            in_bin = [idx for idx, conf in enumerate(confidences) if conf >= bins[i] and conf < bins[i + 1]]
         if in_bin:
             bin_acc = sum(1 for idx in in_bin if correct[idx]) / len(in_bin)
             bin_conf = sum(confidences[idx] for idx in in_bin) / len(in_bin)
@@ -513,7 +548,8 @@ def compute_e2_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
     f1s_u: list[float] = []
     patch_provided = 0
     patch_success = 0
-    patch_fix_rates: list[float] = []
+    total_fixed_weight = 0.0
+    total_oracle_weight = 0.0
     violations_fixed: list[int] = []
     new_violations: list[int] = []
     tool_calls: list[int] = []
@@ -548,9 +584,8 @@ def compute_e2_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
                 new_violations.append(_count_new_violations(oracle_violations, post_violations))
                 fixed_weight = _count_violations_fixed_weighted(oracle_violations, post_violations)
                 total_weight = _total_violation_weight(oracle_violations)
-                patch_fix_rates.append(fixed_weight / total_weight if total_weight > 0 else 0.0)
-            else:
-                patch_fix_rates.append(0.0)
+                total_fixed_weight += fixed_weight
+                total_oracle_weight += total_weight
 
         tool_calls.append(int(record.get("tool_calls", 0)))
         tool_times.append(float(record.get("tool_time_ms", 0.0)))
@@ -579,7 +614,7 @@ def compute_e2_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
         "patch": {
             "patch_provided_rate": patch_provided / n if n > 0 else 0.0,
             "patch_success_rate": patch_success / patch_provided if patch_provided > 0 else 0.0,
-            "patch_fix_rate": _mean(patch_fix_rates),
+            "patch_fix_rate": total_fixed_weight / total_oracle_weight if total_oracle_weight > 0 else 0.0,
             "mean_violations_fixed": _mean(violations_fixed),
             "new_violations_introduced": _mean(new_violations),
         },
@@ -658,6 +693,7 @@ def _count_violations_fixed_weighted(oracle: list[dict[str, Any]], post: list[di
 
 
 def _total_violation_weight(oracle: list[dict[str, Any]]) -> float:
+    """Sum severity weights for oracle violations."""
     return sum(
         SEV_WEIGHT.get(_normalize_severity(v.get("severity")), 0.6)
         for v in oracle
@@ -673,6 +709,7 @@ def _count_new_violations(oracle: list[dict[str, Any]], post: list[dict[str, Any
 
 
 def _compute_severity_breakdown(results: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
+    """Compute total/found/fixed counts per severity."""
     breakdown = {sev: {"total": 0, "found": 0, "fixed": 0} for sev in SEV_WEIGHT}
     for record in results:
         oracle = record.get("oracle_violations", [])
@@ -749,6 +786,15 @@ def generate_summary(
     else:
         raise ValueError(f"Unknown environment: {env}")
 
+    metadata_fields = {
+        "git_sha": metadata.get("git_sha") or metadata.get("git_commit"),
+        "env_version": metadata.get("env_version"),
+        "python_version": metadata.get("python_version"),
+        "verifiers_version": metadata.get("verifiers_version"),
+        "seed": metadata.get("seed"),
+    }
+    metadata_clean = {key: value for key, value in metadata_fields.items() if value is not None}
+
     summary = {
         "environment": env_name,
         "version": "0.1.0",
@@ -758,17 +804,12 @@ def generate_summary(
         "dataset": metadata.get("dataset", "unknown"),
         "n_examples": len(results),
         "metrics": metrics,
-        "metadata": {
-            "git_sha": metadata.get("git_sha") or metadata.get("git_commit"),
-            "env_version": metadata.get("env_version"),
-            "python_version": metadata.get("python_version"),
-            "verifiers_version": metadata.get("verifiers_version"),
-            "seed": metadata.get("seed"),
-        },
+        "metadata": metadata_clean,
     }
 
     if severity_breakdown is not None:
         summary["severity_breakdown"] = severity_breakdown
+    _validate_summary(summary)
 
     return summary
 

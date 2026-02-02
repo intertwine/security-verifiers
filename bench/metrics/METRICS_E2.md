@@ -84,9 +84,9 @@ def score_patch_delta(oracle: List[Violation], post: List[Violation]) -> float:
 
 #### Patch Fix Rate
 
-Fraction of weighted oracle violations fixed by the patch.
+Fraction of weighted oracle violations fixed by the patch, computed **globally across episodes where a patch was applied**.
 
-$$\text{PatchFixRate} = \frac{\text{FixedWeight}}{\sum_{v \in \text{Oracle}} w(v)}$$
+$$\text{PatchFixRate} = \frac{\sum_e \text{FixedWeight}_e}{\sum_e \sum_{v \in \text{Oracle}_e} w(v)}$$
 
 #### New Violations Introduced
 
