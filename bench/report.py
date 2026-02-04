@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import tempfile
 from datetime import datetime, timezone
@@ -70,6 +71,10 @@ def _mean(values: list[float]) -> float:
 def _normalize_severity(value: Any) -> str:
     """Normalize severity strings to low/med/high with 'med' fallback."""
     sev = str(value).lower() if value is not None else "med"
+    if sev == "medium":
+        sev = "med"
+    if sev == "critical":
+        sev = "high"
     return sev if sev in SEV_WEIGHT else "med"
 
 
@@ -103,7 +108,15 @@ def _normalize_violation_list(raw: Any) -> list[dict[str, Any]]:
         for item in raw:
             if not isinstance(item, dict):
                 continue
-            vid = item.get("id") or item.get("rule_id")
+            vid = item.get("id")
+            rule_id = item.get("rule_id")
+            tool = item.get("tool")
+            if not vid:
+                if rule_id and tool:
+                    tool_name = TOOL_NAME_MAP.get(str(tool), str(tool))
+                    vid = f"{tool_name}/{rule_id}"
+                else:
+                    vid = rule_id
             if not vid:
                 continue
             violations.append({"id": str(vid), "severity": _normalize_severity(item.get("severity", "med"))})
@@ -114,7 +127,19 @@ def _parse_e1_completion(completion: str) -> tuple[str | None, float | None]:
     """Parse E1 completion JSON into label/confidence."""
     data = _load_json_from_text(completion)
     if not data:
-        return None, None
+        # Heuristic fallback: try to recover fields from malformed JSON.
+        # This commonly happens when the model emits an almost-correct JSON object
+        # with a broken string quote in an auxiliary field (e.g. rationale).
+        label_match = re.search(r'"label"\s*:\s*"?(malicious|benign|abstain)"?', completion, flags=re.I)
+        conf_match = re.search(r'"confidence"\s*:\s*([+-]?\d+(?:\.\d+)?)', completion, flags=re.I)
+        label_str = label_match.group(1).lower() if label_match else None
+        try:
+            confidence = float(conf_match.group(1)) if conf_match else None
+        except (TypeError, ValueError):
+            confidence = None
+        if confidence is not None:
+            confidence = max(0.0, min(1.0, confidence))
+        return label_str, confidence
     label = data.get("label")
     label_str = label.lower() if isinstance(label, str) else None
     conf_val = data.get("confidence")
@@ -122,6 +147,8 @@ def _parse_e1_completion(completion: str) -> tuple[str | None, float | None]:
         confidence = float(conf_val)
     except (TypeError, ValueError):
         confidence = None
+    if confidence is not None:
+        confidence = max(0.0, min(1.0, confidence))
     return label_str, confidence
 
 
@@ -152,7 +179,10 @@ def _parse_e2_answer(answer: Any) -> tuple[list[dict[str, Any]], str | None, str
             answer_obj = {}
     elif isinstance(answer, dict):
         answer_obj = answer
-    oracle = _normalize_violation_list(answer_obj.get("oracle", []))
+    oracle_raw = answer_obj.get("oracle")
+    if oracle_raw is None:
+        oracle_raw = answer_obj.get("violations")
+    oracle = _normalize_violation_list(oracle_raw or [])
     fixture_path = answer_obj.get("fixture_path")
     fixture_type = answer_obj.get("fixture_type", "k8s")
     if fixture_type not in ("k8s", "tf"):
@@ -218,7 +248,7 @@ def _compute_post_patch_violations(
         tmp_path = Path(tmp.name)
     try:
         if (fixture_type or "k8s") == "tf":
-            findings = semgrep_scan([str(tmp_path)])
+            findings = semgrep_scan([str(tmp_path)], rules="p/terraform")
         else:
             findings = kubelinter_lint([str(tmp_path)])
         post = normalize_findings(findings)
@@ -353,6 +383,20 @@ def _normalize_e2_results(results: list[dict[str, Any]], strict: bool) -> list[d
         if strict and patch and not fixture_path:
             raise ValueError(f"Missing fixture_path for E2 patch at index {idx}")
 
+        # Align scoring to the environment's primary oracle per fixture type:
+        # - k8s: kube-linter
+        # - tf: semgrep
+        # This avoids penalizing models for emitting extra tool findings (e.g., OPA) that are
+        # present in tool outputs but are not part of the scored oracle.
+        tool_prefixes = ("kube-linter/", "semgrep/", "opa/")
+        tool_style = any(v.get("id", "").startswith(tool_prefixes) for v in oracle) or any(
+            v.get("id", "").startswith(tool_prefixes) for v in predicted
+        )
+        if tool_style:
+            primary_prefix = "kube-linter/" if (fixture_type or "k8s") == "k8s" else "semgrep/"
+            oracle = [v for v in oracle if v.get("id", "").startswith(primary_prefix)]
+            predicted = [v for v in predicted if v.get("id", "").startswith(primary_prefix)]
+
         patch_applied = record.get("patch_applied")
         post_patch_raw = record.get("post_patch_violations")
         if patch_applied is None or post_patch_raw is None:
@@ -367,6 +411,9 @@ def _normalize_e2_results(results: list[dict[str, Any]], strict: bool) -> list[d
                 post_patch_raw = post_patch_raw or []
 
         post_patch = _normalize_violation_list(post_patch_raw)
+        if tool_style and post_patch:
+            primary_prefix = "kube-linter/" if (fixture_type or "k8s") == "k8s" else "semgrep/"
+            post_patch = [v for v in post_patch if v.get("id", "").startswith(primary_prefix)]
         tool_calls, tool_time_ms, tool_usage = _normalize_tool_usage(record)
         turns = record.get("turns") or record.get("turns_used") or 1
 
@@ -529,8 +576,11 @@ def _compute_aurc(predictions: list[str], actuals: list[str], confidences: list[
 
     aurc = 0.0
     for i in range(1, len(coverages)):
-        aurc += (coverages[i] - coverages[i - 1]) * (risks[i] + risks[i - 1]) / 2.0
-    return float(aurc)
+        # As tau increases, coverage is (monotonically) decreasing; integrate over
+        # increasing coverage to keep AURC non-negative.
+        delta_coverage = coverages[i - 1] - coverages[i]
+        aurc += delta_coverage * (risks[i] + risks[i - 1]) / 2.0
+    return float(max(0.0, aurc))
 
 
 # ============================================================================
@@ -546,6 +596,8 @@ def compute_e2_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
     precisions_u: list[float] = []
     recalls_u: list[float] = []
     f1s_u: list[float] = []
+    pos_f1s_w: list[float] = []
+    pos_f1s_u: list[float] = []
     patch_provided = 0
     patch_success = 0
     total_fixed_weight = 0.0
@@ -557,6 +609,9 @@ def compute_e2_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
     tool_usage = {name: {"calls": 0, "time_ms": 0.0} for name in TOOL_NAMES}
     format_valid = 0
     turns: list[int] = []
+    clean_episodes = 0
+    clean_pass = 0
+    clean_false_positive = 0
 
     for record in results:
         pred_violations = record.get("predicted_violations", [])
@@ -571,6 +626,18 @@ def compute_e2_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
         precisions_u.append(p_u)
         recalls_u.append(r_u)
         f1s_u.append(f1_u)
+
+        has_oracle = len(oracle_violations) > 0
+        has_pred = len(pred_violations) > 0
+        if has_oracle:
+            pos_f1s_w.append(f1_w)
+            pos_f1s_u.append(f1_u)
+        else:
+            clean_episodes += 1
+            if not has_pred:
+                clean_pass += 1
+            else:
+                clean_false_positive += 1
 
         patch = record.get("patch", "")
         patch_applied = record.get("patch_applied", False)
@@ -601,6 +668,8 @@ def compute_e2_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
 
     n = len(results)
     n_findings = sum(len(r.get("predicted_violations", [])) for r in results)
+    clean_pass_rate = clean_pass / clean_episodes if clean_episodes > 0 else 0.0
+    clean_fp_rate = clean_false_positive / clean_episodes if clean_episodes > 0 else 0.0
 
     return {
         "finding_quality": {
@@ -610,6 +679,8 @@ def compute_e2_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
             "precision_unweighted": _mean(precisions_u),
             "recall_unweighted": _mean(recalls_u),
             "f1_unweighted": _mean(f1s_u),
+            "f1_weighted_positive_only": _mean(pos_f1s_w),
+            "f1_unweighted_positive_only": _mean(pos_f1s_u),
         },
         "patch": {
             "patch_provided_rate": patch_provided / n if n > 0 else 0.0,
@@ -627,6 +698,8 @@ def compute_e2_metrics(results: list[dict[str, Any]]) -> dict[str, Any]:
         "episode": {
             "format_valid_rate": format_valid / n if n > 0 else 0.0,
             "mean_turns": _mean([float(t) for t in turns]),
+            "clean_pass_rate": clean_pass_rate,
+            "false_positive_rate_on_clean": clean_fp_rate,
         },
     }
 
@@ -905,6 +978,10 @@ def _format_e2_report(metrics: dict[str, Any], severity_breakdown: dict[str, Any
         f"| Precision | {fq['precision_weighted']:.3f} | {fq['precision_unweighted']:.3f} |",
         f"| Recall | {fq['recall_weighted']:.3f} | {fq['recall_unweighted']:.3f} |",
         f"| F1 | {fq['f1_weighted']:.3f} | {fq['f1_unweighted']:.3f} |",
+        (
+            f"| F1 (positive-only) | {fq.get('f1_weighted_positive_only', 0):.3f} | "
+            f"{fq.get('f1_unweighted_positive_only', 0):.3f} |"
+        ),
         "",
         "## Patch Analysis",
         "",
@@ -938,6 +1015,8 @@ def _format_e2_report(metrics: dict[str, Any], severity_breakdown: dict[str, Any
             "",
             f"- Format Valid Rate: {ep.get('format_valid_rate', 0):.3f}",
             f"- Mean Turns: {ep.get('mean_turns', 0):.2f}",
+            f"- Clean Pass Rate: {ep.get('clean_pass_rate', 0):.3f}",
+            f"- False Positive Rate (clean): {ep.get('false_positive_rate_on_clean', 0):.3f}",
             "",
         ]
     )

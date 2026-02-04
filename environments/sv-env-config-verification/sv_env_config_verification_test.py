@@ -75,6 +75,16 @@ class TestConfigVerification:
         reward = reward_config_auditing(completion, answer_str)
         assert reward > 0.5
 
+    def test_reward_with_hub_style_answer(self) -> None:
+        """Test reward when oracle is stored under 'violations' with tool/rule_id."""
+        completion = '{"violations":[{"id":"kube-linter/latest-tag","severity":"med"}],"patch":"","confidence":0.8}'
+        answer = {
+            "violations": [{"tool": "kube-linter", "rule_id": "latest-tag", "severity": "medium", "msg": "x"}],
+            "patch": "",
+        }
+        reward = reward_config_auditing(completion, answer)
+        assert reward > 0.5
+
     def test_reward_invalid_json(self) -> None:
         """Test reward with invalid JSON returns 0."""
         completion = "invalid json"

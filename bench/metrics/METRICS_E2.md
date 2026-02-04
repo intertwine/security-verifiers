@@ -58,6 +58,12 @@ def score_detection(pred: List[Violation], oracle: List[Violation]):
     return precision, recall, f1
 ```
 
+#### Positive-only F1
+
+When the oracle is empty, traditional F1 is undefined; we report **positive-only F1** computed
+only over episodes where the oracle contains at least one finding. This avoids penalizing
+clean configurations and makes detection skill comparable on positive samples.
+
 ---
 
 ### 2. Patch Metrics
@@ -145,6 +151,18 @@ Average number of conversation turns (tool calls + responses).
 
 $$\text{MeanTurns} = \frac{\sum_e \text{turns}_e}{N}$$
 
+#### Clean Pass Rate
+
+Fraction of **clean** episodes (oracle has zero findings) where the model predicts **no findings**.
+
+$$\text{CleanPass} = \frac{|\{e : |\text{Oracle}_e|=0 \land |\text{Pred}_e|=0\}|}{|\{e : |\text{Oracle}_e|=0\}|}$$
+
+#### False Positive Rate on Clean
+
+Fraction of **clean** episodes where the model predicts **one or more findings**.
+
+$$\text{FP\_Clean} = \frac{|\{e : |\text{Oracle}_e|=0 \land |\text{Pred}_e|>0\}|}{|\{e : |\text{Oracle}_e|=0\}|}$$
+
 ---
 
 ## Summary JSON Schema
@@ -167,7 +185,9 @@ The report generator produces a `summary.json` with these fields for E2:
       "f1_weighted": 0.78,
       "precision_unweighted": 0.80,
       "recall_unweighted": 0.72,
-      "f1_unweighted": 0.76
+      "f1_unweighted": 0.76,
+      "f1_weighted_positive_only": 0.86,
+      "f1_unweighted_positive_only": 0.84
     },
     "patch": {
       "patch_provided_rate": 0.90,
@@ -188,7 +208,9 @@ The report generator produces a `summary.json` with these fields for E2:
     },
     "episode": {
       "format_valid_rate": 0.95,
-      "mean_turns": 3.2
+      "mean_turns": 3.2,
+      "clean_pass_rate": 0.72,
+      "false_positive_rate_on_clean": 0.28
     }
   },
   "severity_breakdown": {
