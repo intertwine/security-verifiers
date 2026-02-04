@@ -144,7 +144,9 @@
             "f1_weighted": { "type": "number", "minimum": 0, "maximum": 1 },
             "precision_unweighted": { "type": "number", "minimum": 0, "maximum": 1 },
             "recall_unweighted": { "type": "number", "minimum": 0, "maximum": 1 },
-            "f1_unweighted": { "type": "number", "minimum": 0, "maximum": 1 }
+            "f1_unweighted": { "type": "number", "minimum": 0, "maximum": 1 },
+            "f1_weighted_positive_only": { "type": "number", "minimum": 0, "maximum": 1 },
+            "f1_unweighted_positive_only": { "type": "number", "minimum": 0, "maximum": 1 }
           }
         },
         "patch": {
@@ -179,7 +181,9 @@
           "type": "object",
           "properties": {
             "format_valid_rate": { "type": "number", "minimum": 0, "maximum": 1 },
-            "mean_turns": { "type": "number" }
+            "mean_turns": { "type": "number" },
+            "clean_pass_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+            "false_positive_rate_on_clean": { "type": "number", "minimum": 0, "maximum": 1 }
           }
         }
       }

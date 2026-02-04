@@ -68,9 +68,21 @@ make eval-e1 MODELS="gpt-5-mini" N=100 MAX_CONSECUTIVE_ERRORS=0
 
 ## Generating Reports
 
-Reports aggregate results from `outputs/evals/` into summary metrics.
+SV-Bench supports two kinds of reporting:
+- **Per-run contract reports**: `summary.json` (schema-stable) + `report.md` (human readable)
+- **Cross-run comparison reports**: timestamped `report-*.json` aggregations for quick comparisons
 
-### E1 Report (Accuracy, ECE, FN%, FP%, Abstain%)
+### Per-run SV-Bench report (contract-grade)
+
+```bash
+# E1
+WEAVE_DISABLED=true .venv/bin/svbench_report --env e1 --input outputs/evals/sv-env-network-logs--gpt-5-mini/<run_id> --strict
+
+# E2
+WEAVE_DISABLED=true .venv/bin/svbench_report --env e2 --input outputs/evals/sv-env-config-verification--gpt-5-mini/<run_id> --strict
+```
+
+### E1 comparison report (legacy-friendly JSON table)
 
 ```bash
 # All non-archived runs
@@ -83,7 +95,7 @@ make report-network-logs RUN_IDS="run_abc123 run_def456"
 make report-network-logs OUTPUT="reports/e1-comparison.json"
 ```
 
-### E2 Report (MeanReward, FormatSuccess%, AvgTools, AvgTurns)
+### E2 comparison report (legacy-friendly JSON table)
 
 ```bash
 make report-config-verification
@@ -98,7 +110,8 @@ make report-config-verification RUN_IDS="run_abc123"
 outputs/evals/sv-env-{name}--{model}/{run_id}/
 ├── metadata.json    # Run config, versions, git SHA
 ├── results.jsonl    # Per-example results
-└── summary.json     # Aggregated metrics (auto-generated)
+├── summary.json     # SV-Bench schema summary (contract-grade)
+└── report.md        # Human-readable report
 ```
 
 **Note**: OpenRouter models create nested directories:

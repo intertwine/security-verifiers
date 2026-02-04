@@ -7,6 +7,7 @@ import pytest
 from bench.report import (
     TOOL_NAME_MAP,
     TOOL_NAMES,
+    _compute_aurc,
     _compute_brier,
     _compute_ece,
     compute_e1_metrics,
@@ -81,6 +82,15 @@ class TestCalibrationMetrics:
 
         brier = _compute_brier(correct, confidences)
         assert brier == 0.0
+
+    def test_aurc_non_negative(self) -> None:
+        # Coverage decreases as threshold increases; AURC should still be non-negative.
+        predictions = ["malicious", "benign", "malicious", "benign"]
+        actuals = ["malicious", "benign", "benign", "benign"]
+        confidences = [0.9, 0.8, 0.2, 0.1]
+
+        aurc = _compute_aurc(predictions, actuals, confidences)
+        assert aurc >= 0.0
 
 
 class TestE2Metrics:
@@ -171,6 +181,13 @@ class TestReportGeneration:
         assert summary["n_examples"] == 2
         assert "detection" in summary["metrics"]
 
+    def test_generate_e1_strict_recovers_from_malformed_json(self) -> None:
+        # Malformed JSON (broken string) but with recoverable label/confidence.
+        completion = '{"label":"Malicious","confidence":0.9,"rationale":"broken}'
+        results = [{"completion": completion, "answer": "Malicious"}]
+        summary = generate_summary("e1", results, {"model": "test-model"}, run_id="bad-json", strict=True)
+        assert summary["n_examples"] == 1
+
     def test_generate_e2_summary_from_completion(self, tmp_path: Path) -> None:
         answer = {
             "oracle": [{"id": "v1", "severity": "high"}],
@@ -192,7 +209,38 @@ class TestReportGeneration:
 
         assert summary["environment"] == "sv-env-config-verification"
         assert "finding_quality" in summary["metrics"]
+        assert "f1_weighted_positive_only" in summary["metrics"]["finding_quality"]
+        assert "f1_unweighted_positive_only" in summary["metrics"]["finding_quality"]
+        assert "clean_pass_rate" in summary["metrics"]["episode"]
+        assert "false_positive_rate_on_clean" in summary["metrics"]["episode"]
         assert "severity_breakdown" in summary
+
+    def test_generate_e2_summary_from_answer_violations_schema(self) -> None:
+        # Hub datasets may store the oracle under "violations" with tool + rule_id.
+        answer = {
+            "violations": [
+                {"tool": "kube-linter", "rule_id": "latest-tag", "severity": "medium"},
+                {"tool": "kube-linter", "rule_id": "run-as-non-root", "severity": "high"},
+            ],
+            "patch": "",
+        }
+        completion = (
+            "{"
+            '"violations": ['
+            '{"id": "kube-linter/latest-tag", "severity": "med"},'
+            '{"id": "kube-linter/run-as-non-root", "severity": "high"}'
+            "],"
+            '"patch": "",'
+            '"confidence": 0.8'
+            "}"
+        )
+        summary = generate_summary(
+            "e2",
+            [{"completion": completion, "answer": json.dumps(answer)}],
+            {},
+            run_id="t",
+        )
+        assert summary["metrics"]["finding_quality"]["f1_weighted"] == 1.0
 
     def test_generate_report_md(self) -> None:
         results = [

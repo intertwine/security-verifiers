@@ -238,8 +238,8 @@ def main():
     parser.add_argument(
         "--write-summaries",
         action="store_true",
-        default=True,
-        help="Write summary.json to each run directory (default: True)",
+        default=False,
+        help="Write summary.json to each run directory (default: False)",
     )
     parser.add_argument(
         "--no-write-summaries",

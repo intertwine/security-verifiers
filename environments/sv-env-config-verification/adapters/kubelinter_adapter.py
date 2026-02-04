@@ -40,7 +40,7 @@ def kubelinter_lint(
     # Only treat as error if we can't parse JSON output or there's a real error
     try:
         data = json.loads(proc.stdout)
-        findings_json = data.get("Reports", [])
+        findings_json = data.get("Reports") or []
     except json.JSONDecodeError as exc:  # pragma: no cover - defensive
         # If JSON parsing fails, check if it's a real error
         if proc.returncode != 0 and not proc.stdout.strip():

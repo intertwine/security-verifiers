@@ -88,19 +88,28 @@ def run_kubelinter(paths: List[str]) -> List[Dict[str, Any]]:
 def run_semgrep(paths: List[str]) -> List[Dict[str, Any]]:
     """Expose ``semgrep_scan`` as a simple tool."""
 
-    findings = []
-    for f in semgrep_scan(paths):
-        # Create dict without extra field to avoid schema issues
-        finding_dict = {
-            "tool": f.tool,
-            "rule_id": f.rule_id,
-            "severity": f.severity,
-            "message": f.message,
-            "file": f.file,
-            "start_line": f.start_line,
-            "end_line": f.end_line,
-        }
-        findings.append(finding_dict)
+    findings: list[dict[str, Any]] = []
+
+    by_ruleset: dict[str, list[str]] = {"p/kubernetes": [], "p/terraform": []}
+    for path in paths:
+        ruleset = "p/terraform" if path.endswith(".tf") else "p/kubernetes"
+        by_ruleset[ruleset].append(path)
+
+    for ruleset, grouped_paths in by_ruleset.items():
+        if not grouped_paths:
+            continue
+        for f in semgrep_scan(grouped_paths, rules=ruleset):
+            # Create dict without extra field to avoid schema issues
+            finding_dict = {
+                "tool": f.tool,
+                "rule_id": f.rule_id,
+                "severity": f.severity,
+                "message": f.message,
+                "file": f.file,
+                "start_line": f.start_line,
+                "end_line": f.end_line,
+            }
+            findings.append(finding_dict)
     return findings
 
 
@@ -234,13 +243,58 @@ def reward_config_auditing(
     elif isinstance(answer, dict):
         answer_obj = answer
 
-    oracle_dicts = (answer_obj or {}).get("oracle", [])
-    oracle = [Violation(id=v["id"], severity=v["severity"]) for v in oracle_dicts]
+    fixture_type = (answer_obj or {}).get("fixture_type") or kwargs.get("fixture_type") or "k8s"
+    fixture_type = str(fixture_type).lower().strip()
+    if fixture_type in {"tf", "terraform"}:
+        fixture_type = "tf"
+    else:
+        fixture_type = "k8s"
+
+    def _normalize_severity(value: Any) -> str:
+        sev = str(value).lower().strip() if value is not None else "med"
+        if sev == "medium":
+            sev = "med"
+        if sev == "critical":
+            sev = "high"
+        return sev if sev in {"low", "med", "high"} else "med"
+
+    oracle: List[Violation] = []
+    if "oracle" in (answer_obj or {}):
+        oracle_dicts = (answer_obj or {}).get("oracle", []) or []
+        for v in oracle_dicts:
+            if not isinstance(v, dict):
+                continue
+            vid = v.get("id")
+            if not vid:
+                continue
+            oracle.append(Violation(id=str(vid), severity=_normalize_severity(v.get("severity"))))  # type: ignore[arg-type]
+    else:
+        # Hub/build dataset format: oracle findings live under "violations" with tool + rule_id.
+        oracle_findings = (answer_obj or {}).get("violations", []) or []
+        if isinstance(oracle_findings, list):
+            for f in oracle_findings:
+                if not isinstance(f, dict):
+                    continue
+                tool = f.get("tool")
+                rule_id = f.get("rule_id")
+                vid = f.get("id") or (f"{tool}/{rule_id}" if tool and rule_id else None)
+                if not vid:
+                    continue
+                oracle.append(Violation(id=str(vid), severity=_normalize_severity(f.get("severity"))))  # type: ignore[arg-type]
+
+    # Scoring contract: For k8s, primary oracle is kube-linter; for tf, primary oracle is semgrep.
+    # Datasets may include extra tool findings; ignore them for scoring to avoid oracle/tool mismatch.
+    tool_style = any(v.id.startswith(("kube-linter/", "semgrep/", "opa/")) for v in oracle) or any(
+        v.id.startswith(("kube-linter/", "semgrep/", "opa/")) for v in violations_pred
+    )
+    if tool_style:
+        primary_prefix = "kube-linter/" if fixture_type == "k8s" else "semgrep/"
+        oracle = [v for v in oracle if v.id.startswith(primary_prefix)]
+        violations_pred = [v for v in violations_pred if v.id.startswith(primary_prefix)]
 
     post: List[Violation] | None = None
     if patch:
-        fixture_path = (answer_obj or {}).get("fixture_path", "")
-        fixture_type = (answer_obj or {}).get("fixture_type", "k8s")
+        fixture_path = (answer_obj or {}).get("fixture_path") or kwargs.get("fixture_path") or ""
         applied, new_text = try_apply_patch(fixture_path, patch)
         if applied:
             with tempfile.NamedTemporaryFile("w", delete=False) as tmp:
@@ -250,7 +304,7 @@ def reward_config_auditing(
                 if fixture_type == "k8s":
                     post_findings = kubelinter_lint([tmp_path])
                 else:
-                    post_findings = semgrep_scan([tmp_path])
+                    post_findings = semgrep_scan([tmp_path], rules="p/terraform")
                 post = normalize_findings(post_findings)
             finally:
                 Path(tmp_path).unlink(missing_ok=True)
@@ -435,8 +489,14 @@ def load_environment(
             "Return a JSON object with exactly these fields:\n"
             "- violations: array of objects, each with 'id' (string like 'tool/rule-id'), "
             "'severity' ('low', 'med', or 'high')\n"
-            "- patch: string containing a unified diff (optional, can be empty string)\n"
+            "- patch: string containing a *valid unified diff* (optional; use empty string if unsure)\n"
             "- confidence: float between 0 and 1\n\n"
+            "Patch requirements (if patch is non-empty):\n"
+            "- Must be a unified diff that `patch` can apply.\n"
+            "- Include file headers starting with '---' and '+++'.\n"
+            "- Include at least one hunk header like '@@ -1,3 +1,4 @@' (with numbers).\n"
+            "- Do NOT use apply_patch-style markers like '*** Begin Patch'.\n"
+            "- Do NOT include explanations inside the patch; only diff text.\n\n"
             "Example:\n"
             "{\n"
             '  "violations": [\n'

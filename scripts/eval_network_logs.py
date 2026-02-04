@@ -29,18 +29,20 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 os.environ.setdefault("PYTHONPATH", str(REPO_ROOT))
 
-# Import eval utilities (must be before environment imports to avoid circular deps)
+# Imports below rely on the repo root being on sys.path (see bootstrap above).
+from bench.report import generate_report_md, generate_summary, load_results  # noqa: E402
 from eval_utils import (  # noqa: E402
     EarlyStopError,
     ErrorTracker,
     build_base_metadata,
 )
-from generate_e1_eval_report import analyze_run  # noqa: E402
 from model_router import get_client_for_model  # noqa: E402
-
-# Initialize Weave before importing environments for automatic tracing
-# Note: weave_init is imported but its initialization happens automatically
-from sv_shared import weave_init  # type: ignore  # noqa: F401, E402
+from sv_shared import (  # type: ignore  # noqa: F401, E402
+    reward_accuracy,
+    reward_asymmetric_cost,
+    reward_calibration,
+    weave_init,
+)
 
 # Import E1 environment, falling back to source path when not installed as a package
 try:
@@ -48,12 +50,6 @@ try:
 except ImportError:  # pragma: no cover
     sys.path.append(str(REPO_ROOT / "environments" / "sv-env-network-logs"))
     from sv_env_network_logs import load_environment  # type: ignore
-
-from sv_shared import (  # noqa: E402
-    reward_accuracy,
-    reward_asymmetric_cost,
-    reward_calibration,
-)  # type: ignore
 
 # OpenAI client is imported in model_router.py
 
@@ -267,14 +263,15 @@ def main() -> None:
 
         print(f"✓ Saved artifacts for {model} -> {run_dir}")
 
-        # Generate summary.json with aggregated metrics
-        print("  Generating summary.json...")
-        summary = analyze_run(run_dir, write_summary=True)
-        if summary:
-            print(
-                f"  ✓ Summary: Acc={summary['Acc']:.4f}, ECE={summary['ECE']:.4f}, "
-                f"FN%={summary['FN%']:.2f}, FP%={summary['FP%']:.2f}, Abstain%={summary['Abstain%']:.2f}"
-            )
+        # Generate schema-stable report artifacts (WP1)
+        print("  Generating summary.json + report.md (svbench_report)...")
+        try:
+            results, meta = load_results(run_dir)
+            summary = generate_summary("e1", results, meta, run_id=run_dir.name, strict=False)
+            (run_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+            (run_dir / "report.md").write_text(generate_report_md(summary), encoding="utf-8")
+        except Exception as exc:
+            print(f"  ✗ Failed to generate report artifacts: {exc}")
 
 
 if __name__ == "__main__":

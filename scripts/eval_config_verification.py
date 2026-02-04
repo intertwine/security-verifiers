@@ -33,20 +33,15 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 os.environ.setdefault("PYTHONPATH", str(REPO_ROOT))
 
-# Import eval utilities (must be before environment imports to avoid circular deps)
+# Imports below rely on the repo root being on sys.path (see bootstrap above).
+from bench.report import generate_report_md, generate_summary, load_results  # noqa: E402
 from scripts.eval_utils import (  # noqa: E402
     EarlyStopError,
     ErrorTracker,
     build_base_metadata,
     get_tool_version,
 )
-
-# Import report generator for summary generation
-from scripts.generate_e2_eval_report import analyze_run  # noqa: E402
 from scripts.model_router import get_client_for_model  # noqa: E402
-
-# Initialize Weave before importing environments for automatic tracing
-# pylint: disable=wrong-import-position
 from sv_env_config_verification import (  # type: ignore[import]  # noqa: E402
     load_environment,
     reward_config_auditing,
@@ -67,6 +62,33 @@ def ensure_dir(path: Path) -> None:
 def parse_models(s: str) -> List[str]:
     """Parse comma-separated list of models."""
     return [m.strip() for m in s.replace(" ", "").split(",") if m.strip()]
+
+
+def _normalize_fixture_type(value: Any, question: str) -> str:
+    """Best-effort normalization to 'k8s' or 'tf'."""
+    if isinstance(value, str):
+        v = value.lower().strip()
+        if v in {"tf", "terraform"}:
+            return "tf"
+        if v in {"k8s", "kubernetes", "yaml"}:
+            return "k8s"
+
+    q = (question or "").lstrip()
+    if q.startswith(("resource", "provider", "module", "variable", "locals", "data", "output", "terraform")):
+        return "tf"
+    if q.startswith("apiVersion:"):
+        return "k8s"
+    return "k8s"
+
+
+def _persist_fixture(run_dir: Path, index: int, question: str, fixture_type: str) -> str:
+    """Persist the config fixture into the run directory and return its absolute path."""
+    fixtures_dir = run_dir / "fixtures"
+    fixtures_dir.mkdir(parents=True, exist_ok=True)
+    ext = ".tf" if fixture_type == "tf" else ".yaml"
+    fixture_file = fixtures_dir / f"fixture_{index}{ext}"
+    fixture_file.write_text(question or "", encoding="utf-8")
+    return str(fixture_file)
 
 
 def convert_tools_to_openai_format(tools: List) -> List[Dict[str, Any]]:
@@ -119,16 +141,19 @@ async def run_multiturn_evaluation(
 
     Returns a dictionary with the completion and any tool interactions.
     """
-    # Create a temporary file with the configuration content for tools to analyze
-    temp_file = None
-    temp_path = None
-    if question and (question.startswith("apiVersion:") or question.startswith("resource")):
-        # Determine file extension based on content
+    # Prefer an on-disk fixture (persisted in the run directory) if provided.
+    # Fall back to a temporary file when needed.
+    temp_path: Optional[str] = None
+    cleanup_temp_file = False
+    if fixture_path and Path(fixture_path).exists():
+        temp_path = fixture_path
+    elif question and (question.startswith("apiVersion:") or question.startswith("resource")):
         ext = ".yaml" if "apiVersion:" in question else ".tf"
         temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=ext, delete=False)
         temp_file.write(question)
         temp_file.close()
         temp_path = temp_file.name
+        cleanup_temp_file = True
 
     # Initialize conversation with system prompt and user question
     # Include file path hint if we created a temp file
@@ -249,7 +274,7 @@ async def run_multiturn_evaluation(
 
         except Exception as e:
             # Clean up temp file on error
-            if temp_path:
+            if cleanup_temp_file and temp_path:
                 try:
                     Path(temp_path).unlink(missing_ok=True)
                 except Exception:
@@ -257,7 +282,7 @@ async def run_multiturn_evaluation(
             return {"completion": "", "error": str(e), "tool_interactions": tool_interactions}
 
     # Clean up temp file if created
-    if temp_path:
+    if cleanup_temp_file and temp_path:
         try:
             Path(temp_path).unlink(missing_ok=True)
         except Exception:
@@ -432,14 +457,33 @@ def main() -> None:
 
                 # Get fixture path if available
                 fixture_path = None
+                fixture_type = None
                 if isinstance(answer, str):
                     try:
                         answer_obj = json.loads(answer)
                         fixture_path = answer_obj.get("fixture_path")
+                        fixture_type = answer_obj.get("fixture_type")
                     except json.JSONDecodeError:
                         pass
                 elif isinstance(answer, dict):
                     fixture_path = answer.get("fixture_path")
+                    fixture_type = answer.get("fixture_type")
+
+                normalized_fixture_type = _normalize_fixture_type(fixture_type, question)
+
+                resolved_fixture_path: Optional[str] = None
+                if fixture_path:
+                    candidate = Path(str(fixture_path))
+                    if not candidate.is_absolute():
+                        candidate = (REPO_ROOT / candidate).resolve()
+                    if candidate.exists():
+                        resolved_fixture_path = str(candidate)
+
+                if resolved_fixture_path is None:
+                    resolved_fixture_path = _persist_fixture(run_dir, i, question, normalized_fixture_type)
+
+                record["fixture_path"] = resolved_fixture_path
+                record["fixture_type"] = normalized_fixture_type
 
                 # Run multi-turn evaluation
                 try:
@@ -453,7 +497,7 @@ def main() -> None:
                             max_turns=args.max_turns,
                             temperature=args.temperature,
                             max_tokens=args.max_tokens,
-                            fixture_path=fixture_path,
+                            fixture_path=resolved_fixture_path,
                         )
                     )
 
@@ -482,7 +526,14 @@ def main() -> None:
                 # Compute rewards
                 text = result["completion"]
                 try:
-                    r_main = float(reward_config_auditing(text, answer))
+                    r_main = float(
+                        reward_config_auditing(
+                            text,
+                            answer,
+                            fixture_path=resolved_fixture_path,
+                            fixture_type=normalized_fixture_type,
+                        )
+                    )
                 except Exception as e:
                     r_main = 0.0
                     record["reward_error"] = str(e)
@@ -506,15 +557,15 @@ def main() -> None:
 
         print(f"✓ Saved artifacts for {model} -> {run_dir}")
 
-        # Generate summary.json with aggregated metrics
-        print("  Generating summary.json...")
-        summary = analyze_run(run_dir, write_summary=True)
-        if summary:
-            print(
-                f"  ✓ Summary: MeanReward={summary['MeanReward']:.4f}, "
-                f"FormatSuccess%={summary['FormatSuccess%']:.2f}, "
-                f"AvgTools={summary['AvgTools']:.2f}, AvgTurns={summary['AvgTurns']:.2f}"
-            )
+        # Generate schema-stable report artifacts (WP1)
+        print("  Generating summary.json + report.md (svbench_report)...")
+        try:
+            results, meta = load_results(run_dir)
+            summary = generate_summary("e2", results, meta, run_id=run_dir.name, strict=False)
+            (run_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
+            (run_dir / "report.md").write_text(generate_report_md(summary), encoding="utf-8")
+        except Exception as exc:
+            print(f"  ✗ Failed to generate report artifacts: {exc}")
 
 
 if __name__ == "__main__":

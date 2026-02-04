@@ -11,6 +11,7 @@ This directory contains [Agent Skills](https://agentskills.io/) that help AI age
 | `sv-deploy` | Deploy to Environments Hub and publish to PyPI |
 | `sv-hf` | Manage HuggingFace dataset repositories |
 | `sv-dev` | Development workflow (testing, linting, formatting) |
+| `sv-report` | Generate SV-Bench metrics reports (summary.json + report.md) |
 
 ## Using Skills
 
