@@ -123,6 +123,26 @@ def _normalize_violation_list(raw: Any) -> list[dict[str, Any]]:
     return violations
 
 
+def _normalize_primary_tool_ids(
+    violations: list[dict[str, Any]],
+    primary_prefix: str,
+    tool_prefixes: tuple[str, ...],
+) -> list[dict[str, Any]]:
+    """Coerce unprefixed IDs to the primary tool and drop non-primary tool prefixes."""
+    normalized: list[dict[str, Any]] = []
+    for violation in violations:
+        vid = str(violation.get("id", ""))
+        if not vid:
+            continue
+        if vid.startswith(primary_prefix):
+            normalized.append(violation)
+            continue
+        if vid.startswith(tool_prefixes):
+            continue
+        normalized.append({**violation, "id": f"{primary_prefix}{vid}"})
+    return normalized
+
+
 def _parse_e1_completion(completion: str) -> tuple[str | None, float | None]:
     """Parse E1 completion JSON into label/confidence."""
     data = _load_json_from_text(completion)
@@ -394,8 +414,8 @@ def _normalize_e2_results(results: list[dict[str, Any]], strict: bool) -> list[d
         )
         if tool_style:
             primary_prefix = "kube-linter/" if (fixture_type or "k8s") == "k8s" else "semgrep/"
-            oracle = [v for v in oracle if v.get("id", "").startswith(primary_prefix)]
-            predicted = [v for v in predicted if v.get("id", "").startswith(primary_prefix)]
+            oracle = _normalize_primary_tool_ids(oracle, primary_prefix, tool_prefixes)
+            predicted = _normalize_primary_tool_ids(predicted, primary_prefix, tool_prefixes)
 
         patch_applied = record.get("patch_applied")
         post_patch_raw = record.get("post_patch_violations")
@@ -413,7 +433,7 @@ def _normalize_e2_results(results: list[dict[str, Any]], strict: bool) -> list[d
         post_patch = _normalize_violation_list(post_patch_raw)
         if tool_style and post_patch:
             primary_prefix = "kube-linter/" if (fixture_type or "k8s") == "k8s" else "semgrep/"
-            post_patch = [v for v in post_patch if v.get("id", "").startswith(primary_prefix)]
+            post_patch = _normalize_primary_tool_ids(post_patch, primary_prefix, tool_prefixes)
         tool_calls, tool_time_ms, tool_usage = _normalize_tool_usage(record)
         turns = record.get("turns") or record.get("turns_used") or 1
 
