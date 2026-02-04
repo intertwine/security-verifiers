@@ -5,15 +5,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List
 
-from bench.report import generate_report_md, generate_summary
-from scripts.eval_utils import build_base_metadata
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT))
+
+from bench.report import generate_report_md, generate_summary  # noqa: E402
+from scripts.eval_utils import build_base_metadata  # noqa: E402
 
 
 def _load_jsonl(path: Path) -> list[dict[str, Any]]:

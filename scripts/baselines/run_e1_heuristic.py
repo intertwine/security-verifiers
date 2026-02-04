@@ -6,16 +6,17 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 import time
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List
 
-from bench.report import generate_report_md, generate_summary
-from scripts.eval_utils import build_base_metadata
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT))
 
+from bench.report import generate_report_md, generate_summary  # noqa: E402
+from scripts.eval_utils import build_base_metadata  # noqa: E402
 
 SUSPICIOUS_KEYWORDS = {
     "TOR",
@@ -65,9 +66,6 @@ def _heuristic_label(question: str) -> tuple[str, float]:
             return "Malicious", 0.7
         if dest_port in BENIGN_PORTS:
             return "Benign", 0.55
-
-        if dest_port == 22 and ("FLAGS [S]" in upper or "AUTH_FAILED" in upper):
-            return "Malicious", 0.65
 
     return "Abstain", 0.3
 
