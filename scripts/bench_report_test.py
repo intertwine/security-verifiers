@@ -242,6 +242,28 @@ class TestReportGeneration:
         )
         assert summary["metrics"]["finding_quality"]["f1_weighted"] == 1.0
 
+    def test_generate_e2_summary_unprefixed_predictions(self) -> None:
+        answer = {
+            "oracle": [{"id": "kube-linter/privileged-container", "severity": "high"}],
+            "fixture_type": "k8s",
+        }
+        completion = (
+            "{"
+            '"violations": [{"id": "privileged-container", "severity": "high"}],'
+            '"patch": "",'
+            '"confidence": 0.9'
+            "}"
+        )
+        summary = generate_summary(
+            "e2",
+            [{"completion": completion, "answer": json.dumps(answer)}],
+            {},
+            run_id="t",
+        )
+        fq = summary["metrics"]["finding_quality"]
+        assert fq["f1_weighted"] == 1.0
+        assert fq["f1_unweighted"] == 1.0
+
     def test_generate_report_md(self) -> None:
         results = [
             {"predicted_label": "Malicious", "answer": "Malicious", "confidence": 0.9},
