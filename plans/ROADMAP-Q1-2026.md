@@ -1,6 +1,6 @@
 # ROADMAP Q1 2026 — Security Verifiers → SV‑Bench v0.1
 
-**Last updated:** 2026-02-02
+**Last updated:** 2026-02-04
 **Primary objective (Q1):** Ship **SV‑Bench v0.1**: a benchmark + training harness demonstrating that **executable security verifiers** can train models (not just evaluate them) with measurable gains in **operationally-relevant security metrics**.
 
 ---
@@ -64,7 +64,7 @@ Implemented comprehensive metadata tracking and CI for reproducible evaluations:
 - CI workflow (`eval-ci.yml`) for minimal E1/E2 eval integrity checks
 
 ### WP1 — Metrics Contracts + Report Generator ✓
-**Status:** Complete (2026-02-02)
+**Status:** Complete (2026-02-02; refinements 2026-02-04)
 **Why:** SV‑Bench is only as credible as its metric definitions and its ability to generate a report from stored rollouts.
 
 **Definition of Done:**
@@ -84,6 +84,9 @@ Implemented comprehensive metadata tracking and CI for reproducible evaluations:
 - E2 tool economy includes tool call timings (duration_ms) and severity breakdowns
 - Summary schema updated to include confusion matrix + severity breakdowns
 - Tests cover E1/E2 metrics and report generation
+- Added positive-only F1 plus clean-pass/false-positive rates for E2
+- Normalizes unprefixed E2 rule IDs to the primary tool prefix (prevents dropping predictions)
+- Batch report generator for recent runs (`scripts/generate_svbench_reports.py`) + sv-report skill
 
 **Metric Minimums (v0.1):**
 
