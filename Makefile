@@ -12,8 +12,9 @@ test test-env test-utils test-cov lint lint-fix format check quick-test quick-fi
 build build-env build-utils deploy update-version update-utils-version hub-validate hub-deploy hub-push-datasets hub-test-datasets pypi-publish-utils pypi-publish-utils-test ci cd \
 \
 eval eval-e1 eval-e2 report-network-logs e1 e2 e3 e4 e5 e6 \
+baseline-e1 baseline-e2 \
 \
-data-e1 data-e1-ood data-e1-test data-e2 data-e2-local data-e2-test data-all data-test-all clone-e2-sources \
+data-e1 data-e1-ood data-e1-test data-e2 data-e2-local data-e2-test data-all data-test-all data-public-mini clone-e2-sources \
 hf-e1-meta hf-e2-meta hf-e1-push hf-e2-push hf-e1p-meta hf-e2p-meta hf-e1p-push hf-e2p-push hf-push-all \
 validate-e1-data validate-e2-data validate-data hf-e1p-push-canonical hf-e2p-push-canonical hf-e1p-push-canonical-dry hf-e2p-push-canonical-dry \
 \
@@ -90,6 +91,8 @@ help:
 	@$(ECHO) "  make eval E=x                                    - Evaluate environment locally"
 	@$(ECHO) "  make eval-e1 MODELS=... N=10                     - Reproducible E1 evals (network-logs)"
 	@$(ECHO) "  make eval-e2 MODELS=... N=2 INCLUDE_TOOLS=true  - Reproducible E2 evals (config-verification)"
+	@$(ECHO) "  make baseline-e1 MODEL=... N=100                 - E1 baselines on public mini set"
+	@$(ECHO) "  make baseline-e2 MODEL=... N=100                 - E2 baselines on public mini set"
 	@$(ECHO) "  make report-network-logs [RUN_IDS=\"id1 id2\"]    - Generate E1 metrics report (JSON)"
 	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)Hub Dataset Management:$(NC)"
@@ -111,6 +114,7 @@ help:
 	@$(ECHO) "  make data-e1-test   - Build E1 test fixtures for CI (small, checked in)"
 	@$(ECHO) "  make data-e2-test   - Build E2 test fixtures for CI (small, checked in)"
 	@$(ECHO) "  make data-test-all  - Build all test fixtures for CI"
+	@$(ECHO) "  make data-public-mini - Build public mini datasets"
 	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)HuggingFace Flat Metadata Schema (Dataset Viewer):$(NC)"
 	@$(ECHO) "  make hf-e1-meta     - Build E1 metadata (flat schema) locally"
@@ -606,6 +610,52 @@ report-config-verification: venv
 	fi
 	@$(ECHO) "$(GREEN)✓ Report generated$(NC)"
 
+# Baselines (public mini sets)
+baseline-e1: venv
+	@DATASET=$${DATASET:-datasets/public_mini/e1.jsonl}; \
+	N=$${N:-100}; \
+	MODEL=$${MODEL:-gpt-5-mini}; \
+	TS=$$(date +%Y%m%d%H%M%S); \
+	RUN_ID_HEUR=$${RUN_ID_HEUR:-baseline-e1-heur-$$TS}; \
+	RUN_ID_PROMPT=$${RUN_ID_PROMPT:-baseline-e1-prompt-$$TS}; \
+	$(ECHO) "$(YELLOW)Running E1 baselines (dataset=$$DATASET, N=$$N, model=$$MODEL)$(NC)"; \
+	$(ACTIVATE) && uv run python scripts/baselines/run_e1_heuristic.py \
+		--dataset "$$DATASET" --num-examples $$N --run-id "$$RUN_ID_HEUR" --baseline-name "e1-heuristic"; \
+	$(ACTIVATE) && set -a && source .env && set +a && \
+	python scripts/eval_network_logs.py \
+		--models "$$MODEL" --num-examples $$N --dataset "$$DATASET" \
+		--system-prompt-file baselines/e1_prompt/system_prompt.txt \
+		--baseline-name "e1-prompt" --run-id "$$RUN_ID_PROMPT"; \
+	$(ACTIVATE) && uv run python scripts/baselines/update_scoreboard.py \
+		--env e1 --run-dirs \
+		"outputs/evals/sv-env-network-logs--heuristic/$$RUN_ID_HEUR" \
+		"outputs/evals/sv-env-network-logs--$$MODEL/$$RUN_ID_PROMPT"
+	@$(ECHO) "$(GREEN)✓ E1 baselines complete$(NC)"
+
+baseline-e2: venv
+	@DATASET=$${DATASET:-datasets/public_mini/e2.jsonl}; \
+	N=$${N:-100}; \
+	MODEL=$${MODEL:-gpt-5-mini}; \
+	INCLUDE_TOOLS=$${INCLUDE_TOOLS:-true}; \
+	MAX_TURNS=$${MAX_TURNS:-5}; \
+	TS=$$(date +%Y%m%d%H%M%S); \
+	RUN_ID_TOOL=$${RUN_ID_TOOL:-baseline-e2-tool-$$TS}; \
+	RUN_ID_PROMPT=$${RUN_ID_PROMPT:-baseline-e2-prompt-$$TS}; \
+	$(ECHO) "$(YELLOW)Running E2 baselines (dataset=$$DATASET, N=$$N, model=$$MODEL, tools=$$INCLUDE_TOOLS)$(NC)"; \
+	$(ACTIVATE) && uv run python scripts/baselines/run_e2_tool_only.py \
+		--dataset "$$DATASET" --num-examples $$N --run-id "$$RUN_ID_TOOL" --baseline-name "e2-tool-only"; \
+	$(ACTIVATE) && set -a && source .env && set +a && \
+	python scripts/eval_config_verification.py \
+		--models "$$MODEL" --num-examples $$N --dataset "$$DATASET" \
+		--include-tools $$INCLUDE_TOOLS --max-turns $$MAX_TURNS \
+		--system-prompt-file baselines/e2_prompt/system_prompt.txt \
+		--baseline-name "e2-prompt" --run-id "$$RUN_ID_PROMPT"; \
+	$(ACTIVATE) && uv run python scripts/baselines/update_scoreboard.py \
+		--env e2 --run-dirs \
+		"outputs/evals/sv-env-config-verification--tool-only/$$RUN_ID_TOOL" \
+		"outputs/evals/sv-env-config-verification--$$MODEL/$$RUN_ID_PROMPT"
+	@$(ECHO) "$(GREEN)✓ E2 baselines complete$(NC)"
+
 # Data building targets (production - private, not committed)
 data-e1: venv
 	@LIMIT=$${LIMIT:-1800}; \
@@ -694,6 +744,12 @@ data-all: data-e1 data-e1-ood
 # Build all test fixtures for CI
 data-test-all: data-e1-test data-e2-test
 	@$(ECHO) "$(GREEN)✓ All test fixtures built for CI$(NC)"
+
+# Build public mini datasets (small, committed)
+data-public-mini: venv
+	@$(ECHO) "$(YELLOW)Building public mini datasets...$(NC)"; \
+	$(ACTIVATE) && uv run python scripts/data/build_public_mini.py
+	@$(ECHO) "$(GREEN)✓ Public mini datasets built$(NC)"
 
 # ========== Flat Metadata Schema Targets (HF Dataset Viewer) ==========
 # Build metadata locally (flat schema)

@@ -79,6 +79,16 @@ make report-network-logs      # E1 metrics
 make report-config-verification  # E2 metrics
 ```
 
+## Baselines (Public Mini Sets)
+
+Run baseline suites on the committed mini datasets:
+```bash
+make baseline-e1 MODEL="gpt-5-mini"
+make baseline-e2 MODEL="gpt-5-mini" INCLUDE_TOOLS=true
+```
+
+Scoreboards are written to `bench/scoreboards/`.
+
 ## Available Environments
 
 | Environment | Type | Task | Status |

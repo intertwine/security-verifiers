@@ -16,6 +16,24 @@ To access:
 2. Set `HF_TOKEN` in your environment
 3. Datasets load automatically when running evaluations
 
+### Public Mini Sets (Committed)
+
+Small public mini sets are committed to the repo for quick baselines:
+
+- `datasets/public_mini/e1.jsonl` (E1, 100 items)
+- `datasets/public_mini/e2.jsonl` (E2, 100 items)
+
+Regenerate with:
+```bash
+make data-public-mini
+```
+
+Use them in evals:
+```bash
+make eval-e1 MODELS="gpt-5-mini" N=100 DATASET="datasets/public_mini/e1.jsonl"
+make eval-e2 MODELS="gpt-5-mini" N=100 DATASET="datasets/public_mini/e2.jsonl"
+```
+
 ### Dataset Loading Modes
 
 All environments support the `dataset_source` parameter:

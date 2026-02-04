@@ -1,0 +1,14 @@
+{
+  "seed": 42,
+  "e1": {
+    "source": "environments/sv-env-network-logs/data/iot23-train-dev-test-v1.jsonl",
+    "count": 100
+  },
+  "e2": {
+    "k8s_source": "environments/sv-env-config-verification/data/k8s-labeled-v1.jsonl",
+    "tf_source": "environments/sv-env-config-verification/data/terraform-labeled-v1.jsonl",
+    "k8s_count": 80,
+    "tf_count": 20,
+    "count": 100
+  }
+}

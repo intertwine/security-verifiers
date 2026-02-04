@@ -135,6 +135,7 @@ async def run_multiturn_evaluation(
     temperature: Optional[float] = None,
     max_tokens: Optional[int] = None,
     fixture_path: Optional[str] = None,
+    system_prompt_override: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Run a multi-turn evaluation with tool calling support.
@@ -157,7 +158,7 @@ async def run_multiturn_evaluation(
 
     # Initialize conversation with system prompt and user question
     # Include file path hint if we created a temp file
-    enhanced_prompt = env.system_prompt
+    enhanced_prompt = system_prompt_override or env.system_prompt
     if temp_path:
         enhanced_prompt += f"\n\nThe configuration to analyze has been saved to: {temp_path}"
 
@@ -349,10 +350,32 @@ def main() -> None:
         default=None,
         help="Random seed for reproducibility (default: None, non-deterministic)",
     )
+    parser.add_argument(
+        "--system-prompt-file",
+        type=str,
+        default=None,
+        help="Optional system prompt override file",
+    )
+    parser.add_argument(
+        "--baseline-name",
+        type=str,
+        default=None,
+        help="Optional baseline name for metadata",
+    )
+    parser.add_argument(
+        "--run-id",
+        type=str,
+        default=None,
+        help="Optional run id (default: random)",
+    )
     args = parser.parse_args()
 
     models = parse_models(args.models)
     include_tools = str(args.include_tools).lower() in {"1", "true", "yes"}
+
+    system_prompt_override = None
+    if args.system_prompt_file:
+        system_prompt_override = Path(args.system_prompt_file).read_text(encoding="utf-8").strip()
 
     # Load environment
     print(f"Loading environment (tools={'enabled' if include_tools else 'disabled'})...")
@@ -402,7 +425,7 @@ def main() -> None:
             print(f"✗ Skipping {model}: {e}")
             continue
 
-        run_id = uuid.uuid4().hex[:8]
+        run_id = args.run_id or uuid.uuid4().hex[:8]
         run_dir = out_base / f"sv-env-config-verification--{model}" / run_id
         ensure_dir(run_dir)
         meta_path = run_dir / "metadata.json"
@@ -427,6 +450,8 @@ def main() -> None:
                 "semgrep": semgrep_ver,
                 "opa": opa_ver,
             },
+            baseline_name=args.baseline_name,
+            system_prompt_file=args.system_prompt_file,
         )
         if args.temperature is not None:
             metadata["temperature"] = args.temperature
@@ -498,6 +523,7 @@ def main() -> None:
                             temperature=args.temperature,
                             max_tokens=args.max_tokens,
                             fixture_path=resolved_fixture_path,
+                            system_prompt_override=system_prompt_override,
                         )
                     )
 

@@ -91,6 +91,16 @@ security-verifiers/
 | [Logging Guide](docs/logging.md) | Weave tracing configuration |
 | [CLAUDE.md](CLAUDE.md) | Agent/LLM instructions |
 
+## Baselines
+
+Run quick baselines on the public mini sets:
+```
+make baseline-e1 MODEL="gpt-5-mini"
+make baseline-e2 MODEL="gpt-5-mini" INCLUDE_TOOLS=true
+```
+
+Scoreboards are written to `bench/scoreboards/`.
+
 ## Roadmap
 
 See [plans/ROADMAP-Q1-2026.md](plans/ROADMAP-Q1-2026.md) for current development priorities:

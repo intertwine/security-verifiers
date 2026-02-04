@@ -11,6 +11,17 @@ Public metadata-only datasets are available for browsing:
 
 These repos include sampling metadata and instructions for requesting access to full datasets.
 
+### Public Mini Sets (Committed)
+
+Small, committed mini datasets are available under `datasets/public_mini/`:
+- `e1.jsonl` (100 samples)
+- `e2.jsonl` (100 samples)
+
+Regenerate:
+```bash
+make data-public-mini
+```
+
 **Metadata Schema:** All HuggingFace metadata splits use a standardized six-column flat schema:
 
 - `section`: Category (sampling/ood/tools/provenance/notes)
