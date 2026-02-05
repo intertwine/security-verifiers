@@ -1,6 +1,6 @@
 # ROADMAP Q1 2026 — Security Verifiers → SV‑Bench v0.1
 
-**Last updated:** 2026-02-04
+**Last updated:** 2026-02-05
 **Primary objective (Q1):** Ship **SV‑Bench v0.1**: a benchmark + training harness demonstrating that **executable security verifiers** can train models (not just evaluate them) with measurable gains in **operationally-relevant security metrics**.
 
 ---
@@ -102,7 +102,8 @@ E2 (config verification):
 - Severity weighting: score weighted by severity of fixed findings
 - Tool economy: tool calls + tool time per episode
 
-### WP2 — Baselines + Public Mini Sets
+### WP2 — Baselines + Public Mini Sets ✓
+**Status:** Complete (2026-02-05)
 **Why:** You need a floor, a strong prompt baseline, and a tool-only baseline to establish difficulty.
 
 **Definition of Done:**
@@ -116,6 +117,11 @@ E2 (config verification):
 - `baselines/e2_prompt/` (tool-first prompt baseline)
 - `bench/scoreboards/e1_scoreboard.md`, `e2_scoreboard.md`
 - `datasets/public_mini/e1.jsonl`, `e2.jsonl`
+
+**Completion notes:**
+- Public mini sets committed under `datasets/public_mini/`
+- `make baseline-e1` / `make baseline-e2` run heuristic/tool-only + prompt baselines
+- Scoreboards updated from run artifacts
 
 ### WP3 — Canonical RL Training Runs (GRPO Baseline)
 **Why:** This is the "prove it trains" milestone.
