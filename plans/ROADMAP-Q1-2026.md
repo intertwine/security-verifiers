@@ -1,6 +1,6 @@
 # ROADMAP Q1 2026 — Security Verifiers → SV‑Bench v0.1
 
-**Last updated:** 2026-02-05
+**Last updated:** 2026-02-04
 **Primary objective (Q1):** Ship **SV‑Bench v0.1**: a benchmark + training harness demonstrating that **executable security verifiers** can train models (not just evaluate them) with measurable gains in **operationally-relevant security metrics**.
 
 ---
