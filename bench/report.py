@@ -885,6 +885,9 @@ def generate_summary(
         "python_version": metadata.get("python_version"),
         "verifiers_version": metadata.get("verifiers_version"),
         "seed": metadata.get("seed"),
+        "baseline_name": metadata.get("baseline_name"),
+        "baseline_type": metadata.get("baseline_type"),
+        "system_prompt_file": metadata.get("system_prompt_file"),
     }
     metadata_clean = {key: value for key, value in metadata_fields.items() if value is not None}
 

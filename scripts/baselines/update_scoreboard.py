@@ -36,9 +36,16 @@ def _load_entries(path: Path) -> list[dict[str, Any]]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _load_metadata(run_dir: Path) -> dict[str, Any]:
+    metadata_path = run_dir / "metadata.json"
+    if metadata_path.exists():
+        return json.loads(metadata_path.read_text(encoding="utf-8"))
+    return {}
+
+
 def _save_entries(path: Path, entries: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(entries, indent=2), encoding="utf-8")
+    path.write_text(json.dumps(entries, indent=2) + "\n", encoding="utf-8")
 
 
 def _format_float(value: Any) -> str:
@@ -110,12 +117,15 @@ def main() -> None:
     md_path = scoreboard_dir / f"{args.env}_scoreboard.md"
 
     entries = _load_entries(json_path)
-    entries_by_key: dict[str, dict[str, Any]] = {e["baseline"]: e for e in entries}
+    new_entries: list[dict[str, Any]] = []
 
     for run_dir in args.run_dirs:
-        summary = _load_summary(Path(run_dir))
+        run_path = Path(run_dir)
+        summary = _load_summary(run_path)
         metrics = summary.get("metrics", {})
         metadata = summary.get("metadata", {}) or {}
+        if "baseline_name" not in metadata:
+            metadata = {**_load_metadata(run_path), **metadata}
 
         baseline = metadata.get("baseline_name") or metadata.get("baseline") or summary.get("model")
         model = summary.get("model")
@@ -157,16 +167,23 @@ def main() -> None:
                 "run_id": run_id,
             }
 
-        entries_by_key[baseline] = entry
+        new_entries.append(entry)
 
-    entries = list(entries_by_key.values())
-    entries.sort(key=lambda item: item["baseline"])
-    _save_entries(json_path, entries)
+    new_baselines = {entry["baseline"] for entry in new_entries}
+    new_run_ids = {entry["run_id"] for entry in new_entries}
+    filtered_entries = [
+        entry
+        for entry in entries
+        if entry.get("baseline") not in new_baselines and entry.get("run_id") not in new_run_ids
+    ]
+    merged_entries = filtered_entries + new_entries
+    merged_entries.sort(key=lambda item: item["baseline"])
+    _save_entries(json_path, merged_entries)
 
     if args.env == "e1":
-        md_path.write_text(_render_e1(entries), encoding="utf-8")
+        md_path.write_text(_render_e1(merged_entries), encoding="utf-8")
     else:
-        md_path.write_text(_render_e2(entries), encoding="utf-8")
+        md_path.write_text(_render_e2(merged_entries), encoding="utf-8")
 
     print(f"✓ Updated {md_path}")
 
