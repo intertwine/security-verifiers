@@ -1,0 +1,26 @@
+[
+  {
+    "baseline": "gpt-5-mini",
+    "model": "gpt-5-mini",
+    "dataset": "datasets/public_mini/e2.jsonl",
+    "n": 100,
+    "f1": "0.424",
+    "f1_pos": "0.770",
+    "patch_success": "0.156",
+    "clean_pass": "0.756",
+    "fp_clean": "0.244",
+    "run_id": "baseline-e2-prompt-20260204195856"
+  },
+  {
+    "baseline": "tool-only",
+    "model": "tool-only",
+    "dataset": "datasets/public_mini/e2.jsonl",
+    "n": 100,
+    "f1": "0.550",
+    "f1_pos": "1.000",
+    "patch_success": "0.000",
+    "clean_pass": "1.000",
+    "fp_clean": "0.000",
+    "run_id": "baseline-e2-tool-20260204195856"
+  }
+]

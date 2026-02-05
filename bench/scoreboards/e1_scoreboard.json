@@ -1,0 +1,26 @@
+[
+  {
+    "baseline": "gpt-5-mini",
+    "model": "gpt-5-mini",
+    "dataset": "datasets/public_mini/e1.jsonl",
+    "n": 100,
+    "acc": "0.536",
+    "f1": "0.536",
+    "ece": "0.221",
+    "abstain": "0.440",
+    "cost_acc": "0.938",
+    "run_id": "baseline-e1-prompt-20260204194822"
+  },
+  {
+    "baseline": "heuristic",
+    "model": "heuristic",
+    "dataset": "datasets/public_mini/e1.jsonl",
+    "n": 100,
+    "acc": "0.540",
+    "f1": "0.580",
+    "ece": "0.327",
+    "abstain": "0.370",
+    "cost_acc": "0.954",
+    "run_id": "baseline-e1-heur-20260204194822"
+  }
+]
