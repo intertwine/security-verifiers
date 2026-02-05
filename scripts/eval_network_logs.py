@@ -101,6 +101,24 @@ def main() -> None:
         default=None,
         help="Random seed for reproducibility (default: None, non-deterministic)",
     )
+    parser.add_argument(
+        "--system-prompt-file",
+        type=str,
+        default=None,
+        help="Optional system prompt override file",
+    )
+    parser.add_argument(
+        "--baseline-name",
+        type=str,
+        default=None,
+        help="Optional baseline name for metadata",
+    )
+    parser.add_argument(
+        "--run-id",
+        type=str,
+        default=None,
+        help="Optional run id (default: random)",
+    )
     args = parser.parse_args()
 
     models = parse_models(args.models)
@@ -121,6 +139,10 @@ def main() -> None:
 
     ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
+    system_prompt_override = None
+    if args.system_prompt_file:
+        system_prompt_override = Path(args.system_prompt_file).read_text(encoding="utf-8").strip()
+
     for model in models:
         # Get appropriate client for this model
         try:
@@ -129,7 +151,7 @@ def main() -> None:
             print(f"✗ Skipping {model}: {e}")
             continue
 
-        run_id = uuid.uuid4().hex[:8]
+        run_id = args.run_id or uuid.uuid4().hex[:8]
         run_dir = out_base / f"sv-env-network-logs--{model}" / run_id
         ensure_dir(run_dir)
         meta_path = run_dir / "metadata.json"
@@ -154,6 +176,8 @@ def main() -> None:
             temperature=args.temperature,
             max_tokens=args.max_tokens,
             max_consecutive_errors=args.max_consecutive_errors,
+            baseline_name=args.baseline_name,
+            system_prompt_file=args.system_prompt_file,
         )
         meta_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
@@ -170,7 +194,9 @@ def main() -> None:
                 for i, sample in enumerate(dataset):
                     question = str(sample.get("question", ""))
                     answer = str(sample.get("answer", ""))
-                    system_prompt = getattr(env, "system_prompt", "You are a network security analyst...")
+                    system_prompt = system_prompt_override or getattr(
+                        env, "system_prompt", "You are a network security analyst..."
+                    )
 
                     record: Dict[str, Any] = {
                         "index": i,

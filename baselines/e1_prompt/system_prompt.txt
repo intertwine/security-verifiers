@@ -1,0 +1,16 @@
+You are a network security analyst.
+
+Classify the network log entry as Benign, Malicious, or Abstain.
+Return a JSON object with:
+{"label": "Benign|Malicious|Abstain", "confidence": 0.0-1.0}
+
+Signals that usually indicate Malicious:
+- TOR, C2, SYN_SCAN, brute-force patterns, or many ports scanned
+- AUTH_FAILED spikes or repeated attempts
+- Unusual outbound to public IPs with high bytes
+
+Signals that usually indicate Benign:
+- DNS, ICMP ping, normal HTTPS/HTTP with STATUS=OK
+- AUTH_SUCCESS without other anomalies
+
+If you are unsure, choose Abstain with low confidence.

@@ -102,7 +102,8 @@ E2 (config verification):
 - Severity weighting: score weighted by severity of fixed findings
 - Tool economy: tool calls + tool time per episode
 
-### WP2 — Baselines + Public Mini Sets
+### WP2 — Baselines + Public Mini Sets ✓
+**Status:** Complete (2026-02-05)
 **Why:** You need a floor, a strong prompt baseline, and a tool-only baseline to establish difficulty.
 
 **Definition of Done:**
@@ -116,6 +117,11 @@ E2 (config verification):
 - `baselines/e2_prompt/` (tool-first prompt baseline)
 - `bench/scoreboards/e1_scoreboard.md`, `e2_scoreboard.md`
 - `datasets/public_mini/e1.jsonl`, `e2.jsonl`
+
+**Completion notes:**
+- Public mini sets committed under `datasets/public_mini/`
+- `make baseline-e1` / `make baseline-e2` run heuristic/tool-only + prompt baselines
+- Scoreboards updated from run artifacts
 
 ### WP3 — Canonical RL Training Runs (GRPO Baseline)
 **Why:** This is the "prove it trains" milestone.
@@ -222,7 +228,7 @@ When comparing two approaches, match:
 - [x] WP-1 complete (verifiers v0.1.9 API compatibility)
 - [x] WP0 complete (benchmark integrity)
 - [x] WP1 complete (metrics contracts + report generator)
-- [ ] WP2 complete (baselines + public mini sets)
+- [x] WP2 complete (baselines + public mini sets)
 - [ ] WP3 complete (canonical RL runs on E1 and E2)
 - [ ] WP4 complete (GRPO vs GDPO-style ablation)
 - [ ] WP5 complete (SV‑Bench v0.1 release package)
