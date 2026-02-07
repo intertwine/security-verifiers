@@ -1,6 +1,6 @@
 # ROADMAP Q1 2026 — Security Verifiers → SV‑Bench v0.1
 
-**Last updated:** 2026-01-24
+**Last updated:** 2026-02-07
 **Primary objective (Q1):** Ship **SV‑Bench v0.1**: a benchmark + training harness demonstrating that **executable security verifiers** can train models (not just evaluate them) with measurable gains in **operationally-relevant security metrics**.
 
 ---
@@ -106,6 +106,28 @@ E2 (config verification):
 - `bench/scoreboards/e1_scoreboard.md`, `e2_scoreboard.md`
 - `datasets/public_mini/e1.jsonl`, `e2.jsonl`
 
+### WP2.5 — Prime-RL 0.4.0 Upgrade
+**Why:** Prime-RL 0.4.0 brings features critical for WP3/WP4: teacher model support (distillation baselines), temperature scheduling (training stability), environment worker logging (debugging E2), and rate limiting (tool API protection). Upgrade now to avoid mid-training migrations.
+
+**Definition of Done:**
+- Prime-RL 0.4.0 pinned in dependencies
+- Config migrations applied (LoRA path, loss param renames)
+- E1 and E2 eval runs pass with new version
+- Env worker logging validated on E2
+
+**Migration Checklist:**
+- [ ] Update `pyproject.toml` to pin `prime-rl>=0.4.0`
+- [ ] Migrate `model.experimental.lora` → `model.lora`
+- [ ] Migrate loss config keys (`sequence_mask_ratio_*` → `sequence_mask_*`)
+- [ ] Remove deprecated configs (`env_mix`, `ckpt.buffer_path`, `trajectory_strategy`)
+- [ ] Add recommended configs: `orchestrator.log.env_worker_logs=true`, `log.json_logging=true`
+- [ ] Validate E1 eval passes
+- [ ] Validate E2 eval passes (with env worker logs)
+
+**Artifacts:**
+- `docs/PRIME-RL-0.4.0-UPGRADE-ANALYSIS.md` (analysis, already written)
+- Updated `train/configs/base.toml` with 0.4.0 settings
+
 ### WP3 — Canonical RL Training Runs (GRPO Baseline)
 **Why:** This is the "prove it trains" milestone.
 
@@ -139,10 +161,14 @@ E2 (config verification):
 - Variant A: GRPO with scalar summed reward
 - Variant B: Per-component normalization + weighted sum
 - Variant C: GDPO-style decoupled normalization
+- Variant D: Teacher-guided distillation baseline (using 0.4.0's `orchestrator.teacher_model`)
+
+Variant D tests whether distillation from a stronger teacher produces comparable or better results than RL with executable rewards — a key comparison for the "executable verifiers vs alternatives" research question.
 
 **Artifacts:**
 - `research/ablation_grpo_vs_gdpo.md` (setup + results)
 - `results/ablations/grpo_vs_gdpo/<date>/` (plots + tables + configs)
+- `train/configs/e1_distill.yaml`, `train/configs/e2_distill.yaml` (distillation configs)
 
 ### WP5 — SV‑Bench v0.1 Release Package
 **Why:** A clean, versioned release is the on-ramp for adoption and collaboration.
@@ -212,6 +238,7 @@ When comparing two approaches, match:
 - [x] WP0 complete (benchmark integrity)
 - [ ] WP1 complete (metrics contracts + report generator)
 - [ ] WP2 complete (baselines + public mini sets)
+- [ ] WP2.5 complete (Prime-RL 0.4.0 upgrade)
 - [ ] WP3 complete (canonical RL runs on E1 and E2)
-- [ ] WP4 complete (GRPO vs GDPO-style ablation)
+- [ ] WP4 complete (GRPO vs GDPO-style ablation + distillation baseline)
 - [ ] WP5 complete (SV‑Bench v0.1 release package)
