@@ -132,10 +132,14 @@ def load_real_examples(env: str, num_examples: int = 3) -> str:
                 dataset = dataset.to_list()
             examples = []
             for sample in dataset[:num_examples]:
-                examples.append(json.dumps({
-                    "question": str(sample.get("question", ""))[:500],
-                    "answer": str(sample.get("answer", "")),
-                }))
+                examples.append(
+                    json.dumps(
+                        {
+                            "question": str(sample.get("question", ""))[:500],
+                            "answer": str(sample.get("answer", "")),
+                        }
+                    )
+                )
             return "\nHere are real examples for reference:\n" + "\n".join(examples)
         except Exception:
             return ""
@@ -150,10 +154,14 @@ def load_real_examples(env: str, num_examples: int = 3) -> str:
                 dataset = dataset.to_list()
             examples = []
             for sample in dataset[:num_examples]:
-                examples.append(json.dumps({
-                    "question": str(sample.get("question", ""))[:500],
-                    "answer": str(sample.get("answer", ""))[:200],
-                }))
+                examples.append(
+                    json.dumps(
+                        {
+                            "question": str(sample.get("question", ""))[:500],
+                            "answer": str(sample.get("answer", ""))[:200],
+                        }
+                    )
+                )
             return "\nHere are real examples for reference:\n" + "\n".join(examples)
         except Exception:
             return ""
@@ -441,8 +449,10 @@ def main() -> None:
 
     # Validate
     validation = validate_stepping_stones(problems, args.env)
-    print(f"\nValidation: {validation['valid']}/{validation['total']} valid "
-          f"(structural score: {validation['mean_structural_score']:.3f})")
+    print(
+        f"\nValidation: {validation['valid']}/{validation['total']} valid "
+        f"(structural score: {validation['mean_structural_score']:.3f})"
+    )
 
     # Write output
     ts_short = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
