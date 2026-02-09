@@ -1,0 +1,103 @@
+# SOAR Prototype Configuration — E2 (Config Verification)
+#
+# Phase 2 experiment: Teacher generates stepping-stone config audit problems.
+# This is the highest-impact setting due to E2's low initial pass rates
+# and multi-turn tool-calling complexity.
+#
+# E2-specific challenges:
+# - Generated configs must be valid enough for real tools (KubeLinter, Semgrep, OPA)
+# - Multi-turn episodes are expensive — parallel students cost more
+# - Reward is multi-component (detection F1 + patch delta + tool economy)
+
+experiment:
+  name: "soar-e2-prototype"
+  description: "SOAR stepping-stone generation for E2 config verification"
+  phase: 2
+
+teacher:
+  model: "gpt-5-mini"
+  temperature: 0.8
+  max_tokens: 8192  # Configs are longer than log entries
+  prompt_template: "teacher_prompts/e2_config_audit_teacher.txt"
+
+  # Difficulty progression with sub-skill decomposition
+  stages:
+    - name: "single-tool-single-violation"
+      num_problems: 30
+      difficulty: "easy"
+      config_type: "kubernetes"
+      description: "One obvious violation caught by one tool"
+
+    - name: "single-tool-multi-violation"
+      num_problems: 30
+      difficulty: "medium"
+      config_type: "kubernetes"
+      description: "Multiple violations, all caught by the same tool"
+
+    - name: "multi-tool"
+      num_problems: 20
+      difficulty: "medium"
+      config_type: "kubernetes"
+      description: "Violations requiring multiple tools to detect"
+
+    - name: "patch-required"
+      num_problems: 20
+      difficulty: "hard"
+      config_type: "kubernetes"
+      description: "Detect + generate a working patch"
+
+    - name: "terraform-basics"
+      num_problems: 20
+      difficulty: "easy"
+      config_type: "terraform"
+      description: "Single Terraform misconfiguration"
+
+    - name: "terraform-advanced"
+      num_problems: 15
+      difficulty: "hard"
+      config_type: "terraform"
+      description: "Subtle Terraform issues requiring domain knowledge"
+
+student:
+  model: "Qwen/Qwen3-4B"
+  training:
+    method: "GRPO"
+    num_steps: 10
+    learning_rate: 1.0e-5
+    batch_size: 4  # Smaller batch — E2 episodes are longer
+    rollouts_per_example: 2  # Fewer rollouts — E2 is expensive
+    max_turns: 5  # Tool-calling turns per episode
+    include_tools: true
+
+evaluation:
+  dataset: "combined"  # k8s + terraform
+  num_reward_examples: 30
+  k_values: [1, 4, 8, 16]
+
+  metrics:
+    - "pass_at_1"
+    - "pass_at_k"
+    - "detection_f1"
+    - "patch_success_rate"
+    - "tool_economy"
+    - "cold_start_escape_rate"
+
+bilevel:
+  outer_loop_steps: 15  # Fewer — E2 is expensive
+  inner_loop_steps: 10
+  parallel_students: 2  # Fewer — E2 tool calls are costly
+  datasets_per_outer_step: 3
+  problems_per_dataset: 16  # Smaller datasets — configs are longer
+  promotion_threshold: 0.05  # Lower threshold — E2 is harder
+
+# E2-specific: tool validation for generated configs
+tool_validation:
+  enabled: true
+  tools:
+    - kubelinter
+    - semgrep
+    - opa
+  # Reject generated configs that don't parse or produce tool errors
+  reject_invalid: true
+  # Track whether tools find the expected violations
+  measure_tool_agreement: true

@@ -97,6 +97,10 @@ environments/*/data/*.jsonl
 # Test sampling metadata (generated on-demand, not committed)
 environments/*/data/sampling-*-test.json
 
+# Research experiment results (generated artifacts, not committed)
+research/experiments/*/results/*
+!research/experiments/*/results/.gitkeep
+
 # Private Docs
 docs-internal/
 # Coverage reports
