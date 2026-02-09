@@ -40,11 +40,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
+import re
 import sys
 import time
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
@@ -142,6 +146,7 @@ def load_real_examples(env: str, num_examples: int = 3) -> str:
                 )
             return "\nHere are real examples for reference:\n" + "\n".join(examples)
         except Exception:
+            logger.debug("Failed to load E1 examples for teacher context", exc_info=True)
             return ""
     elif env == "e2":
         try:
@@ -164,6 +169,7 @@ def load_real_examples(env: str, num_examples: int = 3) -> str:
                 )
             return "\nHere are real examples for reference:\n" + "\n".join(examples)
         except Exception:
+            logger.debug("Failed to load E2 examples for teacher context", exc_info=True)
             return ""
     return ""
 
@@ -263,8 +269,9 @@ def validate_e1_problem(problem: dict[str, Any]) -> dict[str, Any]:
         issues.append(f"invalid_answer: {answer}")
 
     # Check for structural quality (the SOAR paper finding: structure > correctness)
-    has_ip = any(c.isdigit() and "." in question for c in question.split())
-    has_port = any(word.isdigit() and int(word) < 65536 for word in question.split() if word.isdigit())
+    _IPV4_RE = re.compile(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b")
+    has_ip = bool(_IPV4_RE.search(question))
+    has_port = any(word.isdigit() and 0 < int(word) < 65536 for word in question.split() if word.isdigit())
     has_protocol = any(p in question.upper() for p in ("TCP", "UDP", "ICMP", "HTTP", "DNS"))
 
     structural_score = sum([bool(has_ip), bool(has_port), bool(has_protocol)]) / 3.0

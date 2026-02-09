@@ -37,6 +37,7 @@ import sys
 import time
 from collections import defaultdict
 from pathlib import Path
+from statistics import median
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -112,7 +113,9 @@ def compute_cold_start_stats(
         pass_rates = []
 
         for prompt_key, accuracies in results_by_prompt.items():
-            if len(accuracies) < 1:
+            # Only include prompts with at least K samples to avoid
+            # overstating cold-start severity with insufficient data.
+            if len(accuracies) < k:
                 continue
             eligible += 1
             # Compute pass rate from available samples
@@ -132,7 +135,7 @@ def compute_cold_start_stats(
                 "fail_at_k_count": fail_at_k,
                 "fail_at_k_fraction": fail_at_k / eligible,
                 "mean_pass_rate": sum(pass_rates) / len(pass_rates) if pass_rates else 0.0,
-                "median_pass_rate": sorted(pass_rates)[len(pass_rates) // 2] if pass_rates else 0.0,
+                "median_pass_rate": median(pass_rates) if pass_rates else 0.0,
                 "zero_pass_rate_count": sum(1 for p in pass_rates if p == 0.0),
                 "zero_pass_rate_fraction": sum(1 for p in pass_rates if p == 0.0) / eligible,
             }
