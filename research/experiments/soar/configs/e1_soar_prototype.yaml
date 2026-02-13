@@ -1,0 +1,64 @@
+# SOAR Prototype Configuration — E1 (Network Logs)
+#
+# Phase 2 experiment: Teacher generates stepping-stone network log problems.
+# Student trains on them (once WP3 training infrastructure exists).
+#
+# This config is for the prototype phase (generate + validate stepping stones).
+# Full bilevel training will require additional config (Phase 3).
+
+experiment:
+  name: "soar-e1-prototype"
+  description: "SOAR stepping-stone generation for E1 network log classification"
+  phase: 2  # Phase 1=cold-start analysis, Phase 2=teacher prototype, Phase 3=full bilevel
+
+teacher:
+  model: "gpt-5-mini"
+  temperature: 0.8  # Higher for diversity (SOAR paper: diversity > correctness)
+  max_tokens: 4096
+  prompt_template: "teacher_prompts/e1_network_log_teacher.txt"
+
+  # Difficulty progression (promotion stages)
+  stages:
+    - name: "easy"
+      num_problems: 50
+      difficulty: "easy"
+    - name: "medium"
+      num_problems: 50
+      difficulty: "medium"
+    - name: "hard"
+      num_problems: 30
+      difficulty: "hard"
+
+student:
+  # Placeholder — will be configured when WP3 training exists
+  model: "Qwen/Qwen3-4B"  # Small model for cost efficiency
+  training:
+    method: "GRPO"  # Inner loop optimizer
+    num_steps: 10  # Per SOAR paper: ~10 inner loop steps
+    learning_rate: 1.0e-5
+    batch_size: 8
+    rollouts_per_example: 4
+
+evaluation:
+  # Hard subset for grounded reward computation
+  dataset: "iot23-train-dev-test-v1.jsonl"
+  num_reward_examples: 50  # Subset of D_hard for teacher reward
+  k_values: [1, 8, 16, 32]  # pass@K evaluation points
+
+  # Metrics to track
+  metrics:
+    - "pass_at_1"
+    - "pass_at_k"
+    - "accuracy"
+    - "calibration_ece"
+    - "asymmetric_cost"
+    - "cold_start_escape_rate"  # % of fail@K problems now solvable
+
+bilevel:
+  # Full SOAR parameters (Phase 3)
+  outer_loop_steps: 20
+  inner_loop_steps: 10
+  parallel_students: 3  # r in the paper — for reward stability
+  datasets_per_outer_step: 4  # g in the paper
+  problems_per_dataset: 32  # n in the paper
+  promotion_threshold: 0.1  # Advance when student pass rate > 10% on D_hard
