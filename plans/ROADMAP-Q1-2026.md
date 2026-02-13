@@ -122,7 +122,7 @@ E2 (config verification):
 - Public mini sets committed under `datasets/public_mini/`
 - `make baseline-e1` / `make baseline-e2` run heuristic/tool-only + prompt baselines
 - Scoreboards updated from run artifacts
- 
+
 ### WP2.5 — Prime-RL 0.4.0 Upgrade
 **Why:** Prime-RL 0.4.0 brings features critical for WP3/WP4: teacher model support (distillation baselines), temperature scheduling (training stability), environment worker logging (debugging E2), and rate limiting (tool API protection). Upgrade now to avoid mid-training migrations.
 
