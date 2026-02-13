@@ -1,6 +1,6 @@
 # ROADMAP Q1 2026 — Security Verifiers → SV‑Bench v0.1
 
-**Last updated:** 2026-02-07
+**Last updated:** 2026-02-13
 **Primary objective (Q1):** Ship **SV‑Bench v0.1**: a benchmark + training harness demonstrating that **executable security verifiers** can train models (not just evaluate them) with measurable gains in **operationally-relevant security metrics**.
 
 ---
@@ -24,7 +24,7 @@ The research question: Do tool-grounded verification signals produce meaningfull
 By the end of Q1, SV‑Bench v0.1 is "real" if:
 
 1. **Reproducible evaluation** — Anyone can run `make eval-e1` / `make eval-e2` on a public mini set and reproduce headline baseline metrics.
-2. **Reproducible training proof** — At least one end-to-end RL training run per environment (E1 and E2), on an open-weight model, with learning curves and eval deltas.
+2. **Reproducible training proof** — At least one end-to-end RL training run per environment (E1 and E2), on an open-weight model, with learning curves and eval deltas. Prefer first proof in Prime Lab Hosted Training; if hosted access is blocked, keep local parity readiness as the fallback path.
 3. **Benchmark-grade reporting** — A versioned metrics spec and a single command to generate a report from stored rollouts.
 4. **Industry-useful metrics** — Report more than accuracy: calibration, abstention/risk‑coverage, cost-weighted loss (E1), and patch/tool-economy metrics (E2).
 5. **Clear research wedge** — State and defend a research claim: e.g., multi-reward RL stability and tradeoffs (GRPO vs GDPO-style normalization) or executable verifiers vs LLM-judge rewards.
@@ -123,31 +123,118 @@ E2 (config verification):
 - `make baseline-e1` / `make baseline-e2` run heuristic/tool-only + prompt baselines
 - Scoreboards updated from run artifacts
 
-### WP2.5 — Prime-RL 0.4.0 Upgrade
-**Why:** Prime-RL 0.4.0 brings features critical for WP3/WP4: teacher model support (distillation baselines), temperature scheduling (training stability), environment worker logging (debugging E2), and rate limiting (tool API protection). Upgrade now to avoid mid-training migrations.
+### Prime-First Reprioritization (post-Prime Lab launch)
+
+Prime Lab launched Feb 10, 2026 and now unifies the Environment Hub, Hosted Training, and Hosted Evaluations.
+The fastest route to signal is hosted-first proof, but the integration plan must account for platform maturity, CLI versioning, and beta access.
+
+### Prime Lab Reality Check (2026-02-13)
+
+What we validated locally:
+
+- The Prime CLI installed here is `0.4.9`.
+- `prime lab setup`/`prime lab setup --prime-rl` are currently unavailable in this CLI build (`No such command 'lab'`).
+- `prime env` and `prime env eval` are present, so hosted-style evaluation can run once auth/network access is configured.
+- `prime env push` and dataset-backed environment publishing are still valid paths for Hub readiness.
+
+Docs for Prime indicate `prime lab` setup plus hosted training/evals workflows should be available, and that hosted training uses LoRA with Verifiers envs. Therefore:
+
+- We should treat hosted training as **enabled-by-default only after explicit CLI + access verification**, then run on the main path.
+- We should add a fallback path in the roadmap that still gives us hosted-style evaluation credibility through `prime env eval`/`vf-eval` until `lab` is available.
+
+1. **WP2.5 (P0): Prime Lab integration and run-readiness.**
+2. **WP2.5a (P0/P1): Fallback hosted-eval parity when `prime lab` is unavailable.**
+3. **WP3a (P1): Hosted RL proof on E1 (lowest-complexity signal path).**
+4. **WP3b (P1): Hosted RL proof on E2 (harder, higher-signal validation).**
+5. **WP4 (P2): Hosted ablations before optional local trainer parity.**
+6. **WP2.6 (P2): Local `prime-rl` stack hardening after hosted proof.**
+
+### WP2.5 — Prime Lab Integration Track (Hosting-First)
+
+**Why:** This track turns the roadmap from theory into actual RL runs with minimal infrastructure build-up.
+The launch docs indicate Hosted Training supports LoRA-first agentic RL with environment installs from the Hub and per-run orchestration on Prime infrastructure.
 
 **Definition of Done:**
-- Prime-RL 0.4.0 pinned in dependencies
-- Config migrations applied (LoRA path, loss param renames)
-- E1 and E2 eval runs pass with new version
-- Env worker logging validated on E2
+- Add a platform-compatibility matrix and gate:
+  - If `prime lab` exists and beta access is active, run hosted training.
+  - If `prime lab` is unavailable, keep `WP2.5a` active as fallback and produce hosted-style eval baselines via Hub tooling.
+- Hosted-ready training config exists for both production envs:
+  - `configs/rl/e1.toml` (E1)
+  - `configs/rl/e2.toml` (E2)
+- Hosted-ready eval config exists for both production envs:
+  - `configs/eval/e1.toml`
+  - `configs/eval/e2.toml`
+- `intertwine/sv-env-network-logs` and `intertwine/sv-env-config-verification` can be launched reproducibly from Hub.
+- Hosted run metadata is compatible with our report tooling and includes:
+  - run_id
+  - platform metadata (image/compute allocation)
+  - model ID + revision
+  - dataset revision and loader mode
+  - environment package versions and git SHA
 
-**Migration Checklist:**
-- [ ] Update `pyproject.toml` to pin `prime-rl>=0.4.0`
-- [ ] Migrate `model.experimental.lora` → `model.lora`
-- [ ] Migrate loss config keys (`sequence_mask_ratio_*` → `sequence_mask_*`)
-- [ ] Remove deprecated configs (`env_mix`, `ckpt.buffer_path`, `trajectory_strategy`)
-- [ ] Add recommended configs: `orchestrator.log.env_worker_logs=true`, `log.json_logging=true`
-- [ ] Validate E1 eval passes
-- [ ] Validate E2 eval passes (with env worker logs)
+**Checklist:**
+- [ ] Add compatibility checks: `prime --version`, command discovery for `lab`, auth status, and required team permissions.
+- [ ] When compatible, run `prime lab setup` and record setup assumptions.
+- [ ] Add hosted training templates under `configs/rl/` and validate one dry run against each env.
+- [ ] Add hosted eval templates under `configs/eval/`.
+- [ ] Document launch commands and minimum-run parameters in `docs/PRIME-LAB-INTEGRATION.md`.
+- [ ] Add metadata normalization so hosted run outputs map to `outputs/evals/...` for report tooling.
+- [ ] Add Makefile wrappers for hosted run/eval parity (`lab-run-e1`, `lab-run-e2`, `lab-eval-e1`, `lab-eval-e2`) and fallback `env-eval-*` wrappers.
 
 **Artifacts:**
-- `docs/PRIME-RL-0.4.0-UPGRADE-ANALYSIS.md` (analysis, already written)
-- Updated `train/configs/base.toml` with 0.4.0 settings
+- `configs/rl/e1.toml`
+- `configs/rl/e2.toml`
+- `configs/eval/e1.toml`
+- `configs/eval/e2.toml`
+- `configs/endpoints.toml` (shared endpoint profile)
+- `docs/PRIME-LAB-INTEGRATION.md` (new)
+- `VERSIONING.md` (add hosted infra fields)
 
+### WP2.5a — Fallback Host Path
 
-### WP3 — Canonical RL Training Runs (GRPO Baseline)
-**Why:** This is the "prove it trains" milestone.
+**Why:** Prevent roadmap stalling if hosted training requires a later CLI build or delayed beta onboarding.
+
+**Definition of Done:**
+- `prime env eval` and/or `vf-eval` workflow runs E1/E2 in a reproducible way from Hub-deployed env IDs.
+- Evaluation outputs are imported into local `outputs/evals/...` report format with required metadata fields.
+
+### WP2.6 — Prime-RL Local Stack Stabilization (Deferred)
+
+**Why:** Keep local reproducibility for cases where hosted infra is unavailable or results need local replication.
+
+**Definition of Done:**
+- If local trainer work is needed after hosted proof, complete migration from old to 0.4.0-compatible config semantics:
+  - `model.experimental.lora` → `model.lora`
+  - sequence mask key migration
+  - deprecations removed
+  - env worker logging + JSON logs enabled
+- Add local-only checks that mirror hosted metrics.
+
+### WP3a — Hosted RL Proof (E1)
+
+**Model recommendation:** `Qwen/Qwen3-4B-Instruct-2507` or `Qwen/Qwen3-4B-Thinking-2507` (low-cost entry), LoRA enabled.
+
+**Definition of Done:**
+- One hosted run with a visible non-noisy learning signal in E1.
+- At least one operational metric improves vs baseline on held-out mini set.
+- Full run artifact bundle and versioned metadata captured.
+
+### WP3b — Hosted RL Proof (E2)
+
+**Model recommendation:** Same base stack as E1 (or scaled-up if needed), LoRA enabled.
+
+**Definition of Done:**
+- One hosted run with stable reward progression on E2.
+- Improvement in at least one defensive objective (patch success, tool-economy, or F1/coverage).
+- Multi-turn tool safety guardrails enabled during training runs.
+
+### WP3 — Canonical RL Runs (Merge Point)
+
+**Note:** WP3 now points to the hosted proofs in WP3a/WP3b when compatible with the current Prime CLI.
+If hosted path is blocked, complete WP2.6 first and make local parity the canonical signal.
+
+### WP3c — Local Canonical RL Parity (Optional)
+**Why:** If hosted results need local replication, maintain a reproducible on-premises path.
 
 **Model recommendation:** Start with a ~4B instruct model and LoRA for cost efficiency.
 
@@ -236,10 +323,11 @@ Every run must write:
 - dataset revision hashes
 - model name + weights revision
 - sampling params
-- trainer config (GRPO/GDPO variant)
+- trainer config (GRPO/GDPO variant) and platform mode (hosted/local)
 - seed(s)
 - token counts
 - tool call counts and tool runtime
+- hosted infra fields when applicable (`run_id`, `platform`, `compute_profile`, `team_id`, `project_name`)
 
 ### Budget Parity Rule
 When comparing two approaches, match:
@@ -256,7 +344,11 @@ When comparing two approaches, match:
 - [x] WP0 complete (benchmark integrity)
 - [x] WP1 complete (metrics contracts + report generator)
 - [x] WP2 complete (baselines + public mini sets)
-- [ ] WP2.5 complete (Prime-RL 0.4.0 upgrade)
-- [ ] WP3 complete (canonical RL runs on E1 and E2)
-- [ ] WP4 complete (GRPO vs GDPO-style ablation + distillation baseline)
+- [ ] WP2.5 complete (Prime Lab integration and hosted setup)
+- [ ] WP2.5a complete (hosted-eval fallback parity while `prime lab` is unavailable)
+- [ ] WP3a complete (hosted RL proof on E1)
+- [ ] WP3b complete (hosted RL proof on E2)
+- [ ] WP3 complete (canonical RL proof complete via hosted path)
+- [ ] WP4 complete (hosted ablations: GRPO vs GDPO-style + distillation)
+- [ ] WP2.6 complete (local prime-rl migration, if needed for parity)
 - [ ] WP5 complete (SV‑Bench v0.1 release package)
