@@ -455,6 +455,20 @@ def _normalize_e2_results(results: list[dict[str, Any]], strict: bool) -> list[d
 
 
 # ============================================================================
+# Tool helpers
+# ============================================================================
+
+TOOL_NAMES = ["opa", "kube-linter", "semgrep"]
+TOOL_NAME_MAP = {
+    "run_opa": "opa",
+    "opa": "opa",
+    "run_kubelinter": "kube-linter",
+    "kube-linter": "kube-linter",
+    "run_semgrep": "semgrep",
+    "semgrep": "semgrep",
+}
+
+# ============================================================================
 # E1 Metrics: Network Logs Anomaly Detection
 # ============================================================================
 
