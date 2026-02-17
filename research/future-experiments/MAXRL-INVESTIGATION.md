@@ -1,9 +1,9 @@
 # MaxRL: Maximum Likelihood Reinforcement Learning
 
-**Paper:** [Maximum Likelihood Reinforcement Learning](https://arxiv.org/abs/2602.02710)  
-**Project:** https://zanette-labs.github.io/MaxRL/  
-**Authors:** Tajwar, Zeng, Zhou, Song, Arora, Jiang, Schneider, Salakhutdinov, Feng, Zanette (CMU, Tsinghua, Zhejiang, Berkeley)  
-**Date Reviewed:** 2026-02-07  
+**Paper:** [Maximum Likelihood Reinforcement Learning](https://arxiv.org/abs/2602.02710)
+**Project:** https://zanette-labs.github.io/MaxRL/
+**Authors:** Tajwar, Zeng, Zhou, Song, Arora, Jiang, Schneider, Salakhutdinov, Feng, Zanette (CMU, Tsinghua, Zhejiang, Berkeley)
+**Date Reviewed:** 2026-02-07
 **Status:** Future experiment candidate
 
 ---
@@ -141,15 +141,15 @@ MaxRL Pareto-dominates GRPO:
 1. **Low Initial Pass Rates**
    - Security tasks are hard — E2's config remediation often has <20% initial pass rate
    - MaxRL's upweighting of hard problems should help
-   
+
 2. **Multi-Turn Tool Calling = Navigation**
    - The paper shows strong results on maze navigation
    - E2's OPA/Semgrep tool workflows are structurally similar (sequential decisions, binary success)
-   
+
 3. **Expensive Rollouts**
    - E2 tool calls are slow/costly
    - MaxRL's better sample efficiency matters more when each rollout is expensive
-   
+
 4. **Test-Time Scaling**
    - Security ops often uses best-of-N sampling
    - MaxRL's Pass@K improvements translate to operational gains
@@ -181,7 +181,7 @@ The change is minimal:
 # GRPO-style
 advantage = (reward - reward.mean()) / (reward.std() + eps)
 
-# MaxRL-style  
+# MaxRL-style
 mean_reward = reward.mean()  # = K/N
 advantage = (reward - mean_reward) / (mean_reward + eps)  # normalize by K/N, not std
 ```

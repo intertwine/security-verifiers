@@ -8,7 +8,7 @@ This document specifies pinned versions for Security Verifiers to ensure reprodu
 |-----------|---------|-------|
 | Python | 3.12.x | Required for all environments |
 | verifiers | >=0.1.9 | Prime Intellect RL framework |
-| security-verifiers-utils | >=0.2.2 | Shared utilities package |
+| security-verifiers-utils | >=0.3.0 | Shared utilities package |
 
 ## Security Analysis Tools (E2)
 
