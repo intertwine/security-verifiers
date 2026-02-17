@@ -193,7 +193,7 @@ The launch docs indicate Hosted Training supports LoRA-first agentic RL with env
 - Lab extras (`prime-rl @ v0.4.0`) configured in `pyproject.toml` optional dependencies
 - Makefile targets: `lab-check`, `lab-run-e1`, `lab-run-e2`, `lab-eval-e1`, `lab-eval-e2`, `env-eval-e1`, `env-eval-e2`
 - All environment packages pinned to `security-verifiers-utils>=0.3.0`
-- Default model: `Qwen/Qwen3-4B-Instruct-2507`; default team: `intertwine` (overridable via `MODEL=` / `TEAM=`)
+- Default model: `Qwen/Qwen3-4B-Instruct-2507`; team is user-supplied via `TEAM=your-team` (from `prime auth status`)
 
 **Artifacts:**
 - `configs/rl/e1.toml`

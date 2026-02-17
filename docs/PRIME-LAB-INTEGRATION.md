@@ -2,6 +2,14 @@
 
 This document defines the hosted-first integration path for SV-Bench E1/E2.
 
+> **Note:** All examples below use `your-team` as a placeholder. Replace it with your own Prime Intellect team slug (check with `prime auth status`).
+
+## Prerequisites
+
+- A Prime Intellect account with team access
+- `prime` CLI installed and authenticated (`prime login`)
+- Your team slug (visible in `prime auth status` or your Prime dashboard)
+
 ## 1) Compatibility gate
 
 Run:
@@ -35,8 +43,8 @@ Lab extras include `prime-cli` and `prime-rl` for hosted orchestration readiness
 Launch commands:
 
 ```bash
-make lab-run-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=intertwine
-make lab-run-e2 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=intertwine
+make lab-run-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team
+make lab-run-e2 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team
 ```
 
 ## 4) Hosted eval templates
@@ -47,17 +55,17 @@ make lab-run-e2 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=intertwine
 Launch commands:
 
 ```bash
-make lab-eval-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=intertwine
-make lab-eval-e2 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=intertwine
+make lab-eval-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team
+make lab-eval-e2 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team
 ```
 
 ## 5) Fallback hosted-style eval parity
 
-Use `prime env eval` wrappers:
+Use `prime env eval` wrappers when `prime lab` is not yet available:
 
 ```bash
-make env-eval-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=intertwine N=100
-make env-eval-e2 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=intertwine N=50
+make env-eval-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team N=100
+make env-eval-e2 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team N=50
 ```
 
 ## 6) Metadata normalization for report pipeline

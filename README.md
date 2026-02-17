@@ -110,16 +110,18 @@ Environments are fully integrated with [Prime Intellect's Lab](https://docs.prim
 # Check platform compatibility
 make lab-check
 
-# Hosted training (requires prime lab access)
-make lab-run-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=intertwine
-make lab-run-e2 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=intertwine
+# Hosted training (requires prime lab access + your team credentials)
+make lab-run-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team
+make lab-run-e2 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team
 
 # Hosted evaluation
-make lab-eval-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=intertwine
+make lab-eval-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team
 
 # Fallback: hosted-style eval via prime env
-make env-eval-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=intertwine N=100
+make env-eval-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team N=100
 ```
+
+Replace `your-team` with your Prime Intellect team slug (from `prime auth status`).
 
 See [docs/PRIME-LAB-INTEGRATION.md](docs/PRIME-LAB-INTEGRATION.md) for the full integration guide.
 
