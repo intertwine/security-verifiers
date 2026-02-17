@@ -1,0 +1,18 @@
+# Prime Lab hosted evaluation template for E1
+
+[eval]
+environment = "intertwine/sv-env-network-logs"
+num_examples = 200
+seed = 42
+
+[model]
+id = "Qwen/Qwen3-4B-Instruct-2507"
+revision = "main"
+
+[data]
+loader_mode = "public_mini"
+dataset_revision = "public-mini-v1"
+
+[output]
+format = "jsonl"
+include_trace = true

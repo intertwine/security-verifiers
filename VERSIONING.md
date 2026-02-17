@@ -45,6 +45,19 @@ Datasets are versioned by filename convention and content hash:
 
 Dataset content hashes are recorded in `metadata.json` for each eval run.
 
+## Hosted Infrastructure Versioning (WP2.5)
+
+Hosted Prime runs should additionally record:
+
+- `prime_cli_version`
+- `prime_rl_version`
+- `platform_image`
+- `platform_compute`
+- `run_id`
+- `team`
+
+These fields are normalized into `metadata.json` for report compatibility via `scripts/normalize_hosted_eval.py`.
+
 ## Evaluation Metadata Requirements
 
 Every evaluation run must record in `metadata.json`:
