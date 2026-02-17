@@ -42,3 +42,9 @@ filterwarnings = [
     "ignore:.*variable_values and operation_name arguments.*:DeprecationWarning",
     "ignore:.*Accessing the 'model_fields' attribute on the instance is deprecated:DeprecationWarning"
 ]
+
+
+[project.optional-dependencies]
+lab = [
+    "prime-rl @ git+https://github.com/PrimeIntellect-ai/prime-rl.git@v0.4.0",
+]

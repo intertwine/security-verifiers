@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.12"
 resolution-markers = [
     "sys_platform == 'linux'",
@@ -1915,7 +1915,7 @@ wheels = [
 
 [[package]]
 name = "sv-env-config-verification"
-version = "0.2.11"
+version = "0.2.12"
 source = { editable = "." }
 dependencies = [
     { name = "configparser" },

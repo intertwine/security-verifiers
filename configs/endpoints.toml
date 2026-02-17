@@ -1,0 +1,22 @@
+# Shared endpoint profiles for hosted Prime Lab runs and fallback evals.
+# Keep secrets in environment variables; do not hardcode keys.
+
+[profiles.default]
+provider = "openai"
+base_url = "https://api.openai.com/v1"
+api_key_env = "OPENAI_API_KEY"
+
+[profiles.openai]
+provider = "openai"
+base_url = "https://api.openai.com/v1"
+api_key_env = "OPENAI_API_KEY"
+
+[profiles.anthropic]
+provider = "anthropic"
+base_url = "https://api.anthropic.com/v1"
+api_key_env = "ANTHROPIC_API_KEY"
+
+[profiles.local]
+provider = "openai-compatible"
+base_url = "http://localhost:8000/v1"
+api_key_env = "LOCAL_API_KEY"

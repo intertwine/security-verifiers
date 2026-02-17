@@ -97,6 +97,15 @@ make eval-e2 MODELS="gpt-5-mini" N=2 DATASET="builtin"  # E2 test fixtures (for 
 make eval-e1 MODELS="gpt-5-mini" N=100 MAX_CONSECUTIVE_ERRORS=5  # Stop after 5 consecutive errors
 make eval-e2 MODELS="invalid-model" N=10 MAX_CONSECUTIVE_ERRORS=0  # Disable early stopping (never stop)
 
+# Prime Lab integration (WP2.5; requires `prime` CLI with lab subcommand)
+make lab-check                                    # Prime Lab compatibility gate
+make lab-run-e1 MODEL=... TEAM=intertwine         # Hosted RL launch for E1
+make lab-run-e2 MODEL=... TEAM=intertwine         # Hosted RL launch for E2
+make lab-eval-e1 MODEL=... TEAM=intertwine        # Hosted eval launch for E1
+make lab-eval-e2 MODEL=... TEAM=intertwine        # Hosted eval launch for E2
+make env-eval-e1 MODEL=... TEAM=intertwine N=100  # Fallback prime env eval for E1
+make env-eval-e2 MODEL=... TEAM=intertwine N=50   # Fallback prime env eval for E2
+
 # Shortcuts
 make e1  # test E1 (network-logs)
 make e2  # test E2 (config-verification)
@@ -363,6 +372,7 @@ Skills are automatically discovered and provide step-by-step guidance for comple
 - docs/hub-deployment.md - deploy to Prime Intellect Hub
 - docs/datasets.md - dataset access and management
 - docs/logging.md - Weave tracing configuration
+- docs/PRIME-LAB-INTEGRATION.md - Prime Lab hosted RL/eval integration (WP2.5)
 - skills/ - agent skills for common workflows (eval, data, deploy, hf, dev)
 - CLAUDE.md - this file
 - .github/workflows/ci.yml - CI steps

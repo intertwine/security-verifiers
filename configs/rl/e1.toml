@@ -1,0 +1,39 @@
+# Prime Lab hosted RL template for E1 (sv-env-network-logs)
+# Use with: make lab-run-e1 MODEL=<model-id> TEAM=<org>
+
+[run]
+name = "svbench-e1-grpo-lora"
+environment = "intertwine/sv-env-network-logs"
+seed = 42
+
+[model]
+id = "Qwen/Qwen3-4B-Instruct-2507"
+revision = "main"
+
+[model.lora]
+enabled = true
+rank = 16
+alpha = 32
+dropout = 0.05
+
+[train]
+algorithm = "grpo"
+max_steps = 200
+rollout_batch_size = 32
+learning_rate = 1e-5
+
+[data]
+loader_mode = "public_mini"
+dataset_revision = "public-mini-v1"
+max_examples = 200
+
+[reward]
+# E1 reward components: correctness + calibration + abstention + asymmetric cost
+correctness_weight = 0.5
+calibration_weight = 0.2
+abstention_weight = 0.1
+cost_weight = 0.2
+
+[metadata]
+benchmark_env = "e1"
+report_normalization = "svbench_v1"

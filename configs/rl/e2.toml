@@ -1,0 +1,39 @@
+# Prime Lab hosted RL template for E2 (sv-env-config-verification)
+# Use with: make lab-run-e2 MODEL=<model-id> TEAM=<org>
+
+[run]
+name = "svbench-e2-grpo-lora"
+environment = "intertwine/sv-env-config-verification"
+seed = 42
+
+[model]
+id = "Qwen/Qwen3-4B-Instruct-2507"
+revision = "main"
+
+[model.lora]
+enabled = true
+rank = 16
+alpha = 32
+dropout = 0.05
+
+[train]
+algorithm = "grpo"
+max_steps = 250
+rollout_batch_size = 16
+learning_rate = 8e-6
+
+[data]
+loader_mode = "public_mini"
+dataset_revision = "public-mini-v1"
+max_examples = 200
+
+[reward]
+# E2 reward components: tool-grounded correctness + patch success + economy
+finding_quality_weight = 0.45
+patch_success_weight = 0.3
+severity_weight = 0.15
+tool_economy_weight = 0.1
+
+[metadata]
+benchmark_env = "e2"
+report_normalization = "svbench_v1"
