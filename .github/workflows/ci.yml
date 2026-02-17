@@ -54,6 +54,9 @@ jobs:
           uv venv --python="$PY"
           source .venv/bin/activate
 
+          # Install shared utils first (envs depend on security-verifiers-utils)
+          uv pip install -e sv_shared
+
           # Install each environment with its dependencies
           for env in environments/*/; do
             echo "Installing $env..."
