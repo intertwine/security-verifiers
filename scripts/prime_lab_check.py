@@ -27,7 +27,12 @@ def run(cmd: list[str]) -> tuple[bool, str]:
 
 
 def has_subcommand(help_text: str, subcommand: str) -> bool:
-    return any(line.strip().startswith(subcommand) for line in help_text.splitlines())
+    for line in help_text.splitlines():
+        # Strip whitespace and Rich box-drawing characters (│, ╭, ╰, etc.)
+        cleaned = line.strip().lstrip("│╭╰╮╯─┃┏┗┓┛━ ")
+        if cleaned.startswith(subcommand):
+            return True
+    return False
 
 
 def main() -> int:
