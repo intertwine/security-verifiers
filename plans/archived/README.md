@@ -13,5 +13,6 @@ These documents were synthesized into the productionization plans in `plans/prod
 ## Current Planning Documents
 
 For active planning, see:
+
 - `plans/ROADMAP-Q1-2026.md` - Current development priorities
 - `plans/productionization/` - E3-E6 productionization plans
