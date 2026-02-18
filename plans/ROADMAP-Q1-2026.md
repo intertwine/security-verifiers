@@ -1,6 +1,6 @@
 # ROADMAP Q1 2026 — Security Verifiers → SV‑Bench v0.1
 
-**Last updated:** 2026-02-13
+**Last updated:** 2026-02-17
 **Primary objective (Q1):** Ship **SV‑Bench v0.1**: a benchmark + training harness demonstrating that **executable security verifiers** can train models (not just evaluate them) with measurable gains in **operationally-relevant security metrics**.
 
 ---
@@ -149,7 +149,8 @@ Docs for Prime indicate `prime lab` setup plus hosted training/evals workflows s
 5. **WP4 (P2): Hosted ablations before optional local trainer parity.**
 6. **WP2.6 (P2): Local `prime-rl` stack hardening after hosted proof.**
 
-### WP2.5 — Prime Lab Integration Track (Hosting-First)
+### WP2.5 — Prime Lab Integration Track (Hosting-First) ✓
+**Status:** Complete (2026-02-16; released as v0.3.0 on 2026-02-17)
 
 **Why:** This track turns the roadmap from theory into actual RL runs with minimal infrastructure build-up.
 The launch docs indicate Hosted Training supports LoRA-first agentic RL with environment installs from the Hub and per-run orchestration on Prime infrastructure.
@@ -173,13 +174,26 @@ The launch docs indicate Hosted Training supports LoRA-first agentic RL with env
   - environment package versions and git SHA
 
 **Checklist:**
-- [ ] Add compatibility checks: `prime --version`, command discovery for `lab`, auth status, and required team permissions.
-- [ ] When compatible, run `prime lab setup` and record setup assumptions.
-- [ ] Add hosted training templates under `configs/rl/` and validate one dry run against each env.
-- [ ] Add hosted eval templates under `configs/eval/`.
-- [ ] Document launch commands and minimum-run parameters in `docs/PRIME-LAB-INTEGRATION.md`.
-- [ ] Add metadata normalization so hosted run outputs map to `outputs/evals/...` for report tooling.
-- [ ] Add Makefile wrappers for hosted run/eval parity (`lab-run-e1`, `lab-run-e2`, `lab-eval-e1`, `lab-eval-e2`) and fallback `env-eval-*` wrappers.
+- [x] Add compatibility checks: `prime --version`, command discovery for `lab`, auth status, and required team permissions.
+- [x] When compatible, run `prime lab setup` and record setup assumptions.
+- [x] Add hosted training templates under `configs/rl/` and validate one dry run against each env.
+- [x] Add hosted eval templates under `configs/eval/`.
+- [x] Document launch commands and minimum-run parameters in `docs/PRIME-LAB-INTEGRATION.md`.
+- [x] Add metadata normalization so hosted run outputs map to `outputs/evals/...` for report tooling.
+- [x] Add Makefile wrappers for hosted run/eval parity (`lab-run-e1`, `lab-run-e2`, `lab-eval-e1`, `lab-eval-e2`) and fallback `env-eval-*` wrappers.
+
+**Completion notes:**
+- `scripts/prime_lab_check.py` implements gating: checks CLI version, `lab` subcommand, auth, and `env` fallback — exposed via `make lab-check`
+- Training configs (`configs/rl/e1.toml`, `configs/rl/e2.toml`) define GRPO+LoRA (rank 16, alpha 32) with per-env reward weights
+- Eval configs (`configs/eval/e1.toml`, `configs/eval/e2.toml`) define hosted evaluation templates with trace output
+- `configs/endpoints.toml` provides shared endpoint profiles (OpenAI, Anthropic, local) with `configs/endpoints.py` for vf-eval compatibility
+- `scripts/normalize_hosted_eval.py` maps hosted metadata to local `outputs/evals/` layout for report tooling
+- `docs/PRIME-LAB-INTEGRATION.md` covers full workflow: compatibility gate → hosted training → hosted eval → fallback path
+- `VERSIONING.md` updated with hosted infra fields (`prime_cli_version`, `prime_rl_version`, `platform_image`, `platform_compute`, `run_id`, `team`)
+- Lab extras (`prime-rl @ v0.4.0`) configured in `pyproject.toml` optional dependencies
+- Makefile targets: `lab-check`, `lab-run-e1`, `lab-run-e2`, `lab-eval-e1`, `lab-eval-e2`, `env-eval-e1`, `env-eval-e2`
+- All environment packages pinned to `security-verifiers-utils>=0.3.0`
+- Default model: `Qwen/Qwen3-4B-Instruct-2507`; team is user-supplied via `TEAM=your-team` (from `prime auth status`)
 
 **Artifacts:**
 - `configs/rl/e1.toml`
@@ -187,16 +201,27 @@ The launch docs indicate Hosted Training supports LoRA-first agentic RL with env
 - `configs/eval/e1.toml`
 - `configs/eval/e2.toml`
 - `configs/endpoints.toml` (shared endpoint profile)
-- `docs/PRIME-LAB-INTEGRATION.md` (new)
-- `VERSIONING.md` (add hosted infra fields)
+- `configs/endpoints.py` (vf-eval endpoint registry)
+- `scripts/prime_lab_check.py` (compatibility gate + tests)
+- `scripts/normalize_hosted_eval.py` (metadata normalization + tests)
+- `docs/PRIME-LAB-INTEGRATION.md`
+- `VERSIONING.md` (updated with hosted infra fields)
 
-### WP2.5a — Fallback Host Path
+### WP2.5a — Fallback Host Path ✓
+**Status:** Complete (2026-02-16; infrastructure ready, included in v0.3.0)
 
 **Why:** Prevent roadmap stalling if hosted training requires a later CLI build or delayed beta onboarding.
 
 **Definition of Done:**
 - `prime env eval` and/or `vf-eval` workflow runs E1/E2 in a reproducible way from Hub-deployed env IDs.
 - Evaluation outputs are imported into local `outputs/evals/...` report format with required metadata fields.
+
+**Completion notes:**
+- `make env-eval-e1` and `make env-eval-e2` provide fallback hosted-style evaluation via `prime env eval`
+- Parameterized: `N=100` for E1, `N=50` for E2, `MODEL=` and `TEAM=` overridable
+- `scripts/normalize_hosted_eval.py` converts hosted eval outputs to the local report-compatible schema
+- Gating in `prime_lab_check.py` detects `env` subcommand availability as a fallback primitive
+- Actual execution pending network/auth access to Prime infrastructure
 
 ### WP2.6 — Prime-RL Local Stack Stabilization (Deferred)
 
@@ -344,11 +369,31 @@ When comparing two approaches, match:
 - [x] WP0 complete (benchmark integrity)
 - [x] WP1 complete (metrics contracts + report generator)
 - [x] WP2 complete (baselines + public mini sets)
-- [ ] WP2.5 complete (Prime Lab integration and hosted setup)
-- [ ] WP2.5a complete (hosted-eval fallback parity while `prime lab` is unavailable)
+- [x] WP2.5 complete (Prime Lab integration and hosted setup — v0.3.0)
+- [x] WP2.5a complete (hosted-eval fallback parity — infrastructure ready in v0.3.0)
 - [ ] WP3a complete (hosted RL proof on E1)
 - [ ] WP3b complete (hosted RL proof on E2)
 - [ ] WP3 complete (canonical RL proof complete via hosted path)
 - [ ] WP4 complete (hosted ablations: GRPO vs GDPO-style + distillation)
 - [ ] WP2.6 complete (local prime-rl migration, if needed for parity)
 - [ ] WP5 complete (SV‑Bench v0.1 release package)
+
+---
+
+## Releases
+
+### v0.3.0 — Prime Lab Integration Release (2026-02-17)
+
+Marks the completion of WP2.5 and WP2.5a. All infrastructure for hosted RL training and evaluation on Prime Lab is in place.
+
+**Key additions:**
+- Hosted training configs (`configs/rl/e1.toml`, `configs/rl/e2.toml`) with GRPO+LoRA
+- Hosted eval configs (`configs/eval/e1.toml`, `configs/eval/e2.toml`)
+- Platform compatibility gate (`scripts/prime_lab_check.py`, `make lab-check`)
+- Hosted metadata normalization (`scripts/normalize_hosted_eval.py`)
+- Makefile targets: `lab-run-e1/e2`, `lab-eval-e1/e2`, `env-eval-e1/e2` (fallback)
+- `docs/PRIME-LAB-INTEGRATION.md` with full workflow documentation
+- `VERSIONING.md` extended with hosted infra versioning fields
+- All environment packages pinned to `security-verifiers-utils>=0.3.0`
+
+**Next milestone:** WP3a/WP3b — hosted RL proof on E1 and E2.

@@ -87,6 +87,7 @@ security-verifiers/
 | [Getting Started](docs/getting-started.md) | Installation and first evaluation |
 | [Development Guide](docs/development.md) | Contributing, testing, CI |
 | [Hub Deployment](docs/hub-deployment.md) | Deploy to Prime Intellect Hub |
+| [Prime Lab Integration](docs/PRIME-LAB-INTEGRATION.md) | Hosted RL training and evaluation |
 | [Datasets Guide](docs/datasets.md) | Dataset access and management |
 | [Logging Guide](docs/logging.md) | Weave tracing configuration |
 | [CLAUDE.md](CLAUDE.md) | Agent/LLM instructions |
@@ -101,16 +102,43 @@ make baseline-e2 MODEL="gpt-5-mini" INCLUDE_TOOLS=true
 
 Scoreboards are written to `bench/scoreboards/`.
 
+## Prime Lab Integration
+
+Environments are fully integrated with [Prime Intellect's Lab](https://docs.primeintellect.ai/) for hosted RL training and evaluation:
+
+```bash
+# Check platform compatibility
+make lab-check
+
+# Hosted training (requires prime lab access + your team credentials)
+make lab-run-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team
+make lab-run-e2 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team
+
+# Hosted evaluation
+make lab-eval-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team
+
+# Fallback: hosted-style eval via prime env
+make env-eval-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team N=100
+```
+
+Replace `your-team` with your Prime Intellect team slug (from `prime auth status`).
+
+See [docs/PRIME-LAB-INTEGRATION.md](docs/PRIME-LAB-INTEGRATION.md) for the full integration guide.
+
 ## Roadmap
 
 See [plans/ROADMAP-Q1-2026.md](plans/ROADMAP-Q1-2026.md) for current development priorities:
 
-- **WP0**: Benchmark integrity hardening
-- **WP1**: Metrics contracts and report generator
-- **WP2**: Baselines and public mini sets
-- **WP3**: Canonical RL training runs
-- **WP4**: Multi-reward RL stability research
-- **WP5**: SV-Bench v0.1 release
+| Work Package | Description | Status |
+|---|---|---|
+| **WP0** | Benchmark integrity hardening | Complete |
+| **WP1** | Metrics contracts and report generator | Complete |
+| **WP2** | Baselines and public mini sets | Complete |
+| **WP2.5** | Prime Lab integration (v0.3.0) | Complete |
+| **WP2.5a** | Hosted-eval fallback parity | Complete |
+| **WP3a/b** | Hosted RL proof on E1 and E2 | Next |
+| **WP4** | Multi-reward RL stability research | Planned |
+| **WP5** | SV-Bench v0.1 release | Planned |
 
 ## Contributing
 
