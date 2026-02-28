@@ -2,12 +2,14 @@
 # Launch: prime rl run configs/rl/e1.toml
 # Or via make: make lab-run-e1
 
+# NOTE: Model is baked into config. To change, edit this file.
+# The Makefile's MODEL= override is no longer used (prime rl reads config directly).
 model = "Qwen/Qwen3-4B-Instruct-2507"
 max_steps = 200
 batch_size = 32
 rollouts_per_example = 8
 learning_rate = 1e-5
-lora_alpha = 32
+lora_alpha = 32  # Prime RL uses alpha only; rank is auto-derived (default 16)
 
 [sampling]
 max_tokens = 2048
