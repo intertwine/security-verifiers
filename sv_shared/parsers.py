@@ -155,13 +155,15 @@ class JsonClassificationParser(vf.Parser):
         if isinstance(label, str) and label in self.allowed_labels:
             if debug:
                 logger.warning(
-                    "[SV_DEBUG] parse_answer: label=%s (matched)", label,
+                    "[SV_DEBUG] parse_answer: label=%s (matched)",
+                    label,
                 )
             return label
         if debug:
             logger.warning(
                 "[SV_DEBUG] parse_answer: label=%r NOT in allowed=%s",
-                label, list(self.allowed_labels),
+                label,
+                list(self.allowed_labels),
             )
         return ""
 

@@ -131,7 +131,9 @@ def load_environment(
             "[SV_DEBUG] load_environment called with: "
             "dataset_name=%r, dataset_source=%r, max_examples=%r, "
             "logger=%s, extra_kwargs=%s, HF_TOKEN=%s",
-            dataset_name, dataset_source, max_examples,
+            dataset_name,
+            dataset_source,
+            max_examples,
             "present" if logger else "None",
             extra_kwargs or "none",
             "set" if os.environ.get("HF_TOKEN") else "NOT SET",
@@ -222,7 +224,9 @@ def load_environment(
     if _debug and dataset is not None:
         _log.warning(
             "[SV_DEBUG] Dataset loaded: name=%s, len=%d, columns=%s",
-            dataset_name, len(dataset), dataset.column_names,
+            dataset_name,
+            len(dataset),
+            dataset.column_names,
         )
         # Log first 3 answer values and their types
         for i in range(min(3, len(dataset))):
@@ -230,7 +234,10 @@ def load_environment(
             q = str(dataset[i].get("question", "<MISSING>"))[:80]
             _log.warning(
                 "[SV_DEBUG] Sample[%d]: answer=%r (type=%s), question=%.80s",
-                i, ans, type(ans).__name__, q,
+                i,
+                ans,
+                type(ans).__name__,
+                q,
             )
 
     parser = NetworkLogParser()

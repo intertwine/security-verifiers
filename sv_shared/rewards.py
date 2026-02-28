@@ -33,9 +33,7 @@ def _coerce_answer(answer: Any) -> str:
     if isinstance(answer, int):
         # ClassLabel: 0 = Benign, 1 = Malicious (E1 convention)
         if _should_debug_log("_coerce_answer"):
-            logger.warning(
-                "[SV_DEBUG] _coerce_answer: got int answer=%d, coercing to string", answer
-            )
+            logger.warning("[SV_DEBUG] _coerce_answer: got int answer=%d, coercing to string", answer)
         return "Malicious" if answer == 1 else "Benign"
     return str(answer)
 
@@ -65,10 +63,12 @@ def reward_accuracy(
 
     if _should_debug_log("reward_accuracy"):
         logger.warning(
-            "[SV_DEBUG] reward_accuracy: predicted=%r, answer=%r (type=%s), "
-            "completion_type=%s, result=%.1f",
-            predicted, answer, type(answer).__name__,
-            type(completion).__name__, result,
+            "[SV_DEBUG] reward_accuracy: predicted=%r, answer=%r (type=%s), completion_type=%s, result=%.1f",
+            predicted,
+            answer,
+            type(answer).__name__,
+            type(completion).__name__,
+            result,
         )
     return result
 
@@ -92,9 +92,11 @@ def reward_calibration(
 
     if _should_debug_log("reward_calibration"):
         logger.warning(
-            "[SV_DEBUG] reward_calibration: predicted=%r, conf=%.2f, "
-            "answer=%r, result=%.2f",
-            predicted, conf if predicted else 0.0, answer, result,
+            "[SV_DEBUG] reward_calibration: predicted=%r, conf=%.2f, answer=%r, result=%.2f",
+            predicted,
+            conf if predicted else 0.0,
+            answer,
+            result,
         )
     return result
 
@@ -122,7 +124,9 @@ def reward_asymmetric_cost(
     if _should_debug_log("reward_asymmetric_cost"):
         logger.warning(
             "[SV_DEBUG] reward_asymmetric_cost: predicted=%r, answer=%r, result=%.1f",
-            predicted, answer, result,
+            predicted,
+            answer,
+            result,
         )
     return result
 

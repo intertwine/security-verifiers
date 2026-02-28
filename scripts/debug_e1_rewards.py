@@ -18,12 +18,23 @@ logging.basicConfig(level=logging.WARNING, format="%(name)s | %(message)s")
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from sv_shared.parsers import JsonClassificationParser
-from sv_shared.rewards import reward_accuracy, reward_calibration, reward_asymmetric_cost
+from sv_shared.parsers import JsonClassificationParser  # noqa: E402
+from sv_shared.rewards import (  # noqa: E402
+    reward_accuracy,
+    reward_asymmetric_cost,
+    reward_calibration,
+)
 
 parser = JsonClassificationParser(allowed_labels=["Benign", "Malicious", "Abstain"])
 
 # Test cases: different completion formats that might be seen
+MARKDOWN_COMPLETION = """```json\n{"label": "Malicious", "confidence": 0.95}\n```"""
+THINKING_COMPLETION = '<think>Let me analyze...</think>\n{"label": "Malicious", "confidence": 0.9}'
+QWEN_COMPLETION = (
+    "Based on the network log analysis:\n\n"
+    '{"label": "Malicious", "confidence": 0.85, "rationale": "Port scan detected"}'
+)
+
 test_cases = [
     # Format 1: Raw string (local eval typical)
     {
@@ -40,7 +51,7 @@ test_cases = [
     # Format 3: Markdown-wrapped JSON
     {
         "name": "markdown_wrapped",
-        "completion": [{"role": "assistant", "content": '```json\n{"label": "Malicious", "confidence": 0.95}\n```'}],
+        "completion": [{"role": "assistant", "content": MARKDOWN_COMPLETION}],
         "answer": "Malicious",
     },
     # Format 4: Integer answer (ClassLabel not coerced)
@@ -58,13 +69,13 @@ test_cases = [
     # Format 6: Thinking model format (with reasoning prefix)
     {
         "name": "thinking_model",
-        "completion": [{"role": "assistant", "content": '<think>Let me analyze...</think>\n{"label": "Malicious", "confidence": 0.9}'}],
+        "completion": [{"role": "assistant", "content": THINKING_COMPLETION}],
         "answer": "Malicious",
     },
     # Format 7: Qwen chat template wrapping
     {
         "name": "qwen_wrapped",
-        "completion": [{"role": "assistant", "content": 'Based on the network log analysis:\n\n{"label": "Malicious", "confidence": 0.85, "rationale": "Port scan detected"}'}],
+        "completion": [{"role": "assistant", "content": QWEN_COMPLETION}],
         "answer": "Malicious",
     },
 ]
@@ -81,11 +92,12 @@ for tc in test_cases:
     acc = reward_accuracy(completion=tc["completion"], answer=tc["answer"], parser=parser)
     cal = reward_calibration(completion=tc["completion"], answer=tc["answer"], parser=parser)
     cost = reward_asymmetric_cost(completion=tc["completion"], answer=tc["answer"], parser=parser)
-
     fmt = parser.get_format_reward_func()(completion=tc["completion"])
 
     total_real = acc * 1.0 + fmt * 0.1 + cal * 0.2 + cost * 0.5
-    print(f"  REWARDS: accuracy={acc:.2f}, format={fmt:.2f}, calibration={cal:.2f}, asymmetric_cost={cost:.2f}")
+    print(
+        f"  REWARDS: accuracy={acc:.2f}, format={fmt:.2f}, calibration={cal:.2f}, asymmetric_cost={cost:.2f}"
+    )
     print(f"  TOTAL (weighted): {total_real:.2f}")
 
 print("\n" + "=" * 70)
@@ -93,8 +105,14 @@ print("Testing dataset loading from Hub...")
 print("=" * 70)
 
 try:
-    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                                     "environments", "sv-env-network-logs"))
+    sys.path.insert(
+        0,
+        os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "environments",
+            "sv-env-network-logs",
+        ),
+    )
 
     # Load .env.secrets if available
     env_secrets = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env.secrets")
@@ -107,9 +125,11 @@ try:
                     os.environ.setdefault(key.strip(), val.strip())
 
     from sv_env_network_logs import load_environment
+
     env = load_environment(max_examples=5)
     print(f"\nEnvironment loaded successfully: {env.name if hasattr(env, 'name') else 'ok'}")
 except Exception as e:
     print(f"\nFailed to load environment: {e}")
     import traceback
+
     traceback.print_exc()

@@ -35,23 +35,27 @@ def get_response_text(completion: Any) -> str:
                 logger.warning(
                     "[SV_DEBUG] get_response_text: list[dict] path | "
                     "len=%d, last_role=%s, content_type=%s, text=%.200s",
-                    len(completion), last.get("role"), type(content).__name__, result,
+                    len(completion),
+                    last.get("role"),
+                    type(content).__name__,
+                    result,
                 )
             return result
         result = "" if last is None else str(last)
         if debug:
             logger.warning(
-                "[SV_DEBUG] get_response_text: list[other] path | "
-                "len=%d, last_type=%s, text=%.200s",
-                len(completion), type(last).__name__, result,
+                "[SV_DEBUG] get_response_text: list[other] path | len=%d, last_type=%s, text=%.200s",
+                len(completion),
+                type(last).__name__,
+                result,
             )
         return result
     result = str(completion)
     if debug:
         logger.warning(
-            "[SV_DEBUG] get_response_text: raw string path | "
-            "type=%s, text=%.200s",
-            type(completion).__name__, result,
+            "[SV_DEBUG] get_response_text: raw string path | type=%s, text=%.200s",
+            type(completion).__name__,
+            result,
         )
     return result
 
