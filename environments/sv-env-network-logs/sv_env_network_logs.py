@@ -25,6 +25,9 @@ except ImportError:
     sys.path.append(str(Path(__file__).resolve().parents[2]))
     from sv_shared import weave_init  # type: ignore  # noqa: F401
 
+import logging as _logging
+import os
+
 import verifiers as vf
 from datasets import Dataset
 
@@ -113,9 +116,6 @@ def load_environment(
         os.environ["E1_HF_REPO"] = "my-org/my-security-verifiers-e1"
         env = load_environment(dataset_source="hub")
     """
-    import logging as _logging
-    import os
-
     _log = _logging.getLogger("sv_env_network_logs")
     _debug = os.environ.get("SV_DEBUG", "")
 

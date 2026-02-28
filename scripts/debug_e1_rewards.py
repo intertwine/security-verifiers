@@ -82,8 +82,6 @@ for tc in test_cases:
     cal = reward_calibration(completion=tc["completion"], answer=tc["answer"], parser=parser)
     cost = reward_asymmetric_cost(completion=tc["completion"], answer=tc["answer"], parser=parser)
 
-    # Weighted sum matching rubric config
-    total = acc * 1.0 + 0.1 * 1.0 + cal * 0.2 + cost * 0.5  # format_reward placeholder
     fmt = parser.get_format_reward_func()(completion=tc["completion"])
 
     total_real = acc * 1.0 + fmt * 0.1 + cal * 0.2 + cost * 0.5
@@ -95,8 +93,6 @@ print("Testing dataset loading from Hub...")
 print("=" * 70)
 
 try:
-    from environments import sv_env_network_logs  # noqa
-    # Actually import the load function
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                                      "environments", "sv-env-network-logs"))
 

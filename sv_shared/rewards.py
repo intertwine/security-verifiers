@@ -27,14 +27,16 @@ def _coerce_answer(answer: Any) -> str:
     """Coerce answer to string, handling ClassLabel ints from Hub datasets."""
     if isinstance(answer, str):
         return answer
+    if isinstance(answer, bool):
+        # Check bool before int (bool is subclass of int in Python)
+        return "Malicious" if answer else "Benign"
     if isinstance(answer, int):
         # ClassLabel: 0 = Benign, 1 = Malicious (E1 convention)
-        logger.warning(
-            "[SV_DEBUG] _coerce_answer: got int answer=%d, coercing to string", answer
-        )
+        if _should_debug_log("_coerce_answer"):
+            logger.warning(
+                "[SV_DEBUG] _coerce_answer: got int answer=%d, coercing to string", answer
+            )
         return "Malicious" if answer == 1 else "Benign"
-    if isinstance(answer, bool):
-        return "Malicious" if answer else "Benign"
     return str(answer)
 
 

@@ -64,7 +64,7 @@ def extract_json_object(text: str) -> str:
         if c == "\\":
             escape = True
             continue
-        if c == '"' and not escape:
+        if c == '"':
             in_string = not in_string
             continue
         if in_string:
@@ -195,4 +195,4 @@ class JsonClassificationParser(vf.Parser):
         return format_reward
 
 
-__all__ = ["JsonClassificationParser", "extract_json_from_markdown"]
+__all__ = ["JsonClassificationParser", "extract_json_from_markdown", "extract_json_object"]
