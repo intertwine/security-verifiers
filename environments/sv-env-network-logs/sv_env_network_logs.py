@@ -66,6 +66,7 @@ def load_environment(
     dataset_source: DatasetSource = "auto",
     max_examples: int = 1000,
     logger: RolloutLogger | None = None,
+    **extra_kwargs,  # Accept and log unknown kwargs for debugging
 ) -> vf.SingleTurnEnv:
     """Load the Network Logs Anomaly Detection environment.
 
@@ -112,6 +113,30 @@ def load_environment(
         os.environ["E1_HF_REPO"] = "my-org/my-security-verifiers-e1"
         env = load_environment(dataset_source="hub")
     """
+    import logging as _logging
+    import os
+
+    _log = _logging.getLogger("sv_env_network_logs")
+    _debug = os.environ.get("SV_DEBUG", "")
+
+    if extra_kwargs:
+        _log.warning(
+            "[SV_DEBUG] load_environment received unexpected kwargs: %s "
+            "(these are being IGNORED but may indicate config mismatch)",
+            extra_kwargs,
+        )
+
+    if _debug:
+        _log.warning(
+            "[SV_DEBUG] load_environment called with: "
+            "dataset_name=%r, dataset_source=%r, max_examples=%r, "
+            "logger=%s, extra_kwargs=%s, HF_TOKEN=%s",
+            dataset_name, dataset_source, max_examples,
+            "present" if logger else "None",
+            extra_kwargs or "none",
+            "set" if os.environ.get("HF_TOKEN") else "NOT SET",
+        )
+
     env_root = Path(__file__).parent
 
     def _create_synthetic_dataset():
@@ -193,6 +218,20 @@ def load_environment(
         synthetic_generator=_create_synthetic_dataset,
     )
     dataset_name = resolved_name
+
+    if _debug and dataset is not None:
+        _log.warning(
+            "[SV_DEBUG] Dataset loaded: name=%s, len=%d, columns=%s",
+            dataset_name, len(dataset), dataset.column_names,
+        )
+        # Log first 3 answer values and their types
+        for i in range(min(3, len(dataset))):
+            ans = dataset[i].get("answer", "<MISSING>")
+            q = str(dataset[i].get("question", "<MISSING>"))[:80]
+            _log.warning(
+                "[SV_DEBUG] Sample[%d]: answer=%r (type=%s), question=%.80s",
+                i, ans, type(ans).__name__, q,
+            )
 
     parser = NetworkLogParser()
 
