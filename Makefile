@@ -1,3 +1,9 @@
+bash: cannot set terminal process group (-1): Inappropriate ioctl for device
+bash: no job control in this shell
+bash: cannot set terminal process group (-1): Inappropriate ioctl for device
+bash: no job control in this shell
+bash: cannot set terminal process group (-1): Inappropriate ioctl for device
+bash: no job control in this shell
 # Makefile for Open Security Verifiers
 # A composable suite of security and alignment RL environments
 
@@ -13,7 +19,7 @@ build build-env build-utils deploy update-version update-utils-version hub-valid
 \
 eval eval-e1 eval-e2 report-network-logs e1 e2 e3 e4 e5 e6 \
 baseline-e1 baseline-e2 \
-lab-check lab-run-e1 lab-run-e2 lab-eval-e1 lab-eval-e2 env-eval-e1 env-eval-e2 \
+lab-check lab-run-e1 lab-run-e2 env-eval-e1 env-eval-e2 \
 \
 data-e1 data-e1-ood data-e1-test data-e2 data-e2-local data-e2-test data-all data-test-all data-public-mini clone-e2-sources \
 hf-e1-meta hf-e2-meta hf-e1-push hf-e2-push hf-e1p-meta hf-e2p-meta hf-e1p-push hf-e2p-push hf-push-all \
@@ -94,11 +100,9 @@ help:
 	@$(ECHO) "  make eval-e2 MODELS=... N=2 INCLUDE_TOOLS=true  - Reproducible E2 evals (config-verification)"
 	@$(ECHO) "  make baseline-e1 MODEL=... N=100                 - E1 baselines on public mini set"
 	@$(ECHO) "  make baseline-e2 MODEL=... N=100                 - E2 baselines on public mini set"
-	@$(ECHO) "  make lab-check                                    - Prime Lab compatibility gate (WP2.5)"
-	@$(ECHO) "  make lab-run-e1 MODEL=... TEAM=intertwine         - Hosted RL launch template for E1"
-	@$(ECHO) "  make lab-run-e2 MODEL=... TEAM=intertwine         - Hosted RL launch template for E2"
-	@$(ECHO) "  make lab-eval-e1 MODEL=... TEAM=intertwine        - Hosted eval launch template for E1"
-	@$(ECHO) "  make lab-eval-e2 MODEL=... TEAM=intertwine        - Hosted eval launch template for E2"
+	@$(ECHO) "  make lab-check                                    - Prime CLI v0.5+ compatibility gate"
+	@$(ECHO) "  make lab-run-e1                                   - Hosted RL training for E1 (prime rl run)"
+	@$(ECHO) "  make lab-run-e2                                   - Hosted RL training for E2 (prime rl run)"
 	@$(ECHO) "  make env-eval-e1 MODEL=... TEAM=intertwine N=100  - Fallback prime env eval wrapper for E1"
 	@$(ECHO) "  make env-eval-e2 MODEL=... TEAM=intertwine N=50   - Fallback prime env eval wrapper for E2"
 	@$(ECHO) "  make report-network-logs [RUN_IDS=\"id1 id2\"]    - Generate E1 metrics report (JSON)"
@@ -951,27 +955,19 @@ info:
 		$(ECHO) "Status: $(YELLOW)Run 'make setup' to get started$(NC)"; \
 	fi
 
-# Prime Lab compatibility gate
+# Prime CLI compatibility gate (v0.5+)
 lab-check: venv
-	@$(ECHO) "$(YELLOW)Running Prime Lab compatibility checks...$(NC)"
-	@$(ACTIVATE) && uv run python scripts/prime_lab_check.py
+	@$(ECHO) "$(YELLOW)Running Prime CLI compatibility checks...$(NC)"
+	@$(ACTIVATE) && python scripts/prime_lab_check.py
 
-# Hosted RL launch templates (WP2.5)
+# Hosted RL training via Prime CLI v0.5+ (WP3a/WP3b)
 lab-run-e1: venv
-	@MODEL=$${MODEL:-Qwen/Qwen3-4B-Instruct-2507}; \
-	$(ACTIVATE) && prime lab train --config configs/rl/e1.toml --model $$MODEL --team $(TEAM)
+	@$(ECHO) "$(YELLOW)Launching hosted RL training for E1 (network-logs)...$(NC)"
+	@$(ACTIVATE) && prime rl run configs/rl/e1.toml
 
 lab-run-e2: venv
-	@MODEL=$${MODEL:-Qwen/Qwen3-4B-Instruct-2507}; \
-	$(ACTIVATE) && prime lab train --config configs/rl/e2.toml --model $$MODEL --team $(TEAM)
-
-lab-eval-e1: venv
-	@MODEL=$${MODEL:-Qwen/Qwen3-4B-Instruct-2507}; \
-	$(ACTIVATE) && prime lab eval --config configs/eval/e1.toml --model $$MODEL --team $(TEAM)
-
-lab-eval-e2: venv
-	@MODEL=$${MODEL:-Qwen/Qwen3-4B-Instruct-2507}; \
-	$(ACTIVATE) && prime lab eval --config configs/eval/e2.toml --model $$MODEL --team $(TEAM)
+	@$(ECHO) "$(YELLOW)Launching hosted RL training for E2 (config-verification)...$(NC)"
+	@$(ACTIVATE) && prime rl run configs/rl/e2.toml
 
 # Fallback hosted-style eval parity (WP2.5a)
 env-eval-e1: venv
