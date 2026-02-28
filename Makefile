@@ -1,9 +1,3 @@
-bash: cannot set terminal process group (-1): Inappropriate ioctl for device
-bash: no job control in this shell
-bash: cannot set terminal process group (-1): Inappropriate ioctl for device
-bash: no job control in this shell
-bash: cannot set terminal process group (-1): Inappropriate ioctl for device
-bash: no job control in this shell
 # Makefile for Open Security Verifiers
 # A composable suite of security and alignment RL environments
 
