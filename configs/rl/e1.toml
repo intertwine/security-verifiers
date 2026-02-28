@@ -1,39 +1,44 @@
-# Prime Lab hosted RL template for E1 (sv-env-network-logs)
-# Use with: make lab-run-e1 MODEL=<model-id> TEAM=<org>
+# Prime RL hosted training config for E1 (sv-env-network-logs)
+# Launch: prime rl run configs/rl/e1.toml
+# Or via make: make lab-run-e1
 
-[run]
-name = "svbench-e1-grpo-lora"
-environment = "intertwine/sv-env-network-logs"
-seed = 42
-
-[model]
-id = "Qwen/Qwen3-4B-Instruct-2507"
-revision = "main"
-
-[model.lora]
-enabled = true
-rank = 16
-alpha = 32
-dropout = 0.05
-
-[train]
-algorithm = "grpo"
+# NOTE: Model is baked into config. To change, edit this file.
+# The Makefile's MODEL= override is no longer used (prime rl reads config directly).
+model = "Qwen/Qwen3-4B-Instruct-2507"
 max_steps = 200
-rollout_batch_size = 32
+batch_size = 32
+rollouts_per_example = 8
 learning_rate = 1e-5
+lora_alpha = 32  # Prime RL uses alpha only; rank is auto-derived (default 16)
 
-[data]
-loader_mode = "public_mini"
-dataset_revision = "public-mini-v1"
-max_examples = 200
+[sampling]
+max_tokens = 2048
+temperature = 0.7
 
-[reward]
-# E1 reward components: correctness + calibration + abstention + asymmetric cost
-correctness_weight = 0.5
-calibration_weight = 0.2
-abstention_weight = 0.1
-cost_weight = 0.2
+[[env]]
+id = "intertwine/sv-env-network-logs"
+args = { max_examples = 200 }
 
-[metadata]
-benchmark_env = "e1"
-report_normalization = "svbench_v1"
+[wandb]
+project = "svbench-e1"
+entity = "intertwine"
+name = "e1-grpo-lora-proof"
+
+[eval]
+interval = 50
+num_examples = 50
+rollouts_per_example = 1
+eval_base_model = true
+
+[[eval.env]]
+id = "intertwine/sv-env-network-logs"
+args = { max_examples = 50 }
+num_examples = 50
+rollouts_per_example = 1
+
+[checkpoints]
+interval = 50
+keep_cloud = 3
+
+[buffer]
+seed = 42

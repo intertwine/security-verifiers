@@ -1,39 +1,44 @@
-# Prime Lab hosted RL template for E2 (sv-env-config-verification)
-# Use with: make lab-run-e2 MODEL=<model-id> TEAM=<org>
+# Prime RL hosted training config for E2 (sv-env-config-verification)
+# Launch: prime rl run configs/rl/e2.toml
+# Or via make: make lab-run-e2
 
-[run]
-name = "svbench-e2-grpo-lora"
-environment = "intertwine/sv-env-config-verification"
+# NOTE: Model is baked into config. To change, edit this file.
+# The Makefile's MODEL= override is no longer used (prime rl reads config directly).
+model = "Qwen/Qwen3-4B-Instruct-2507"
+max_steps = 250  # E2 is multi-turn, needs more steps than E1
+batch_size = 16
+rollouts_per_example = 8
+learning_rate = 8e-6  # Lower LR for complex multi-turn E2 env
+lora_alpha = 32  # Prime RL uses alpha only; rank is auto-derived (default 16)
+
+[sampling]
+max_tokens = 4096
+temperature = 0.7
+
+[[env]]
+id = "intertwine/sv-env-config-verification"
+args = { max_examples = 100 }
+
+[wandb]
+project = "svbench-e2"
+entity = "intertwine"
+name = "e2-grpo-lora-proof"
+
+[eval]
+interval = 50
+num_examples = 30
+rollouts_per_example = 1
+eval_base_model = true
+
+[[eval.env]]
+id = "intertwine/sv-env-config-verification"
+args = { max_examples = 30 }
+num_examples = 30
+rollouts_per_example = 1
+
+[checkpoints]
+interval = 50
+keep_cloud = 3
+
+[buffer]
 seed = 42
-
-[model]
-id = "Qwen/Qwen3-4B-Instruct-2507"
-revision = "main"
-
-[model.lora]
-enabled = true
-rank = 16
-alpha = 32
-dropout = 0.05
-
-[train]
-algorithm = "grpo"
-max_steps = 250
-rollout_batch_size = 16
-learning_rate = 8e-6
-
-[data]
-loader_mode = "public_mini"
-dataset_revision = "public-mini-v1"
-max_examples = 200
-
-[reward]
-# E2 reward components: tool-grounded correctness + patch success + economy
-finding_quality_weight = 0.45
-patch_success_weight = 0.3
-severity_weight = 0.15
-tool_economy_weight = 0.1
-
-[metadata]
-benchmark_env = "e2"
-report_normalization = "svbench_v1"

@@ -114,8 +114,6 @@ make lab-check
 # Hosted training/eval (when lab compatibility + access are available)
 make lab-run-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team
 make lab-run-e2 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team
-make lab-eval-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team
-make lab-eval-e2 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team
 
 # Fallback: hosted-style eval via prime env (keeps report/metadata parity)
 make env-eval-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=your-team N=100

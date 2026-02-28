@@ -101,8 +101,6 @@ make eval-e2 MODELS="invalid-model" N=10 MAX_CONSECUTIVE_ERRORS=0  # Disable ear
 make lab-check                                    # Prime Lab compatibility gate
 make lab-run-e1 MODEL=... TEAM=intertwine         # Hosted RL launch for E1
 make lab-run-e2 MODEL=... TEAM=intertwine         # Hosted RL launch for E2
-make lab-eval-e1 MODEL=... TEAM=intertwine        # Hosted eval launch for E1
-make lab-eval-e2 MODEL=... TEAM=intertwine        # Hosted eval launch for E2
 make env-eval-e1 MODEL=... TEAM=intertwine N=100  # Fallback prime env eval for E1
 make env-eval-e2 MODEL=... TEAM=intertwine N=50   # Fallback prime env eval for E2
 
