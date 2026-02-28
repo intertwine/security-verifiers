@@ -15,7 +15,7 @@ temperature = 0.7
 
 [[env]]
 id = "intertwine/sv-env-config-verification"
-args = { split = "train", max_examples = 100 }
+args = { max_examples = 100 }
 
 [wandb]
 project = "svbench-e2"
@@ -30,7 +30,7 @@ eval_base_model = true
 
 [[eval.env]]
 id = "intertwine/sv-env-config-verification"
-args = { split = "test" }
+args = { max_examples = 30 }
 num_examples = 30
 rollouts_per_example = 1
 
