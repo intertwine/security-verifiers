@@ -1,0 +1,51 @@
+# Prime RL hosted training config for E1 Judge Variant (sv-env-network-logs-judge)
+# Launch: prime rl run configs/rl/e1_judge.toml
+# Or via make: make lab-run-e1-judge
+#
+# WP3c: LLM-judge reward comparison experiment
+# This config is MATCHED to configs/rl/e1.toml for controlled comparison:
+#   - Same model, same LoRA, same budget (max_steps, batch_size, rollouts_per_example)
+#   - Only difference: environment ID (judge variant uses LLM-judge binary reward)
+#
+# Executable verifier (e1.toml):
+#   Reward = 1.0*accuracy + 0.1*format + 0.2*calibration + 0.5*cost
+#   (multi-component, deterministic, per-dimension feedback)
+#
+# LLM-judge (this config):
+#   Reward = 1.0 if judge says "yes" else 0.0
+#   (holistic binary assessment via gpt-4.1-nano)
+
+model = "Qwen/Qwen3-4B-Instruct-2507"
+max_steps = 200
+batch_size = 32
+rollouts_per_example = 8
+learning_rate = 1e-5
+lora_alpha = 32  # Prime RL uses alpha only; rank is auto-derived (default 16)
+
+[sampling]
+max_tokens = 2048
+temperature = 0.7
+
+[[env]]
+id = "intertwine/sv-env-network-logs-judge"
+args = { max_examples = 200 }
+
+[wandb]
+project = "svbench-e1"
+entity = "intertwine"
+name = "e1-grpo-lora-judge"
+
+[eval]
+interval = 50
+num_examples = 50
+rollouts_per_example = 1
+eval_base_model = true
+
+[[eval.env]]
+id = "intertwine/sv-env-network-logs-judge"
+args = { max_examples = 50 }
+num_examples = 50
+rollouts_per_example = 1
+
+[buffer]
+seed = 42

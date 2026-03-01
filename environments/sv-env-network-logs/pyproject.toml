@@ -23,6 +23,7 @@ dependencies = [
 
 [project.entry-points."verifiers.environments"]
 sv-env-network-logs = "sv_env_network_logs:load_environment"
+sv-env-network-logs-judge = "sv_env_network_logs_judge:load_environment"
 
 [project.optional-dependencies]
 dev = [
@@ -35,7 +36,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build]
-include = ["sv_env_network_logs.py", "sv_env_network_logs_test.py"]
+include = ["sv_env_network_logs.py", "sv_env_network_logs_judge.py", "sv_env_network_logs_test.py"]
 
 [tool.pytest.ini_options]
 python_files = ["*_test.py"]
