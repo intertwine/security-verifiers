@@ -1,9 +1,3 @@
-bash: cannot set terminal process group (-1): Inappropriate ioctl for device
-bash: no job control in this shell
-bash: cannot set terminal process group (-1): Inappropriate ioctl for device
-bash: no job control in this shell
-bash: cannot set terminal process group (-1): Inappropriate ioctl for device
-bash: no job control in this shell
 # ROADMAP Q1 2026 — Security Verifiers → SV‑Bench v0.1
 
 **Last updated:** 2026-02-18
