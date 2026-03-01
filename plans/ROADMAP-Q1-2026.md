@@ -298,6 +298,8 @@ The launch docs indicate Hosted Training supports LoRA-first agentic RL with env
 
 ### WP3a — Hosted RL Proof (E1)
 
+**Status:** In Progress (initial proof run complete, comparator run WP3c pending)
+
 **Model recommendation:** `Qwen/Qwen3-4B-Instruct-2507` or `Qwen/Qwen3-4B-Thinking-2507` (low-cost entry), LoRA enabled.
 
 **Definition of Done:**
@@ -306,6 +308,22 @@ The launch docs indicate Hosted Training supports LoRA-first agentic RL with env
 - At least one operational metric improves vs baseline on held-out mini set.
 - One matched-budget comparator run in E1: executable-verifier reward vs LLM-judge reward, same base model and budget envelope.
 - Full run artifact bundle and versioned metadata captured.
+
+**Initial E1 Run — Completion Notes (2026-03-01):**
+
+- **Run ID:** `kvyp3sz2afit54dv3apgoozp`
+- **Platform:** Prime Intellect Lab (hosted)
+- **Model:** `Qwen/Qwen3-4B-Instruct-2507`, GRPO+LoRA
+- **Config:** `configs/rl/e1.toml`
+- **Status:** COMPLETED — 200/200 steps
+- **Average reward:** +0.396
+- **Accuracy:** ~30%
+- **Bugs found and fixed during run (PRs #66 and #67, merged):**
+  1. **int answer crash** — ClassLabel sends int not str, `.lower()` fails, rubric silently returns 0.0. Fix: `_coerce_answer()` in `rewards.py`.
+  2. **JSON parsing missed Qwen-style text-before-JSON** — Fix: `extract_json_object()` in `parsers.py`.
+- **Config fix:** `[checkpoints]` section was invalid in current Prime RL format; removed from `e1.toml`.
+- **Release:** Bug fixes shipped as `security-verifiers-utils` v0.3.1 on PyPI.
+- **Remaining:** Matched-budget comparator run (WP3c) still pending.
 
 ### WP3b — Hosted RL Proof (E2)
 
@@ -489,7 +507,7 @@ When comparing two approaches, match:
 - [x] WP2 complete (baselines + public mini sets)
 - [x] WP2.5 complete (Prime Lab integration and hosted setup — v0.3.0)
 - [x] WP2.5a complete (hosted-eval fallback parity — infrastructure ready in v0.3.0)
-- [ ] WP3a complete (hosted RL proof on E1)
+- [ ] WP3a complete (hosted RL proof on E1) — initial run complete, comparator pending
 - [ ] WP3b complete (hosted RL proof on E2)
 - [ ] WP3c complete (reward-source comparator: executable vs LLM-judge)
 - [ ] WP3 complete (canonical RL proof complete via hosted path)
@@ -517,3 +535,15 @@ Marks the completion of WP2.5 and WP2.5a. All infrastructure for hosted RL train
 - All environment packages pinned to `security-verifiers-utils>=0.3.0`
 
 **Next milestone:** WP3a/WP3b/WP3c — hosted RL proof on E1/E2 plus reward-source comparator evidence.
+
+### v0.3.1 — E1 Run Bug Fixes (2026-03-01)
+
+Bug fixes discovered during the first hosted RL training run on E1 (run `kvyp3sz2afit54dv3apgoozp`).
+
+**Fixes (PRs #66 and #67):**
+
+- `_coerce_answer()` in `rewards.py` — ClassLabel sends int not str; `.lower()` crashed, causing rubric to silently return 0.0.
+- `extract_json_object()` in `parsers.py` — JSON parsing now handles Qwen-style text-before-JSON output.
+- `[checkpoints]` section removed from `configs/rl/e1.toml` (invalid in current Prime RL format).
+
+**Published:** `security-verifiers-utils` v0.3.1 on PyPI.
