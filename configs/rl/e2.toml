@@ -36,9 +36,5 @@ args = { max_examples = 30 }
 num_examples = 30
 rollouts_per_example = 1
 
-[checkpoints]
-interval = 50
-keep_cloud = 3
-
 [buffer]
 seed = 42
