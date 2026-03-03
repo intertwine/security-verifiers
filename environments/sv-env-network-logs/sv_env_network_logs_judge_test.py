@@ -62,11 +62,7 @@ class TestJudgeReward:
         async def mock_judge(prompt, completion, answer, state):
             return "yes"
 
-        result = self._run(
-            judge_reward(
-                prompt="test", completion="test", answer="test", state={}, judge=mock_judge
-            )
-        )
+        result = self._run(judge_reward(prompt="test", completion="test", answer="test", state={}, judge=mock_judge))
         assert result == 1.0
 
     def test_no_response(self) -> None:
@@ -75,11 +71,7 @@ class TestJudgeReward:
         async def mock_judge(prompt, completion, answer, state):
             return "no"
 
-        result = self._run(
-            judge_reward(
-                prompt="test", completion="test", answer="test", state={}, judge=mock_judge
-            )
-        )
+        result = self._run(judge_reward(prompt="test", completion="test", answer="test", state={}, judge=mock_judge))
         assert result == 0.0
 
     def test_yes_with_trailing_text(self) -> None:
@@ -88,11 +80,7 @@ class TestJudgeReward:
         async def mock_judge(prompt, completion, answer, state):
             return "Yes, the response is correct."
 
-        result = self._run(
-            judge_reward(
-                prompt="test", completion="test", answer="test", state={}, judge=mock_judge
-            )
-        )
+        result = self._run(judge_reward(prompt="test", completion="test", answer="test", state={}, judge=mock_judge))
         assert result == 1.0
 
     def test_unexpected_response(self) -> None:
@@ -101,11 +89,7 @@ class TestJudgeReward:
         async def mock_judge(prompt, completion, answer, state):
             return "maybe"
 
-        result = self._run(
-            judge_reward(
-                prompt="test", completion="test", answer="test", state={}, judge=mock_judge
-            )
-        )
+        result = self._run(judge_reward(prompt="test", completion="test", answer="test", state={}, judge=mock_judge))
         assert result == 0.0
 
 
@@ -165,8 +149,6 @@ class TestLoadEnvironment:
         assert judge_rubric.judge_model == "gpt-4.1-nano"
 
     def test_custom_judge_model(self) -> None:
-        env = load_environment(
-            dataset_name="synthetic", max_examples=5, judge_model="gpt-4.1-mini"
-        )
+        env = load_environment(dataset_name="synthetic", max_examples=5, judge_model="gpt-4.1-mini")
         judge_rubric = self._get_judge_rubric(env)
         assert judge_rubric.judge_model == "gpt-4.1-mini"

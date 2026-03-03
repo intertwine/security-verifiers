@@ -35,6 +35,10 @@ TEAM ?= intertwine
 # Version bump type for deployments (patch, minor, major, or none)
 BUMP ?= patch
 
+# Optional Hub environment name override (defaults to pyproject.toml name)
+# Usage: make hub-deploy E=network-logs NAME=sv-env-network-logs-judge
+NAME ?=
+
 # ---------- Colors (portable) ----------
 # Use NO_COLOR=1 to disable
 ifdef NO_COLOR
@@ -386,7 +390,7 @@ deploy: venv install-dev
 	@$(ACTIVATE) && ( cd environments/sv-env-$(E) && \
 		python -m build --wheel && \
 		prime login && \
-		prime env push -v PUBLIC --team $(TEAM) )
+		prime env push -v PUBLIC --team $(TEAM) $(if $(NAME),--name $(NAME)) )
 	@$(ECHO) "$(GREEN)✓ sv-env-$(E) deployed to Hub$(NC)"
 
 # Validate environment for Hub deployment

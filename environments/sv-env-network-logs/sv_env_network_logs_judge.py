@@ -174,9 +174,7 @@ def load_environment(
         # Same synthetic data as the executable variant for controlled comparison
         log_patterns = [
             {
-                "question": (
-                    "2024-01-15 10:23:45 SRC=192.168.1.105 DST=192.168.1.1 PROTO=HTTPS PORT=443 STATUS=OK"
-                ),
+                "question": ("2024-01-15 10:23:45 SRC=192.168.1.105 DST=192.168.1.1 PROTO=HTTPS PORT=443 STATUS=OK"),
                 "answer": "Benign",
             },
             {
@@ -199,9 +197,7 @@ def load_environment(
                 "answer": "Malicious",
             },
             {
-                "question": (
-                    "2024-01-15 10:27:15 SRC=10.0.0.99 DST=185.220.101.45 PROTO=TOR PORT=9001 BYTES=50000"
-                ),
+                "question": ("2024-01-15 10:27:15 SRC=10.0.0.99 DST=185.220.101.45 PROTO=TOR PORT=9001 BYTES=50000"),
                 "answer": "Malicious",
             },
             {
@@ -211,9 +207,7 @@ def load_environment(
                 "answer": "Malicious",
             },
             {
-                "question": (
-                    "2024-01-15 10:29:03 SRC=192.168.1.50 DST=8.8.8.8 PROTO=ICMP TYPE=ECHO_REQUEST STATUS=OK"
-                ),
+                "question": ("2024-01-15 10:29:03 SRC=192.168.1.50 DST=8.8.8.8 PROTO=ICMP TYPE=ECHO_REQUEST STATUS=OK"),
                 "answer": "Benign",
             },
             {
@@ -292,7 +286,7 @@ def load_environment(
         rubric=rubric,
         system_prompt=(
             "You are a network security analyst. Analyze the provided network log entry and "
-            'respond with a JSON object: {"label": \'Benign|Malicious|Abstain\', '
+            "respond with a JSON object: {\"label\": 'Benign|Malicious|Abstain', "
             '"confidence": 0.0-1.0, "rationale": optional}.'
         ),
     )
