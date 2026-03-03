@@ -13,7 +13,7 @@ build build-env build-utils deploy update-version update-utils-version hub-valid
 \
 eval eval-e1 eval-e2 report-network-logs e1 e2 e3 e4 e5 e6 \
 baseline-e1 baseline-e2 \
-lab-check lab-run-e1 lab-run-e2 env-eval-e1 env-eval-e2 \
+lab-check lab-run-e1 lab-run-e1-judge lab-run-e2 env-eval-e1 env-eval-e2 \
 \
 data-e1 data-e1-ood data-e1-test data-e2 data-e2-local data-e2-test data-all data-test-all data-public-mini clone-e2-sources \
 hf-e1-meta hf-e2-meta hf-e1-push hf-e2-push hf-e1p-meta hf-e2p-meta hf-e1p-push hf-e2p-push hf-push-all \
@@ -34,6 +34,10 @@ TEAM ?= intertwine
 
 # Version bump type for deployments (patch, minor, major, or none)
 BUMP ?= patch
+
+# Optional Hub environment name override (defaults to pyproject.toml name)
+# Usage: make hub-deploy E=network-logs NAME=sv-env-network-logs-judge
+NAME ?=
 
 # ---------- Colors (portable) ----------
 # Use NO_COLOR=1 to disable
@@ -96,6 +100,7 @@ help:
 	@$(ECHO) "  make baseline-e2 MODEL=... N=100                 - E2 baselines on public mini set"
 	@$(ECHO) "  make lab-check                                    - Prime CLI v0.5+ compatibility gate"
 	@$(ECHO) "  make lab-run-e1                                   - Hosted RL training for E1 (prime rl run)"
+	@$(ECHO) "  make lab-run-e1-judge                             - Hosted RL training for E1 judge variant (WP3c)"
 	@$(ECHO) "  make lab-run-e2                                   - Hosted RL training for E2 (prime rl run)"
 	@$(ECHO) "  make env-eval-e1 MODEL=... TEAM=intertwine N=100  - Fallback prime env eval wrapper for E1"
 	@$(ECHO) "  make env-eval-e2 MODEL=... TEAM=intertwine N=50   - Fallback prime env eval wrapper for E2"
@@ -385,7 +390,7 @@ deploy: venv install-dev
 	@$(ACTIVATE) && ( cd environments/sv-env-$(E) && \
 		python -m build --wheel && \
 		prime login && \
-		prime env push -v PUBLIC --team $(TEAM) )
+		prime env push -v PUBLIC --team $(TEAM) $(if $(NAME),--name $(NAME)) )
 	@$(ECHO) "$(GREEN)✓ sv-env-$(E) deployed to Hub$(NC)"
 
 # Validate environment for Hub deployment
@@ -958,6 +963,10 @@ lab-check: venv
 lab-run-e1: venv
 	@$(ECHO) "$(YELLOW)Launching hosted RL training for E1 (network-logs)...$(NC)"
 	@$(ACTIVATE) && prime rl run configs/rl/e1.toml
+
+lab-run-e1-judge: venv
+	@$(ECHO) "$(YELLOW)Launching hosted RL training for E1 judge variant (WP3c)...$(NC)"
+	@$(ACTIVATE) && prime rl run configs/rl/e1_judge.toml
 
 lab-run-e2: venv
 	@$(ECHO) "$(YELLOW)Launching hosted RL training for E2 (config-verification)...$(NC)"
