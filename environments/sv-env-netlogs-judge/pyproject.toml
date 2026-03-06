@@ -39,7 +39,7 @@ build-backend = "hatchling.build"
 include = [
   "sv_netlogs_judge.py",
   "sv_env_network_logs_judge.py",
-  "sv_env_network_logs_judge_test.py",
+  "sv_netlogs_judge_test.py",
 ]
 
 [tool.pytest.ini_options]
