@@ -42,7 +42,7 @@ on security classification tasks?
 
 ### Condition B: LLM-Judge (e1_judge.toml)
 
-- **Environment**: `intertwine/sv-env-network-logs-judge`
+- **Environment**: `intertwine/sv-netlogs-judge`
 - **Reward**: Single LLM-judge binary assessment
   - `judge_reward` (weight=1.0): 1.0 if judge says "yes", 0.0 otherwise
 - **Judge model**: gpt-4.1-nano (cheapest available, ~$0.10/1M tokens)

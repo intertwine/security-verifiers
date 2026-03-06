@@ -36,7 +36,7 @@ TEAM ?= intertwine
 BUMP ?= patch
 
 # Optional Hub environment name override (defaults to pyproject.toml name)
-# Usage: make hub-deploy E=network-logs NAME=sv-env-network-logs-judge
+# Usage: make hub-deploy E=network-logs NAME=sv-netlogs-judge
 NAME ?=
 
 # ---------- Colors (portable) ----------
