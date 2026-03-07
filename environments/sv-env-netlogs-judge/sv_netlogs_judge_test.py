@@ -8,7 +8,8 @@ from unittest.mock import Mock
 import pytest
 import verifiers as vf
 
-from sv_env_network_logs_judge import (
+from sv_netlogs_judge_impl import (
+    DEFAULT_ENV_NAME,
     JUDGE_PROMPT,
     NetworkLogParser,
     judge_reward,
@@ -126,6 +127,8 @@ class TestLoadEnvironment:
 
         env = load_environment(dataset_name="synthetic", max_examples=5, logger=logger)
         assert isinstance(env, vf.SingleTurnEnv)
+        assert env.name == DEFAULT_ENV_NAME
+        assert env.env_id == DEFAULT_ENV_NAME
         assert env.rubric is not None
         judge_rubric = self._get_judge_rubric(env)
         assert isinstance(judge_rubric, vf.JudgeRubric)
@@ -134,7 +137,7 @@ class TestLoadEnvironment:
 
         logger.log_environment_init.assert_called_once()
         call_kwargs = logger.log_environment_init.call_args.kwargs
-        assert call_kwargs["environment_name"] == "sv-env-network-logs-judge"
+        assert call_kwargs["environment_name"] == DEFAULT_ENV_NAME
         assert "synthetic" in call_kwargs["dataset_name"]
         assert call_kwargs["metadata"]["reward_type"] == "llm-judge"
 
@@ -154,7 +157,27 @@ class TestLoadEnvironment:
         judge_rubric = self._get_judge_rubric(env)
         assert judge_rubric.judge_model == "gpt-4.1-mini"
 
+    def test_custom_env_name_updates_logging_and_ids(self) -> None:
+        logger = Mock()
+        logger.enabled = True
+
+        env = load_environment(dataset_name="synthetic", max_examples=5, logger=logger, env_name="custom-env-id")
+        assert env.name == "custom-env-id"
+        assert env.env_id == "custom-env-id"
+
+        logger.log_environment_init.assert_called_once()
+        call_kwargs = logger.log_environment_init.call_args.kwargs
+        assert call_kwargs["environment_name"] == "custom-env-id"
+
     def test_short_alias_loads_environment(self) -> None:
-        env = load_short_environment(dataset_name="synthetic", max_examples=5)
+        logger = Mock()
+        logger.enabled = True
+
+        env = load_short_environment(dataset_name="synthetic", max_examples=5, logger=logger)
         assert isinstance(env, vf.SingleTurnEnv)
         assert env.name == "sv-netlogs-judge"
+        assert env.env_id == "sv-netlogs-judge"
+
+        logger.log_environment_init.assert_called_once()
+        call_kwargs = logger.log_environment_init.call_args.kwargs
+        assert call_kwargs["environment_name"] == "sv-netlogs-judge"

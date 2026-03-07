@@ -9,14 +9,12 @@ label bug while reusing the same judge environment implementation.
 
 from __future__ import annotations
 
-from sv_env_network_logs_judge import load_environment as _load_environment
+from sv_netlogs_judge_impl import load_environment as _load_environment
 
 SHORT_ENV_ID = "sv-netlogs-judge"
 
 
 def load_environment(**kwargs):
     """Load the short-name alias of the E1 judge environment."""
-    env = _load_environment(**kwargs)
-    env.name = SHORT_ENV_ID
-    env.env_id = SHORT_ENV_ID
-    return env
+    kwargs.setdefault("env_name", SHORT_ENV_ID)
+    return _load_environment(**kwargs)

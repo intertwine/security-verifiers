@@ -1,4 +1,4 @@
-"""sv_env_network_logs_judge: LLM-judge reward variant of Network Log environment.
+"""sv_netlogs_judge_impl: LLM-judge reward variant of Network Log environment.
 
 This module implements a JudgeRubric-based variant of PRD Environment #1 (WP3c).
 It reuses the same dataset, prompt, and parsing as the executable-verifier variant,
@@ -15,23 +15,24 @@ returning a binary yes/no verdict that maps to reward 1.0/0.0.
 
 from __future__ import annotations
 
+import logging as _logging
+import os
+import sys
 from pathlib import Path
+
+import verifiers as vf
+from datasets import Dataset
+
+REPO_ROOT = str(Path(__file__).resolve().parents[2])
 
 try:
     # Try importing from installed package first
     from sv_shared import weave_init  # type: ignore  # noqa: F401
 except ImportError:
     # Fall back to local development import
-    import sys
-
-    sys.path.append(str(Path(__file__).resolve().parents[2]))
+    if REPO_ROOT not in sys.path:
+        sys.path.append(REPO_ROOT)
     from sv_shared import weave_init  # type: ignore  # noqa: F401
-
-import logging as _logging
-import os
-
-import verifiers as vf
-from datasets import Dataset
 
 try:
     from sv_shared import (
@@ -42,9 +43,8 @@ try:
     )
 except ImportError:
     # Fall back to local development import
-    import sys
-
-    sys.path.append(str(Path(__file__).resolve().parents[2]))
+    if REPO_ROOT not in sys.path:
+        sys.path.append(REPO_ROOT)
     from sv_shared import (  # type: ignore
         DatasetSource,
         JsonClassificationParser,
@@ -111,12 +111,16 @@ class NetworkLogParser(JsonClassificationParser):
         super().__init__(allowed_labels=["Benign", "Malicious", "Abstain"])
 
 
+DEFAULT_ENV_NAME = "sv-env-network-logs-judge"
+
+
 def load_environment(
     dataset_name: str = "iot23-train-dev-test-v1.jsonl",
     dataset_source: DatasetSource = "auto",
     max_examples: int = 1000,
     logger: RolloutLogger | None = None,
     judge_model: str = "gpt-4.1-nano",
+    env_name: str = DEFAULT_ENV_NAME,
     **extra_kwargs,  # Accept and log unknown kwargs for debugging
 ) -> vf.SingleTurnEnv:
     """Load the Network Logs environment with LLM-judge rewards (WP3c variant).
@@ -131,6 +135,7 @@ def load_environment(
         max_examples: Maximum number of examples to use from the dataset.
         logger: Optional rollout logger for instrumenting environment metadata.
         judge_model: LLM model to use as judge (default: gpt-4.1-nano for cost parity).
+        env_name: Environment name/env_id to expose and log for this loader.
 
     Returns:
         A Verifiers SingleTurnEnv configured with JudgeRubric reward.
@@ -143,7 +148,7 @@ def load_environment(
         For the matched-budget experiment (WP3c), use the same training config
         parameters (max_steps, batch_size, rollouts_per_example) as e1.toml.
     """
-    _log = _logging.getLogger("sv_env_network_logs_judge")
+    _log = _logging.getLogger("sv_netlogs_judge_impl")
     _debug = os.environ.get("SV_DEBUG", "")
 
     if extra_kwargs:
@@ -157,11 +162,12 @@ def load_environment(
         _log.warning(
             "[SV_DEBUG] load_environment (judge) called with: "
             "dataset_name=%r, dataset_source=%r, max_examples=%r, "
-            "judge_model=%r, logger=%s, extra_kwargs=%s, HF_TOKEN=%s",
+            "judge_model=%r, env_name=%r, logger=%s, extra_kwargs=%s, HF_TOKEN=%s",
             dataset_name,
             dataset_source,
             max_examples,
             judge_model,
+            env_name,
             "present" if logger else "None",
             extra_kwargs or "none",
             "set" if os.environ.get("HF_TOKEN") else "NOT SET",
@@ -265,7 +271,7 @@ def load_environment(
 
     if logger and logger.enabled:
         logger.log_environment_init(
-            environment_name="sv-env-network-logs-judge",
+            environment_name=env_name,
             dataset_name=dataset_name,
             total_examples=len(dataset) if dataset is not None else None,
             metadata={
@@ -276,7 +282,8 @@ def load_environment(
         )
 
     return vf.SingleTurnEnv(
-        name="sv-env-network-logs-judge",
+        name=env_name,
+        env_id=env_name,
         description=(
             "Classify network logs as 'Malicious', 'Benign', or 'Abstain' "
             "(LLM-judge reward variant for WP3c comparison)."
