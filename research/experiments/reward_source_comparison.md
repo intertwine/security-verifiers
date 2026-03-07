@@ -99,10 +99,10 @@ tasks, favoring cheaper judge-based approaches for future environments.
 
 ## Status
 
-- [x] Environment implementation (sv_env_network_logs_judge.py)
+- [x] Environment implementation (environments/sv-env-netlogs-judge/sv_netlogs_judge_impl.py)
 - [x] Training config (configs/rl/e1_judge.toml)
 - [x] Makefile target (lab-run-e1-judge)
-- [ ] Deploy judge environment to Hub
+- [x] Deploy judge environment to Hub
 - [ ] Run Condition A (executable verifier)
 - [ ] Run Condition B (LLM-judge)
 - [ ] Collect results and plot learning curves
@@ -112,7 +112,7 @@ tasks, favoring cheaper judge-based approaches for future environments.
 
 | File | Purpose |
 |------|---------|
-| `environments/sv-env-network-logs/sv_env_network_logs_judge.py` | Judge variant environment |
+| `environments/sv-env-netlogs-judge/sv_netlogs_judge_impl.py` | Judge variant environment |
 | `environments/sv-env-network-logs/sv_env_network_logs.py` | Executable verifier environment (baseline) |
 | `configs/rl/e1.toml` | Condition A training config |
 | `configs/rl/e1_judge.toml` | Condition B training config |
