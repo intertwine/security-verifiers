@@ -157,6 +157,36 @@ class TestLoadEnvironment:
         judge_rubric = self._get_judge_rubric(env)
         assert judge_rubric.judge_model == "gpt-4.1-mini"
 
+    def test_judge_prompt_receives_structured_json_response(self) -> None:
+        env = load_environment(dataset_name="synthetic", max_examples=1)
+        judge_rubric = self._get_judge_rubric(env)
+
+        captured = {}
+
+        async def fake_create(**kwargs):
+            captured["prompt"] = kwargs["messages"][0]["content"]
+            return Mock(choices=[Mock(message=Mock(content="yes"))])
+
+        judge_rubric.judge_client = Mock()
+        judge_rubric.judge_client.chat = Mock()
+        judge_rubric.judge_client.chat.completions = Mock()
+        judge_rubric.judge_client.chat.completions.create = fake_create
+
+        result = asyncio.run(
+            judge_rubric.judge(
+                prompt=[{"role": "user", "content": "sample log"}],
+                completion='{"label": "Benign", "confidence": 0.95, "rationale": "normal traffic"}',
+                answer="Benign",
+                state={},
+            )
+        )
+
+        assert result == "yes"
+        prompt_text = captured["prompt"]
+        assert '"label": "Benign"' in prompt_text
+        assert '"confidence": 0.95' in prompt_text
+        assert "Model's parsed response: Benign" not in prompt_text
+
     def test_custom_env_name_updates_logging_and_ids(self) -> None:
         logger = Mock()
         logger.enabled = True
