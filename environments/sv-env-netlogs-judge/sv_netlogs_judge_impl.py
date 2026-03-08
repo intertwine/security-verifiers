@@ -23,6 +23,8 @@ from pathlib import Path
 
 import verifiers as vf
 from datasets import Dataset
+from openai import APIError, APITimeoutError, RateLimitError
+from verifiers.utils.async_utils import maybe_await
 
 REPO_ROOT = str(Path(__file__).resolve().parents[2])
 
@@ -128,11 +130,7 @@ def format_completion_for_judge(parser: NetworkLogParser, completion) -> str:
     """
     data = parser._parse_json(completion)
     if data:
-        canonical = {
-            key: data[key]
-            for key in ("label", "confidence", "rationale")
-            if key in data
-        }
+        canonical = {key: data[key] for key in ("label", "confidence", "rationale") if key in data}
         if canonical:
             return json.dumps(canonical, sort_keys=True)
     return get_response_text(completion)
@@ -156,8 +154,9 @@ class StructuredResponseJudgeRubric(vf.JudgeRubric):
 
     Upstream JudgeRubric calls parser.parse_answer(completion), which is too
     lossy for this environment because the judge prompt evaluates JSON validity
-    and confidence as well as the label. We swap in a prompt-only parser wrapper
-    for judge() while leaving the environment's normal parser behavior intact.
+    and confidence as well as the label. We compute the structured response
+    directly inside judge() so concurrent scoring cannot mutate shared rubric
+    state.
     """
 
     def __init__(self, parser: NetworkLogParser, **kwargs) -> None:
@@ -165,12 +164,78 @@ class StructuredResponseJudgeRubric(vf.JudgeRubric):
         self._prompt_parser = _JudgePromptParser(parser)
 
     async def judge(self, prompt, completion, answer, state=None) -> str:
-        original_parser = self.parser
+        if isinstance(prompt, list):
+            last_msg = prompt[-1]
+            if isinstance(last_msg, dict) and "content" in last_msg:
+                question = str(last_msg["content"])
+            else:
+                question = ""
+        else:
+            question = str(prompt)
+
+        response = self._prompt_parser.parse_answer(completion)
+        judge_prompt = self.judge_prompt.format(question=question, answer=answer, response=response)
+        cached = state.get("judge_response") if state else None
+        if isinstance(cached, dict) and judge_prompt in cached:
+            return cached[judge_prompt]
+
+        judge_args = dict(self.judge_sampling_args or {})
+        if "max_tokens" in judge_args:
+            if judge_args["max_tokens"] is None:
+                judge_args.pop("max_tokens")
+            else:
+                judge_args["max_completion_tokens"] = judge_args.pop("max_tokens")
+        if "max_completion_tokens" in judge_args and judge_args["max_completion_tokens"] is None:
+            judge_args.pop("max_completion_tokens")
+        judge_args = {k: v for k, v in judge_args.items() if v is not None}
+
         try:
-            self.parser = self._prompt_parser
-            return await super().judge(prompt, completion, answer, state)
-        finally:
-            self.parser = original_parser
+            judge_response = await maybe_await(
+                self.judge_client.chat.completions.create,
+                model=self.judge_model,
+                messages=[{"role": "user", "content": judge_prompt}],
+                **judge_args,
+            )
+            judge_response = str(judge_response.choices[0].message.content)
+        except RateLimitError as e:
+            self.logger.warning(
+                f"Rate limit exceeded when calling judge model '{self.judge_model}'. "
+                f"Try reducing concurrency or waiting before retrying. Error: {str(e)}"
+            )
+            raise RuntimeError(
+                f"Judge model rate limit exceeded. Try reducing concurrency or waiting before retrying. "
+                f"Model: {self.judge_model}, Error: {str(e)}"
+            ) from e
+        except APITimeoutError as e:
+            self.logger.warning(
+                f"Timeout when calling judge model '{self.judge_model}'. "
+                f"Increase timeout in judge_sampling_args or check model responsiveness. Error: {str(e)}"
+            )
+            raise RuntimeError(
+                f"Judge model timeout. Increase timeout in judge_sampling_args or check model responsiveness. "
+                f"Model: {self.judge_model}, Error: {str(e)}"
+            ) from e
+        except APIError as e:
+            self.logger.warning(
+                f"API error when calling judge model '{self.judge_model}'. "
+                f"Check model availability and API key. Error: {str(e)}"
+            )
+            raise RuntimeError(
+                f"Judge model API error. Check model availability and API key. "
+                f"Model: {self.judge_model}, Error: {str(e)}"
+            ) from e
+        except Exception as e:
+            self.logger.warning(f"Unexpected error when calling judge model '{self.judge_model}'. Error: {str(e)}")
+            raise RuntimeError(
+                f"Unexpected error when calling judge model '{self.judge_model}'. Error: {str(e)}"
+            ) from e
+
+        if state:
+            if not isinstance(cached, dict):
+                cached = {}
+            cached[judge_prompt] = judge_response
+            state["judge_response"] = cached
+        return judge_response
 
 
 DEFAULT_ENV_NAME = "sv-env-network-logs-judge"
