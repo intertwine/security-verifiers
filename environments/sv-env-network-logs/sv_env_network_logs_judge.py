@@ -15,6 +15,7 @@ returning a binary yes/no verdict that maps to reward 1.0/0.0.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 try:
@@ -38,6 +39,7 @@ try:
         DatasetSource,
         JsonClassificationParser,
         RolloutLogger,
+        get_response_text,
         load_dataset_with_fallback,
     )
 except ImportError:
@@ -49,6 +51,7 @@ except ImportError:
         DatasetSource,
         JsonClassificationParser,
         RolloutLogger,
+        get_response_text,
         load_dataset_with_fallback,
     )
 
@@ -109,6 +112,65 @@ class NetworkLogParser(JsonClassificationParser):
 
     def __init__(self) -> None:
         super().__init__(allowed_labels=["Benign", "Malicious", "Abstain"])
+
+
+def format_completion_for_judge(parser: NetworkLogParser, completion) -> str:
+    """Format a completion for judge prompts with full structured context.
+
+    JudgeRubric normally passes parser.parse_answer(completion) into the judge
+    prompt, which only yields the label (for example "Benign"). That erased the
+    confidence/format information the judge prompt explicitly asks about, causing
+    the judge to reject otherwise-correct responses as not valid JSON.
+
+    We instead pass a canonical JSON rendering of the parsed response so the
+    judge can evaluate label, confidence, and structure together. If parsing
+    fails, fall back to the raw response text for debugging resilience.
+    """
+    data = parser._parse_json(completion)
+    if data:
+        canonical = {
+            key: data[key]
+            for key in ("label", "confidence", "rationale")
+            if key in data
+        }
+        if canonical:
+            return json.dumps(canonical, sort_keys=True)
+    return get_response_text(completion)
+
+
+class _JudgePromptParser:
+    """Thin parser wrapper used only when rendering the judge prompt."""
+
+    def __init__(self, base_parser: NetworkLogParser) -> None:
+        self.base_parser = base_parser
+
+    def parse_answer(self, completion) -> str:
+        return format_completion_for_judge(self.base_parser, completion)
+
+    def __getattr__(self, name: str):
+        return getattr(self.base_parser, name)
+
+
+class StructuredResponseJudgeRubric(vf.JudgeRubric):
+    """JudgeRubric that feeds structured JSON to the judge prompt.
+
+    Upstream JudgeRubric calls parser.parse_answer(completion), which is too
+    lossy for this environment because the judge prompt evaluates JSON validity
+    and confidence as well as the label. We swap in a prompt-only parser wrapper
+    for judge() while leaving the environment's normal parser behavior intact.
+    """
+
+    def __init__(self, parser: NetworkLogParser, **kwargs) -> None:
+        super().__init__(parser=parser, **kwargs)
+        self._prompt_parser = _JudgePromptParser(parser)
+
+    async def judge(self, prompt, completion, answer, state=None) -> str:
+        original_parser = self.parser
+        try:
+            self.parser = self._prompt_parser
+            return await super().judge(prompt, completion, answer, state)
+        finally:
+            self.parser = original_parser
 
 
 def load_environment(
@@ -254,7 +316,7 @@ def load_environment(
 
     # Use JudgeRubric instead of executable Rubric
     # The judge_reward function uses the judge callable injected by JudgeRubric
-    rubric = vf.JudgeRubric(
+    rubric = StructuredResponseJudgeRubric(
         parser=parser,
         judge_model=judge_model,
         judge_prompt=JUDGE_PROMPT,
