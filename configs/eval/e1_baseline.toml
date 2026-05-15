@@ -1,0 +1,19 @@
+[eval]
+environment = "sv-env-network-logs"
+dataset = "datasets/public_mini/e1.jsonl"
+split = "public_mini"
+num_examples = 100
+seed = 42
+mode = "local"
+
+[model]
+id = "gpt-5-mini"
+revision = "default"
+
+[metrics]
+include = ["accuracy", "precision", "recall", "f1", "tpr", "fpr", "fnr", "expected_cost", "ece", "brier", "abstention_rate", "risk_coverage"]
+
+[output_schema]
+label = "benign|malicious|abstain"
+confidence = "0.0..1.0"
+evidence = "list[str]"

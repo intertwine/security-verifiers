@@ -1,0 +1,1 @@
+{"metrics": {"detection": {"accuracy": 0.75}, "calibration": {"ece": 0.2}, "cost": {"expected_cost": 0.4}}, "run_id": "fixture-e1-local"}

@@ -1,6 +1,6 @@
-# Prime CLI Integration for Hosted RL Training (WP3a/WP3b)
+# Prime Lab Integration for Hosted RL Training and Evaluation
 
-This document defines the hosted RL training workflow for SV-Bench E1/E2 using Prime CLI v0.5+.
+This document defines the GA hosted-training, hosted-evaluation, fallback hosted-style eval, and local eval workflow for SV-Bench E1/E2.
 
 > **Note:** All examples below use `intertwine` as the team slug. Verify yours with `prime whoami`.
 
@@ -59,22 +59,34 @@ prime rl models
 ## 5) Hosted RL training
 
 Training configs are in `configs/rl/`:
-- `configs/rl/e1.toml` — E1 (sv-env-network-logs)
-- `configs/rl/e2.toml` — E2 (sv-env-config-verification)
+- `configs/rl/e1_executable_reward.toml`
+- `configs/rl/e1_llm_judge_reward.toml`
+- `configs/rl/e1_hybrid_reward.toml`
+- `configs/rl/e2_executable_reward.toml`
+- `configs/rl/e2_llm_judge_reward.toml`
+- `configs/rl/e2_hybrid_reward.toml`
 
 Launch training:
 
 ```bash
-# Via make
-make lab-run-e1
-make lab-run-e2
+make lab-run-e1 REWARD_SOURCE=executable
+make lab-run-e1 REWARD_SOURCE=llm_judge
+make lab-run-e1 REWARD_SOURCE=hybrid
+
+make lab-run-e2 REWARD_SOURCE=executable
+make lab-run-e2 REWARD_SOURCE=llm_judge
+make lab-run-e2 REWARD_SOURCE=hybrid
 
 # Or directly
-prime rl run configs/rl/e1.toml
-prime rl run configs/rl/e2.toml
+prime rl run configs/rl/e1_executable_reward.toml
+prime rl run configs/rl/e2_executable_reward.toml
 ```
 
-The config files contain all training parameters (model, batch size, learning rate, LoRA settings, eval intervals, etc.) in the flat TOML format expected by `prime rl run`.
+The config files record model, batch size, learning rate, LoRA settings, reward source, budget group, eval intervals, and environment args. Validate all configs before launch:
+
+```bash
+make config-validate
+```
 
 ## 6) Monitoring training runs
 
@@ -100,13 +112,22 @@ prime env info intertwine/sv-env-network-logs
 prime env info intertwine/sv-env-config-verification
 ```
 
-## 8) Fallback hosted-style eval parity
+## 8) Hosted eval, fallback eval, and local eval
+
+Hosted eval uses Prime platform resources. Fallback hosted-style eval uses `prime env eval`/`vf-eval` wrappers to preserve metadata/report parity when hosted training is unavailable. Local eval uses the repo's Python scripts and writes `outputs/evals/...`.
 
 Use `prime env eval` wrappers when full RL training is not needed:
 
 ```bash
 make env-eval-e1 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=intertwine N=100
 make env-eval-e2 MODEL=Qwen/Qwen3-4B-Instruct-2507 TEAM=intertwine N=50
+```
+
+Local eval:
+
+```bash
+make eval-e1 MODELS=gpt-5-mini N=10
+make eval-e2 MODELS=gpt-5-mini INCLUDE_TOOLS=true N=2
 ```
 
 ## 9) Metadata normalization for report pipeline
@@ -122,3 +143,9 @@ python scripts/normalize_hosted_eval.py \
 ```
 
 Expected normalized fields include `run_id`, model/revision, dataset revision, platform metadata, and git SHA.
+
+Every reportable hosted, fallback-hosted, or local run should produce or be paired with a run manifest:
+
+```bash
+uv run svbench_manifest validate results/runs/<id>/run_manifest.json
+```

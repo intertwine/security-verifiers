@@ -1,0 +1,12 @@
+[eval]
+environment = "sv-env-redteam-defense"
+dataset = "datasets/public_mini/e6_sanitized.jsonl"
+split = "public_mini"
+num_examples = 10
+seed = 42
+mode = "local-beta-smoke"
+
+[safety]
+rule_checks_before_judge = true
+judge_role = "tie_breaker_only"
+public_traces = "sanitized"

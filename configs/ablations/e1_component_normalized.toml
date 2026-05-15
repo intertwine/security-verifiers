@@ -1,0 +1,8 @@
+[ablation]
+environment = "e1"
+name = "component_normalized"
+supported = true
+
+[normalization]
+mode = "per_component"
+components = ["accuracy", "calibration", "asymmetric_cost", "abstention"]

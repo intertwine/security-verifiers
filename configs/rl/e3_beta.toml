@@ -1,0 +1,13 @@
+model = "Qwen/Qwen3-4B-Instruct-2507"
+reward_source = "executable"
+reward_config_id = "e3_beta_executable"
+trainer = "grpo"
+max_steps = 100
+rollouts_per_example = 4
+
+[sampling]
+max_tokens = 4096
+
+[[env]]
+id = "intertwine/sv-env-code-vulnerability"
+args = { max_examples = 50, sandbox_mode = "local" }

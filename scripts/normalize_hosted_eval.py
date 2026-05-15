@@ -42,6 +42,10 @@ def main() -> int:
             "compute": source.get("compute"),
             "loader_mode": source.get("loader_mode"),
         },
+        "platform_mode": source.get("platform_mode") or "hosted",
+        "prime_run_id": source.get("prime_run_id") or source.get("run_id"),
+        "team": source.get("team"),
+        "adapter_id": source.get("adapter_id"),
     }
 
     output_path = Path(args.output)

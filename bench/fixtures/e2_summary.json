@@ -1,0 +1,1 @@
+{"metrics": {"finding_quality": {"precision": 0.8, "recall": 0.7, "f1_weighted": 0.75}, "patch": {"patch_success_rate": 0.5}, "episode": {"tool_calls_per_episode": 2.0}}, "run_id": "fixture-e2-local"}

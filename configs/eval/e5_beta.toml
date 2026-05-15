@@ -1,0 +1,12 @@
+[eval]
+environment = "sv-env-redteam-attack"
+dataset = "datasets/public_mini/e5_sanitized.jsonl"
+split = "public_mini"
+num_examples = 10
+seed = 42
+mode = "local-beta-smoke"
+
+[safety]
+public_data = "sanitized_non_operational"
+penalize_unsafe_attacker_output = true
+raw_harmful_corpus_allowed = false

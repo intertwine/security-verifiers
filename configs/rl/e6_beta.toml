@@ -1,0 +1,13 @@
+model = "Qwen/Qwen3-4B-Instruct-2507"
+reward_source = "hybrid"
+reward_config_id = "e6_beta_hybrid"
+trainer = "grpo"
+max_steps = 100
+rollouts_per_example = 4
+
+[sampling]
+max_tokens = 2048
+
+[[env]]
+id = "intertwine/sv-env-redteam-defense"
+args = { max_examples = 50, safety_gate = "rules_first" }

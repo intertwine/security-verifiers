@@ -1,0 +1,9 @@
+[ablation]
+environment = "e1"
+name = "gdpo_style_decoupled_normalization"
+supported = false
+unsupported_reason = "Runtime GDPO support is not confirmed; this is a decoupled-normalization placeholder."
+
+[normalization]
+mode = "decoupled_placeholder"
+components = ["accuracy", "calibration", "asymmetric_cost", "abstention"]

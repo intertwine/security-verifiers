@@ -117,21 +117,41 @@ def main() -> int:
         )
     )
 
-    compatible = all(
+    hosted_ready = all(
         c.ok
         for c in checks
         if c.name in {"prime_cli_installed", "prime_version", "prime_rl_command", "prime_auth"}
     )
+    fallback_ready = all(
+        c.ok for c in checks if c.name in {"prime_cli_installed", "prime_version", "prime_env_command"}
+    )
+    compatible = hosted_ready
 
     result = {
         "compatible": compatible,
+        "status": "hosted-ready" if hosted_ready else "fallback-ready" if fallback_ready else "unavailable",
         "checks": [asdict(c) for c in checks],
+        "next_steps": (
+            [
+                "Run `make config-validate`.",
+                "Launch with `make lab-run-e1 REWARD_SOURCE=executable` "
+                "or `make lab-run-e2 REWARD_SOURCE=executable`.",
+                "Use `make env-eval-e1` / `make env-eval-e2` for fallback hosted-style eval.",
+            ]
+            if compatible
+            else [
+                "Authenticate with `prime login` before launching hosted RL."
+                if fallback_ready
+                else "Install or update the Prime CLI.",
+                "Use local eval or fallback docs until hosted training is available.",
+            ]
+        ),
     }
     if team_slug:
         result["team_slug"] = team_slug
 
     print(json.dumps(result, indent=2))
-    return 0 if compatible else 1
+    return 0 if hosted_ready or fallback_ready else 1
 
 
 if __name__ == "__main__":

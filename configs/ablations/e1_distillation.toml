@@ -1,0 +1,8 @@
+[ablation]
+environment = "e1"
+name = "distillation"
+supported = true
+
+[teacher]
+model = "gpt-5-mini"
+target = "schema_valid_calibrated_classifier"

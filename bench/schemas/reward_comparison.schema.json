@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SV-Bench Reward Source Comparison",
+  "type": "object",
+  "required": ["environment", "budget_fields", "budget_mismatches", "runs", "metric_rows"],
+  "properties": {
+    "environment": {"enum": ["e1", "e2"]},
+    "allow_unmatched": {"type": "boolean"},
+    "budget_fields": {"type": "array", "items": {"type": "string"}},
+    "budget_mismatches": {"type": "object"},
+    "runs": {"type": "object"},
+    "metric_rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["metric", "executable", "judge", "hybrid"],
+        "properties": {
+          "metric": {"type": "string"},
+          "executable": {"type": ["number", "null"]},
+          "judge": {"type": ["number", "null"]},
+          "hybrid": {"type": ["number", "null"]},
+          "judge_delta_vs_executable": {"type": ["number", "null"]},
+          "hybrid_delta_vs_executable": {"type": ["number", "null"]}
+        }
+      }
+    }
+  }
+}

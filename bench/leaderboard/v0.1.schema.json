@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SV-Bench v0.1 Leaderboard",
+  "type": "object",
+  "required": ["version", "scope", "entries"],
+  "properties": {
+    "version": {"const": "v0.1"},
+    "scope": {"const": "E1/E2 only"},
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["environment", "model", "run_manifest", "metrics"],
+        "properties": {
+          "environment": {"enum": ["e1", "e2"]},
+          "model": {"type": "string"},
+          "run_manifest": {"type": "string"},
+          "metrics": {"type": "object"}
+        }
+      }
+    }
+  }
+}

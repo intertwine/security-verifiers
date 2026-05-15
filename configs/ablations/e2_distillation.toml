@@ -1,0 +1,8 @@
+[ablation]
+environment = "e2"
+name = "distillation"
+supported = true
+
+[teacher]
+model = "gpt-5-mini"
+target = "tool_grounded_patch_auditor"

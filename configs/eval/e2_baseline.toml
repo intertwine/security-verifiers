@@ -1,0 +1,31 @@
+[eval]
+environment = "sv-env-config-verification"
+dataset = "datasets/public_mini/e2.jsonl"
+split = "public_mini"
+num_examples = 100
+seed = 42
+mode = "local"
+include_tools = true
+
+[tooling]
+sandbox_mode = "local"
+allowed_tools = ["opa", "kube-linter", "semgrep"]
+tool_budget = 3
+timeout_per_tool_seconds = 30
+timeout_per_episode_seconds = 120
+
+[metrics]
+include = [
+  "violation_precision",
+  "violation_recall",
+  "violation_f1",
+  "severity_weighted_score",
+  "patch_success_rate",
+  "clean_pass_rate",
+  "false_positive_rate_on_clean",
+  "hallucinated_finding_count",
+  "unnecessary_change_rate",
+  "patch_delta_size",
+  "tool_calls_per_episode",
+  "tool_runtime_per_episode"
+]

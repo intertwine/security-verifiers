@@ -1,0 +1,10 @@
+[ablation]
+environment = "e2"
+name = "grpo_scalar"
+supported = true
+
+[reward_weights]
+finding_f1 = 1.0
+patch_success = 1.0
+hallucination_penalty = -0.5
+tool_economy = 0.1

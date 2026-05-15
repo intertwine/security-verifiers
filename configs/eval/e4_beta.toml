@@ -1,0 +1,10 @@
+[eval]
+environment = "sv-env-phishing-detection"
+dataset = "datasets/public_mini/e4.jsonl"
+split = "public_mini"
+num_examples = 10
+seed = 42
+mode = "local-beta-smoke"
+
+[metrics]
+include = ["precision", "recall", "f1", "false_negative_rate", "false_positive_rate", "brier", "abstention_rate", "risk_coverage", "evidence_precision"]
