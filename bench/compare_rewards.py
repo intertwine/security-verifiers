@@ -26,6 +26,10 @@ BUDGET_FIELDS = (
     "tool_budget",
     "trainer",
 )
+HOSTED_IDENTITY_FIELDS = (
+    "prime_environment_id",
+    "environment_version",
+)
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -48,17 +52,24 @@ def _load_manifest(path: Path) -> dict[str, Any]:
     return manifest
 
 
-def _budget_mismatches(manifests: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+def _field_mismatches(
+    manifests: dict[str, dict[str, Any]],
+    fields: tuple[str, ...],
+) -> dict[str, dict[str, Any]]:
     baseline = manifests["executable"]
     mismatches: dict[str, dict[str, Any]] = {}
     for variant, manifest in manifests.items():
         if variant == "executable":
             continue
-        for field in BUDGET_FIELDS:
+        for field in fields:
             if manifest.get(field) != baseline.get(field):
                 mismatches.setdefault(field, {})["executable"] = baseline.get(field)
                 mismatches[field][variant] = manifest.get(field)
     return mismatches
+
+
+def _budget_mismatches(manifests: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    return _field_mismatches(manifests, BUDGET_FIELDS)
 
 
 def _flatten_metrics(summary: dict[str, Any]) -> dict[str, float]:
@@ -81,10 +92,19 @@ def _flatten_metrics(summary: dict[str, Any]) -> dict[str, float]:
     return flat
 
 
-def _load_metrics(manifest: dict[str, Any]) -> dict[str, float]:
+def _load_metrics(manifest: dict[str, Any], *, allow_incomplete: bool) -> dict[str, float]:
     manifest_path = Path(str(manifest["_manifest_path"]))
     summary_path = _resolve(str(manifest["metrics_summary_path"]), manifest_path.parent)
-    return _flatten_metrics(_load_json(summary_path))
+    summary = _load_json(summary_path)
+    run_status = summary.get("run_status")
+    if not allow_incomplete and manifest.get("platform_mode") == "hosted" and run_status != "COMPLETED":
+        raise ValueError(
+            f"Run {manifest.get('run_id')} is not complete enough for claim comparison: {run_status}"
+        )
+    metrics = _flatten_metrics(summary)
+    if not allow_incomplete and not metrics:
+        raise ValueError(f"Run {manifest.get('run_id')} has no comparable metrics")
+    return metrics
 
 
 def _delta(left: float | None, right: float | None) -> float | None:
@@ -93,7 +113,12 @@ def _delta(left: float | None, right: float | None) -> float | None:
     return right - left
 
 
-def _build_summary(env: str, manifests: dict[str, dict[str, Any]], allow_unmatched: bool) -> dict[str, Any]:
+def _build_summary(
+    env: str,
+    manifests: dict[str, dict[str, Any]],
+    allow_unmatched: bool,
+    allow_incomplete: bool = False,
+) -> dict[str, Any]:
     mismatches = _budget_mismatches(manifests)
     if mismatches and not allow_unmatched:
         raise ValueError(
@@ -101,7 +126,16 @@ def _build_summary(env: str, manifests: dict[str, dict[str, Any]], allow_unmatch
             f"Mismatched fields: {', '.join(sorted(mismatches))}"
         )
 
-    metrics = {variant: _load_metrics(manifest) for variant, manifest in manifests.items()}
+    hosted_identity_mismatches = _field_mismatches(manifests, HOSTED_IDENTITY_FIELDS)
+    if hosted_identity_mismatches and not allow_unmatched:
+        raise ValueError(
+            "Hosted identity parity failed. Use --allow-unmatched only for exploratory reports. "
+            f"Mismatched fields: {', '.join(sorted(hosted_identity_mismatches))}"
+        )
+    metrics = {
+        variant: _load_metrics(manifest, allow_incomplete=allow_incomplete)
+        for variant, manifest in manifests.items()
+    }
     metric_names = sorted({name for variant_metrics in metrics.values() for name in variant_metrics})
     rows: list[dict[str, Any]] = []
     for name in metric_names:
@@ -122,8 +156,11 @@ def _build_summary(env: str, manifests: dict[str, dict[str, Any]], allow_unmatch
     return {
         "environment": env,
         "allow_unmatched": allow_unmatched,
+        "allow_incomplete": allow_incomplete,
         "budget_fields": list(BUDGET_FIELDS),
         "budget_mismatches": mismatches,
+        "hosted_identity_fields": list(HOSTED_IDENTITY_FIELDS),
+        "hosted_identity_mismatches": hosted_identity_mismatches,
         "runs": {
             variant: {
                 "run_id": manifest["run_id"],
@@ -163,6 +200,24 @@ def render_markdown(summary: dict[str, Any]) -> str:
     lines.extend(
         [
             "",
+            "## Hosted Identity",
+            "",
+        ]
+    )
+    if summary["hosted_identity_mismatches"]:
+        lines.append(
+            "Hosted environment identity/version differs across variants and is reported separately."
+        )
+        lines.append("")
+        lines.extend(
+            f"- `{field}`: {values}"
+            for field, values in sorted(summary["hosted_identity_mismatches"].items())
+        )
+    else:
+        lines.append("Hosted environment IDs and versions match across variants, or were not reported.")
+    lines.extend(
+        [
+            "",
             "## Metric Deltas",
             "",
             "| Metric | Executable | Judge | Hybrid | Judge delta | Hybrid delta |",
@@ -185,7 +240,7 @@ def render_markdown(summary: dict[str, Any]) -> str:
             "",
             "## Failure-Mode Notes",
             "",
-            "- Add representative trace links after real hosted or fallback-hosted runs complete.",
+            "- Inspect `results.jsonl` or `rollouts_raw.json` before quoting representative traces.",
             "- Treat judge-only gains cautiously unless unsupported claims and invalid schemas remain low.",
             "",
         ]
@@ -202,6 +257,7 @@ def main() -> int:
     parser.add_argument("--out", required=True, help="Markdown output path")
     parser.add_argument("--json-out", default=None, help="JSON summary output path")
     parser.add_argument("--allow-unmatched", action="store_true", help="Allow unmatched budgets")
+    parser.add_argument("--allow-incomplete", action="store_true", help="Allow incomplete/empty metrics")
     args = parser.parse_args()
 
     manifests = {
@@ -209,7 +265,7 @@ def main() -> int:
         "judge": _load_manifest(Path(args.judge)),
         "hybrid": _load_manifest(Path(args.hybrid)),
     }
-    summary = _build_summary(args.env, manifests, args.allow_unmatched)
+    summary = _build_summary(args.env, manifests, args.allow_unmatched, args.allow_incomplete)
 
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)

@@ -9,6 +9,7 @@ violations, an optional patch, and a confidence score.
 from __future__ import annotations
 
 import json
+import ast
 
 # Allow importing shared utilities when developing from the repo
 import sys
@@ -27,7 +28,9 @@ from sv_shared import weave_init  # type: ignore  # noqa: F401, E402
 import verifiers as vf
 import yaml  # noqa: F401 - used in run_opa function
 from datasets import Dataset
+from openai import APIError, APITimeoutError, RateLimitError
 from pydantic import BaseModel, ConfigDict
+from verifiers.utils.async_utils import maybe_await
 
 from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
     DatasetSource,
@@ -65,12 +68,69 @@ class ToolFindingModel(BaseModel):
 
 DATASET_ROOT = Path(__file__).resolve().parent / "dataset"
 
+JUDGE_PROMPT = """\
+You are evaluating a security configuration auditing model's response.
+
+The model was given a Kubernetes or Terraform configuration and asked to return JSON:
+{{"violations": [...], "patch": "...", "confidence": 0.0-1.0}}.
+
+Configuration:
+```
+{question}
+```
+
+Ground truth audit metadata:
+```
+{answer}
+```
+
+Model's parsed response:
+```
+{response}
+```
+
+Respond "yes" if the response identifies the relevant security violations, is valid JSON,
+and does not invent unsupported findings. Respond "no" otherwise.\
+"""
+
 
 def run_kubelinter(paths: List[str]) -> List[Dict[str, Any]]:
     """Expose ``kubelinter_lint`` as a simple tool."""
 
     findings = []
-    for f in kubelinter_lint(paths):
+    tool_backend = "adapter"
+    try:
+        raw_findings = kubelinter_lint(paths)
+    except Exception:
+        tool_backend = "deterministic_fallback"
+        raw_findings = []
+        for path in paths:
+            try:
+                content = Path(path).read_text(encoding="utf-8")
+            except OSError:
+                continue
+            if ":latest" in content:
+                raw_findings.append(
+                    ToolFindingModel(
+                        tool="kube-linter",
+                        rule_id="latest-tag",
+                        severity="med",
+                        message="Container image uses the latest tag.",
+                        file=path,
+                    )
+                )
+            if "runAsNonRoot: false" in content:
+                raw_findings.append(
+                    ToolFindingModel(
+                        tool="kube-linter",
+                        rule_id="run-as-non-root",
+                        severity="med",
+                        message="Container explicitly disables runAsNonRoot.",
+                        file=path,
+                    )
+                )
+
+    for f in raw_findings:
         # Create dict without extra field to avoid schema issues
         finding_dict = {
             "tool": f.tool,
@@ -80,6 +140,7 @@ def run_kubelinter(paths: List[str]) -> List[Dict[str, Any]]:
             "file": f.file,
             "start_line": f.start_line,
             "end_line": f.end_line,
+            "tool_backend": tool_backend,
         }
         findings.append(finding_dict)
     return findings
@@ -98,7 +159,29 @@ def run_semgrep(paths: List[str]) -> List[Dict[str, Any]]:
     for ruleset, grouped_paths in by_ruleset.items():
         if not grouped_paths:
             continue
-        for f in semgrep_scan(grouped_paths, rules=ruleset):
+        tool_backend = "adapter"
+        try:
+            raw_findings = semgrep_scan(grouped_paths, rules=ruleset)
+        except Exception:
+            tool_backend = "deterministic_fallback"
+            raw_findings = []
+            if ruleset == "p/terraform":
+                for path in grouped_paths:
+                    try:
+                        content = Path(path).read_text(encoding="utf-8")
+                    except OSError:
+                        continue
+                    if 'acl    = "public-read"' in content or 'acl = "public-read"' in content:
+                        raw_findings.append(
+                            ToolFindingModel(
+                                tool="semgrep",
+                                rule_id="terraform-acl-public-read",
+                                severity="high",
+                                message="S3 bucket ACL is public-read.",
+                                file=path,
+                            )
+                        )
+        for f in raw_findings:
             # Create dict without extra field to avoid schema issues
             finding_dict = {
                 "tool": f.tool,
@@ -108,6 +191,7 @@ def run_semgrep(paths: List[str]) -> List[Dict[str, Any]]:
                 "file": f.file,
                 "start_line": f.start_line,
                 "end_line": f.end_line,
+                "tool_backend": tool_backend,
             }
             findings.append(finding_dict)
     return findings
@@ -206,6 +290,254 @@ class ConfigVerificationParser(vf.Parser):
         return format_reward
 
 
+async def judge_reward(prompt, completion, answer, state, judge, **kwargs):  # pylint: disable=unused-argument
+    """Binary reward from an LLM judge."""
+
+    result = await judge(prompt, completion, answer, state)
+    return 1.0 if result.strip().lower().startswith("yes") else 0.0
+
+
+def format_completion_for_judge(parser: ConfigVerificationParser, completion: Any) -> str:
+    """Render structured model output for judge prompts."""
+
+    parsed = parser.parse_answer(completion)
+    if parsed:
+        return json.dumps(parsed, sort_keys=True)
+    return get_response_text(completion)
+
+
+class _JudgePromptParser:
+    """Thin parser wrapper used only when rendering the judge prompt."""
+
+    def __init__(self, base_parser: ConfigVerificationParser) -> None:
+        self.base_parser = base_parser
+
+    def parse_answer(self, completion) -> str:
+        return format_completion_for_judge(self.base_parser, completion)
+
+    def __getattr__(self, name: str):
+        return getattr(self.base_parser, name)
+
+
+class StructuredConfigJudgeRubric(vf.JudgeRubric):
+    """JudgeRubric that passes the full structured config-audit response."""
+
+    def __init__(self, parser: ConfigVerificationParser, **kwargs) -> None:
+        super().__init__(parser=parser, **kwargs)
+        self._prompt_parser = _JudgePromptParser(parser)
+
+    async def judge(self, prompt, completion, answer, state=None) -> str:
+        if isinstance(prompt, list):
+            last_msg = prompt[-1]
+            question = str(last_msg.get("content", "")) if isinstance(last_msg, dict) else ""
+        else:
+            question = str(prompt)
+
+        response = self._prompt_parser.parse_answer(completion)
+        judge_prompt = self.judge_prompt.format(question=question, answer=answer, response=response)
+        cached = state.get("judge_response") if state else None
+        if isinstance(cached, dict) and judge_prompt in cached:
+            return cached[judge_prompt]
+
+        judge_args = dict(self.judge_sampling_args or {})
+        if "max_tokens" in judge_args:
+            if judge_args["max_tokens"] is None:
+                judge_args.pop("max_tokens")
+            else:
+                judge_args["max_completion_tokens"] = judge_args.pop("max_tokens")
+        if "max_completion_tokens" in judge_args and judge_args["max_completion_tokens"] is None:
+            judge_args.pop("max_completion_tokens")
+        judge_args = {key: value for key, value in judge_args.items() if value is not None}
+
+        try:
+            judge_response = await maybe_await(
+                self.judge_client.chat.completions.create,
+                model=self.judge_model,
+                messages=[{"role": "user", "content": judge_prompt}],
+                **judge_args,
+            )
+            judge_response = str(judge_response.choices[0].message.content)
+        except RateLimitError as exc:
+            self.logger.warning("Rate limit exceeded when calling judge model %r: %s", self.judge_model, exc)
+            raise RuntimeError(f"Judge model rate limit exceeded: {self.judge_model}") from exc
+        except APITimeoutError as exc:
+            self.logger.warning("Timeout when calling judge model %r: %s", self.judge_model, exc)
+            raise RuntimeError(f"Judge model timeout: {self.judge_model}") from exc
+        except APIError as exc:
+            self.logger.warning("API error when calling judge model %r: %s", self.judge_model, exc)
+            raise RuntimeError(f"Judge model API error: {self.judge_model}") from exc
+
+        if state:
+            if not isinstance(cached, dict):
+                cached = {}
+            cached[judge_prompt] = judge_response
+            state["judge_response"] = cached
+        return judge_response
+
+
+def _normalize_severity(value: Any) -> str:
+    sev = str(value).lower().strip() if value is not None else "med"
+    if sev == "medium":
+        sev = "med"
+    if sev == "critical":
+        sev = "high"
+    return sev if sev in {"low", "med", "high"} else "med"
+
+
+def _answer_to_dict(answer: Dict[str, Any] | str | None) -> Dict[str, Any]:
+    if isinstance(answer, str):
+        try:
+            return json.loads(answer)
+        except json.JSONDecodeError:
+            return {}
+    return answer or {}
+
+
+def _oracle_from_answer(answer_obj: Dict[str, Any], kwargs: Dict[str, Any]) -> tuple[list[Violation], str]:
+    fixture_type = answer_obj.get("fixture_type") or kwargs.get("fixture_type") or "k8s"
+    fixture_type = str(fixture_type).lower().strip()
+    fixture_type = "tf" if fixture_type in {"tf", "terraform"} else "k8s"
+
+    oracle: list[Violation] = []
+    if "oracle" in answer_obj:
+        oracle_dicts = answer_obj.get("oracle", []) or []
+        for v in oracle_dicts:
+            if not isinstance(v, dict):
+                continue
+            vid = v.get("id")
+            if vid:
+                oracle.append(Violation(id=str(vid), severity=_normalize_severity(v.get("severity"))))  # type: ignore[arg-type]
+    else:
+        # Hub/build dataset format: oracle findings live under "violations" with tool + rule_id.
+        oracle_findings = answer_obj.get("violations", []) or []
+        if isinstance(oracle_findings, list):
+            for f in oracle_findings:
+                if not isinstance(f, dict):
+                    continue
+                tool = f.get("tool")
+                rule_id = f.get("rule_id")
+                vid = f.get("id") or (f"{tool}/{rule_id}" if tool and rule_id else None)
+                if vid:
+                    oracle.append(Violation(id=str(vid), severity=_normalize_severity(f.get("severity"))))  # type: ignore[arg-type]
+    return oracle, fixture_type
+
+
+def _primary_tool_filter(
+    predicted: list[Violation],
+    oracle: list[Violation],
+    fixture_type: str,
+) -> tuple[list[Violation], list[Violation]]:
+    tool_style = any(v.id.startswith(("kube-linter/", "semgrep/", "opa/")) for v in oracle) or any(
+        v.id.startswith(("kube-linter/", "semgrep/", "opa/")) for v in predicted
+    )
+    if not tool_style:
+        return predicted, oracle
+    primary_prefix = "kube-linter/" if fixture_type == "k8s" else "semgrep/"
+    return (
+        [v for v in predicted if v.id.startswith(primary_prefix)],
+        [v for v in oracle if v.id.startswith(primary_prefix)],
+    )
+
+
+def _message_value(message: Any, key: str) -> Any:
+    if isinstance(message, dict):
+        return message.get(key)
+    return getattr(message, key, None)
+
+
+def _parse_tool_content(content: Any) -> Any:
+    if not isinstance(content, str):
+        return content
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        try:
+            return ast.literal_eval(content)
+        except (SyntaxError, ValueError):
+            return content
+
+
+def _walk_tool_findings(value: Any) -> list[Violation]:
+    if isinstance(value, dict):
+        tool = value.get("tool")
+        rule_id = value.get("rule_id")
+        if tool and rule_id:
+            return [
+                Violation(
+                    id=f"{tool}/{rule_id}",
+                    severity=_normalize_severity(value.get("severity")),  # type: ignore[arg-type]
+                    message=value.get("message"),
+                    file=value.get("file"),
+                    start_line=value.get("start_line"),
+                    end_line=value.get("end_line"),
+                    source_tool=str(tool),
+                    native_rule_id=str(rule_id),
+                )
+            ]
+        findings: list[Violation] = []
+        for child in value.values():
+            findings.extend(_walk_tool_findings(child))
+        return findings
+    if isinstance(value, list):
+        findings = []
+        for child in value:
+            findings.extend(_walk_tool_findings(child))
+        return findings
+    return []
+
+
+def _extract_tool_observation_violations(completion: Any) -> list[Violation]:
+    if not isinstance(completion, list):
+        return []
+    findings: list[Violation] = []
+    for message in completion:
+        if _message_value(message, "role") != "tool":
+            continue
+        findings.extend(_walk_tool_findings(_parse_tool_content(_message_value(message, "content"))))
+
+    deduped: dict[str, Violation] = {}
+    for finding in findings:
+        deduped.setdefault(finding.id, finding)
+    return list(deduped.values())
+
+
+def tool_observation_reward(completion, answer: Dict[str, Any] | str | None = None, **kwargs) -> float:
+    """Reward executable evidence surfaced by actual tool observations."""
+
+    observed = _extract_tool_observation_violations(completion)
+    if not observed:
+        return 0.0
+
+    answer_obj = _answer_to_dict(answer)
+    oracle, fixture_type = _oracle_from_answer(answer_obj, kwargs)
+    observed, oracle = _primary_tool_filter(observed, oracle, fixture_type)
+    if not observed or not oracle:
+        return 0.0
+    return max(0.0, final_reward(observed, oracle, format_bonus=0.0, invalid_penalty=0.0))
+
+
+def _build_executable_rubric(parser: ConfigVerificationParser) -> vf.Rubric:
+    return vf.Rubric(
+        funcs=[reward_config_auditing, parser.get_format_reward_func(), tool_observation_reward],
+        weights=[1.0, 0.05, 0.2],
+        parser=parser,
+    )
+
+
+def _build_judge_rubric(
+    parser: ConfigVerificationParser,
+    judge_model: str,
+) -> StructuredConfigJudgeRubric:
+    rubric = StructuredConfigJudgeRubric(
+        parser=parser,
+        judge_model=judge_model,
+        judge_prompt=JUDGE_PROMPT,
+        judge_sampling_args={"max_tokens": 16, "temperature": 0.0},
+    )
+    rubric.add_reward_func(judge_reward, weight=1.0)
+    return rubric
+
+
 # pylint: disable=unused-argument
 def reward_config_auditing(
     completion,
@@ -219,7 +551,9 @@ def reward_config_auditing(
     """
 
     text = get_response_text(completion)
-    # Try raw JSON first, then extract from markdown code blocks
+    # Try raw JSON first, then extract from markdown code blocks. Invalid prose
+    # should not earn executable reward; early shaped signal comes from actual
+    # tool observations via `tool_observation_reward`.
     try:
         data = json.loads(text)
     except json.JSONDecodeError:
@@ -228,69 +562,26 @@ def reward_config_auditing(
             data = json.loads(extracted)
         except json.JSONDecodeError:
             return 0.0
-    try:
-        violations_pred, patch, _ = parse_model_output(data)
-    except (ValueError, KeyError):
+        else:
+            try:
+                violations_pred, patch, _ = parse_model_output(data)
+            except (ValueError, KeyError):
+                return 0.0
+    else:
+        try:
+            violations_pred, patch, _ = parse_model_output(data)
+        except (ValueError, KeyError):
+            return 0.0
+
+    if not violations_pred:
         return 0.0
 
-    # Normalize answer to a dict
-    answer_obj: Dict[str, Any] = {}
-    if isinstance(answer, str):
-        try:
-            answer_obj = json.loads(answer)
-        except json.JSONDecodeError:
-            answer_obj = {}
-    elif isinstance(answer, dict):
-        answer_obj = answer
-
-    fixture_type = (answer_obj or {}).get("fixture_type") or kwargs.get("fixture_type") or "k8s"
-    fixture_type = str(fixture_type).lower().strip()
-    if fixture_type in {"tf", "terraform"}:
-        fixture_type = "tf"
-    else:
-        fixture_type = "k8s"
-
-    def _normalize_severity(value: Any) -> str:
-        sev = str(value).lower().strip() if value is not None else "med"
-        if sev == "medium":
-            sev = "med"
-        if sev == "critical":
-            sev = "high"
-        return sev if sev in {"low", "med", "high"} else "med"
-
-    oracle: List[Violation] = []
-    if "oracle" in (answer_obj or {}):
-        oracle_dicts = (answer_obj or {}).get("oracle", []) or []
-        for v in oracle_dicts:
-            if not isinstance(v, dict):
-                continue
-            vid = v.get("id")
-            if not vid:
-                continue
-            oracle.append(Violation(id=str(vid), severity=_normalize_severity(v.get("severity"))))  # type: ignore[arg-type]
-    else:
-        # Hub/build dataset format: oracle findings live under "violations" with tool + rule_id.
-        oracle_findings = (answer_obj or {}).get("violations", []) or []
-        if isinstance(oracle_findings, list):
-            for f in oracle_findings:
-                if not isinstance(f, dict):
-                    continue
-                tool = f.get("tool")
-                rule_id = f.get("rule_id")
-                vid = f.get("id") or (f"{tool}/{rule_id}" if tool and rule_id else None)
-                if not vid:
-                    continue
-                oracle.append(Violation(id=str(vid), severity=_normalize_severity(f.get("severity"))))  # type: ignore[arg-type]
+    answer_obj = _answer_to_dict(answer)
+    oracle, fixture_type = _oracle_from_answer(answer_obj, kwargs)
 
     # Scoring contract: For k8s, primary oracle is kube-linter; for tf, primary oracle is semgrep.
     # Datasets may include extra tool findings; ignore them for scoring to avoid oracle/tool mismatch.
-    tool_style = any(v.id.startswith(("kube-linter/", "semgrep/", "opa/")) for v in oracle) or any(
-        v.id.startswith(("kube-linter/", "semgrep/", "opa/")) for v in violations_pred
-    )
-    if tool_style:
-        primary_prefix = "kube-linter/" if fixture_type == "k8s" else "semgrep/"
-        oracle = [v for v in oracle if v.id.startswith(primary_prefix)]
-        violations_pred = [v for v in violations_pred if v.id.startswith(primary_prefix)]
+    violations_pred, oracle = _primary_tool_filter(violations_pred, oracle, fixture_type)
 
     post: List[Violation] | None = None
     if patch:
@@ -309,7 +600,7 @@ def reward_config_auditing(
             finally:
                 Path(tmp_path).unlink(missing_ok=True)
 
-    return final_reward(violations_pred, oracle, post_patch=post)
+    return max(0.0, final_reward(violations_pred, oracle, had_valid_json=True, post_patch=post))
 
 
 def _create_builtin_fixtures() -> Dataset:
@@ -332,11 +623,13 @@ def _create_builtin_fixtures() -> Dataset:
     ]
     items: List[Dict[str, Any]] = []
     for item in fixtures:
-        question = Path(item["path"]).read_text(encoding="utf-8")
+        fixture_path = str(item["path"])
+        config_text = Path(item["path"]).read_text(encoding="utf-8")
+        question = f"File path: {fixture_path}\n\nConfiguration:\n```text\n{config_text}\n```"
         oracle = json.loads(Path(item["oracle"]).read_text(encoding="utf-8"))
         answer_obj = {
             "oracle": oracle,
-            "fixture_path": str(item["path"]),
+            "fixture_path": fixture_path,
             "fixture_type": item["type"],
         }
         # Store answer as JSON string for compatibility with recent verifiers schemas
@@ -361,9 +654,14 @@ def _convert_e2_format(example: Dict[str, Any]) -> Dict[str, Any]:
     # Convert from build/hub format (has "info" instead of "answer")
     # Hub format uses "question", build format uses "prompt"
     question = example.get("question") or example.get("prompt", "")
+    info = example.get("info", {})
+    if isinstance(info, dict):
+        fixture_path = info.get("fixture_path")
+        if fixture_path and "File path:" not in question:
+            question = f"File path: {fixture_path}\n\nConfiguration:\n```text\n{question}\n```"
     return {
         "question": question,
-        "answer": json.dumps(example.get("info", {})),
+        "answer": json.dumps(info),
     }
 
 
@@ -374,6 +672,8 @@ def load_environment(
     max_turns: int | None = None,  # pylint: disable=unused-argument
     logger: RolloutLogger | None = None,
     include_tools: bool = True,
+    reward_source: str = "executable",
+    judge_model: str = "gpt-4.1-nano",
 ) -> vf.ToolEnv:
     """Load the configuration auditing environment.
 
@@ -393,6 +693,8 @@ def load_environment(
         max_examples: Maximum number of examples to load from the dataset.
         logger: Optional rollout logger to capture dataset metadata.
         include_tools: Whether to include security tools (can be disabled for testing).
+        reward_source: Reward source variant: "executable", "llm_judge", or "hybrid".
+        judge_model: LLM model for judge/hybrid reward variants.
 
     Environment Variables:
         HF_TOKEN: HuggingFace API token (required for Hub datasets)
@@ -420,6 +722,9 @@ def load_environment(
         env = load_environment(dataset_source="hub")
     """
     del max_turns  # Accepted for API compatibility but not used by ToolEnv
+    reward_source = reward_source.strip().lower()
+    if reward_source not in {"executable", "llm_judge", "hybrid"}:
+        raise ValueError("reward_source must be executable, llm_judge, or hybrid")
     env_root = Path(__file__).resolve().parent
 
     # Handle "builtin", "fixtures", or "synthetic" as explicit requests for test data
@@ -449,17 +754,24 @@ def load_environment(
     dataset_name = resolved_name
 
     parser = ConfigVerificationParser()
-    rubric = vf.Rubric(
-        funcs=[reward_config_auditing, parser.get_format_reward_func()],
-        weights=[1.0, 0.05],
-        parser=parser,  # Pass parser to rubric so reward functions can access it
-    )
+    executable_rubric = _build_executable_rubric(parser)
+    if reward_source == "executable":
+        rubric = executable_rubric
+    elif reward_source == "llm_judge":
+        rubric = _build_judge_rubric(parser, judge_model)
+    else:
+        rubric = vf.RubricGroup([executable_rubric, _build_judge_rubric(parser, judge_model)])
     if logger and logger.enabled:
         logger.log_environment_init(
             environment_name="sv-env-config-verification",
             dataset_name=dataset_name,
             total_examples=len(dataset),
-            metadata={"max_examples": max_examples, "fixture_root": str(DATASET_ROOT)},
+            metadata={
+                "max_examples": max_examples,
+                "fixture_root": str(DATASET_ROOT),
+                "reward_source": reward_source,
+                "judge_model": judge_model if reward_source in {"llm_judge", "hybrid"} else None,
+            },
         )
 
     return vf.ToolEnv(
@@ -472,7 +784,12 @@ def load_environment(
         tools=[run_kubelinter, run_semgrep, run_opa] if include_tools else [],
         system_prompt=(
             "You are a security auditor for Kubernetes and Terraform configurations.\n\n"
-            "If tools are available, you may use:\n"
+            "The task includes a `File path:` line followed by the configuration content.\n"
+            "If tools are available, call the relevant tool on that path before your final answer:\n"
+            "- For Kubernetes YAML, call run_kubelinter with paths=[the provided file path].\n"
+            "- For Terraform, call run_semgrep with paths=[the provided file path].\n"
+            "- Use run_opa only as supporting evidence when useful.\n\n"
+            "Available tools:\n"
             "- run_kubelinter: Analyze Kubernetes YAML files for security issues\n"
             "- run_semgrep: Scan Terraform and other files for security patterns\n"
             "- run_opa: Evaluate configurations against Open Policy Agent security policies\n\n"
@@ -514,5 +831,6 @@ def load_environment(
 __all__ = [
     "ConfigVerificationParser",
     "reward_config_auditing",
+    "tool_observation_reward",
     "load_environment",
 ]

@@ -10,11 +10,14 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["environment", "model", "run_manifest", "metrics"],
+        "required": ["environment", "model", "run_manifest", "metrics", "evidence_grade", "matched_claim"],
         "properties": {
           "environment": {"enum": ["e1", "e2"]},
           "model": {"type": "string"},
           "run_manifest": {"type": "string"},
+          "evidence_grade": {"enum": ["claim-grade", "exploratory"]},
+          "matched_claim": {"type": "boolean"},
+          "exploratory_reason": {"type": "string"},
           "metrics": {"type": "object"}
         }
       }

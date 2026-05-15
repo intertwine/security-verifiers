@@ -1,0 +1,26 @@
+model = "Qwen/Qwen3.5-9B"
+max_steps = 1
+batch_size = 16
+rollouts_per_example = 8
+learning_rate = 8e-06
+lora_alpha = 32
+name = "svbench-e2-hybrid-pilot-svbench-research-claim-20260515T141203Z"
+
+[sampling]
+max_tokens = 4096
+temperature = 0.7
+
+[[env]]
+id = "intertwine/sv-env-config-verification"
+version = "0.2.19"
+args = { max_examples = 60, reward_source = "hybrid" }
+
+[eval]
+interval = 50
+num_examples = 20
+rollouts_per_example = 1
+eval_base_model = true
+env = [{ id = "intertwine/sv-env-config-verification", version = "0.2.19", args = { max_examples = 20, reward_source = "hybrid" } }]
+
+[buffer]
+seed = 42

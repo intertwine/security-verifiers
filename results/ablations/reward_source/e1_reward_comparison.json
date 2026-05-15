@@ -1,0 +1,224 @@
+{
+  "allow_incomplete": false,
+  "allow_unmatched": true,
+  "budget_fields": [
+    "environment_id",
+    "dataset_id",
+    "dataset_revision",
+    "split",
+    "model_id",
+    "model_revision_or_digest",
+    "max_steps",
+    "rollouts_per_example",
+    "max_tokens",
+    "max_turns",
+    "tool_budget",
+    "trainer"
+  ],
+  "budget_mismatches": {},
+  "environment": "e1",
+  "hosted_identity_fields": [
+    "prime_environment_id",
+    "environment_version"
+  ],
+  "hosted_identity_mismatches": {
+    "environment_version": {
+      "executable": "0.2.15",
+      "judge": "0.2.18"
+    },
+    "prime_environment_id": {
+      "executable": "intertwine/sv-env-network-logs",
+      "judge": "intertwine/sv-netlogs-judge"
+    }
+  },
+  "metric_rows": [
+    {
+      "executable": 1.785,
+      "hybrid": 1.7900000000000005,
+      "hybrid_delta_vs_executable": 0.0050000000000005596,
+      "judge": null,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-env-network-logs/avg@1"
+    },
+    {
+      "executable": 22.0,
+      "hybrid": 21.0,
+      "hybrid_delta_vs_executable": -1.0,
+      "judge": null,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-env-network-logs/completion_len/max"
+    },
+    {
+      "executable": 21.1,
+      "hybrid": 21.0,
+      "hybrid_delta_vs_executable": -0.10000000000000142,
+      "judge": null,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-env-network-logs/completion_len/mean"
+    },
+    {
+      "executable": 21.0,
+      "hybrid": 21.0,
+      "hybrid_delta_vs_executable": 0.0,
+      "judge": null,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-env-network-logs/completion_len/min"
+    },
+    {
+      "executable": 0.0,
+      "hybrid": 0.0,
+      "hybrid_delta_vs_executable": 0.0,
+      "judge": null,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-env-network-logs/failed_rollouts"
+    },
+    {
+      "executable": 0.0,
+      "hybrid": 0.0,
+      "hybrid_delta_vs_executable": 0.0,
+      "judge": null,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-env-network-logs/is_truncated/mean"
+    },
+    {
+      "executable": 0.0,
+      "hybrid": 0.0,
+      "hybrid_delta_vs_executable": 0.0,
+      "judge": null,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-env-network-logs/no_response/count"
+    },
+    {
+      "executable": 0.0,
+      "hybrid": 0.0,
+      "hybrid_delta_vs_executable": 0.0,
+      "judge": null,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-env-network-logs/no_response/mean"
+    },
+    {
+      "executable": 0.20655383076518777,
+      "hybrid": 0.14460940100252628,
+      "hybrid_delta_vs_executable": -0.061944429762661485,
+      "judge": null,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-env-network-logs/time"
+    },
+    {
+      "executable": null,
+      "hybrid": null,
+      "hybrid_delta_vs_executable": null,
+      "judge": 0.44,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-netlogs-judge/avg@1"
+    },
+    {
+      "executable": null,
+      "hybrid": null,
+      "hybrid_delta_vs_executable": null,
+      "judge": 553.0,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-netlogs-judge/completion_len/max"
+    },
+    {
+      "executable": null,
+      "hybrid": null,
+      "hybrid_delta_vs_executable": null,
+      "judge": 178.0,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-netlogs-judge/completion_len/mean"
+    },
+    {
+      "executable": null,
+      "hybrid": null,
+      "hybrid_delta_vs_executable": null,
+      "judge": 119.0,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-netlogs-judge/completion_len/min"
+    },
+    {
+      "executable": null,
+      "hybrid": null,
+      "hybrid_delta_vs_executable": null,
+      "judge": 0.0,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-netlogs-judge/failed_rollouts"
+    },
+    {
+      "executable": null,
+      "hybrid": null,
+      "hybrid_delta_vs_executable": null,
+      "judge": 0.0,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-netlogs-judge/is_truncated/mean"
+    },
+    {
+      "executable": null,
+      "hybrid": null,
+      "hybrid_delta_vs_executable": null,
+      "judge": 0.0,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-netlogs-judge/no_response/count"
+    },
+    {
+      "executable": null,
+      "hybrid": null,
+      "hybrid_delta_vs_executable": null,
+      "judge": 0.0,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-netlogs-judge/no_response/mean"
+    },
+    {
+      "executable": null,
+      "hybrid": null,
+      "hybrid_delta_vs_executable": null,
+      "judge": 0.44,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-netlogs-judge/pass@1"
+    },
+    {
+      "executable": null,
+      "hybrid": null,
+      "hybrid_delta_vs_executable": null,
+      "judge": 8.336822919547558,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-netlogs-judge/time"
+    },
+    {
+      "executable": 48.0,
+      "hybrid": 49.0,
+      "hybrid_delta_vs_executable": 1.0,
+      "judge": 48.0,
+      "judge_delta_vs_executable": 0.0,
+      "metric": "progress/ckpt_step"
+    },
+    {
+      "executable": 50.0,
+      "hybrid": 50.0,
+      "hybrid_delta_vs_executable": 0.0,
+      "judge": 50.0,
+      "judge_delta_vs_executable": 0.0,
+      "metric": "step"
+    }
+  ],
+  "runs": {
+    "executable": {
+      "manifest": "results/runs/svbench-research-claim-20260515T141203Z/bp6qd19u06wzeqkdrf0h24xx/run_manifest.json",
+      "reward_config_id": "e1_executable_reward",
+      "reward_source": "executable",
+      "run_id": "bp6qd19u06wzeqkdrf0h24xx"
+    },
+    "hybrid": {
+      "manifest": "results/runs/svbench-research-claim-20260515T141203Z/iiy65ubvx5xwke4dfb9vos64/run_manifest.json",
+      "reward_config_id": "e1_hybrid_reward",
+      "reward_source": "hybrid",
+      "run_id": "iiy65ubvx5xwke4dfb9vos64"
+    },
+    "judge": {
+      "manifest": "results/runs/svbench-research-claim-20260515T141203Z/j1i1ys9rpdcluvtqneql2o4l/run_manifest.json",
+      "reward_config_id": "e1_llm_judge_reward",
+      "reward_source": "llm_judge",
+      "run_id": "j1i1ys9rpdcluvtqneql2o4l"
+    }
+  }
+}

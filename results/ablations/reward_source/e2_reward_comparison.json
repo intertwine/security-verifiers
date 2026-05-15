@@ -1,0 +1,143 @@
+{
+  "allow_incomplete": false,
+  "allow_unmatched": false,
+  "budget_fields": [
+    "environment_id",
+    "dataset_id",
+    "dataset_revision",
+    "split",
+    "model_id",
+    "model_revision_or_digest",
+    "max_steps",
+    "rollouts_per_example",
+    "max_tokens",
+    "max_turns",
+    "tool_budget",
+    "trainer"
+  ],
+  "budget_mismatches": {},
+  "environment": "e2",
+  "hosted_identity_fields": [
+    "prime_environment_id",
+    "environment_version"
+  ],
+  "hosted_identity_mismatches": {},
+  "metric_rows": [
+    {
+      "executable": 0.15714285714285714,
+      "hybrid": 1.157142857142857,
+      "hybrid_delta_vs_executable": 0.9999999999999999,
+      "judge": 0.5,
+      "judge_delta_vs_executable": 0.34285714285714286,
+      "metric": "eval/intertwine/sv-env-config-verification/avg@1"
+    },
+    {
+      "executable": 1241.0,
+      "hybrid": 831.0,
+      "hybrid_delta_vs_executable": -410.0,
+      "judge": 636.0,
+      "judge_delta_vs_executable": -605.0,
+      "metric": "eval/intertwine/sv-env-config-verification/completion_len/max"
+    },
+    {
+      "executable": 765.5,
+      "hybrid": 723.5,
+      "hybrid_delta_vs_executable": -42.0,
+      "judge": 516.5,
+      "judge_delta_vs_executable": -249.0,
+      "metric": "eval/intertwine/sv-env-config-verification/completion_len/mean"
+    },
+    {
+      "executable": 290.0,
+      "hybrid": 616.0,
+      "hybrid_delta_vs_executable": 326.0,
+      "judge": 397.0,
+      "judge_delta_vs_executable": 107.0,
+      "metric": "eval/intertwine/sv-env-config-verification/completion_len/min"
+    },
+    {
+      "executable": 0.0,
+      "hybrid": 0.0,
+      "hybrid_delta_vs_executable": 0.0,
+      "judge": 0.0,
+      "judge_delta_vs_executable": 0.0,
+      "metric": "eval/intertwine/sv-env-config-verification/failed_rollouts"
+    },
+    {
+      "executable": 0.0,
+      "hybrid": 0.0,
+      "hybrid_delta_vs_executable": 0.0,
+      "judge": 0.0,
+      "judge_delta_vs_executable": 0.0,
+      "metric": "eval/intertwine/sv-env-config-verification/is_truncated/mean"
+    },
+    {
+      "executable": 0.0,
+      "hybrid": 0.0,
+      "hybrid_delta_vs_executable": 0.0,
+      "judge": 0.0,
+      "judge_delta_vs_executable": 0.0,
+      "metric": "eval/intertwine/sv-env-config-verification/no_response/count"
+    },
+    {
+      "executable": 0.0,
+      "hybrid": 0.0,
+      "hybrid_delta_vs_executable": 0.0,
+      "judge": 0.0,
+      "judge_delta_vs_executable": 0.0,
+      "metric": "eval/intertwine/sv-env-config-verification/no_response/mean"
+    },
+    {
+      "executable": null,
+      "hybrid": null,
+      "hybrid_delta_vs_executable": null,
+      "judge": 0.5,
+      "judge_delta_vs_executable": null,
+      "metric": "eval/intertwine/sv-env-config-verification/pass@1"
+    },
+    {
+      "executable": 46.40974702103995,
+      "hybrid": 15.260394973913208,
+      "hybrid_delta_vs_executable": -31.14935204712674,
+      "judge": 43.77409577788785,
+      "judge_delta_vs_executable": -2.635651243152097,
+      "metric": "eval/intertwine/sv-env-config-verification/time"
+    },
+    {
+      "executable": 0.0,
+      "hybrid": 0.0,
+      "hybrid_delta_vs_executable": 0.0,
+      "judge": 0.0,
+      "judge_delta_vs_executable": 0.0,
+      "metric": "progress/ckpt_step"
+    },
+    {
+      "executable": 1.0,
+      "hybrid": 1.0,
+      "hybrid_delta_vs_executable": 0.0,
+      "judge": 1.0,
+      "judge_delta_vs_executable": 0.0,
+      "metric": "step"
+    }
+  ],
+  "runs": {
+    "executable": {
+      "manifest": "results/runs/svbench-research-claim-20260515T141203Z/hu1j9b61il8dydv2bh1aj97d/run_manifest.json",
+      "reward_config_id": "e2_executable_reward",
+      "reward_source": "executable",
+      "run_id": "hu1j9b61il8dydv2bh1aj97d"
+    },
+    "hybrid": {
+      "manifest": "results/runs/svbench-research-claim-20260515T141203Z/hzu95jfm266370x9kr9wwgkz/run_manifest.json",
+      "reward_config_id": "e2_hybrid_reward",
+      "reward_source": "hybrid",
+      "run_id": "hzu95jfm266370x9kr9wwgkz"
+    },
+    "judge": {
+      "manifest": "results/runs/svbench-research-claim-20260515T141203Z/h4y9hb6fjom4xfbclitb2938/run_manifest.json",
+      "reward_config_id": "e2_llm_judge_reward",
+      "reward_source": "llm_judge",
+      "run_id": "h4y9hb6fjom4xfbclitb2938"
+    }
+  }
+}

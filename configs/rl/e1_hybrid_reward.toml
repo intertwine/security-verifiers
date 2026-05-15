@@ -31,7 +31,7 @@ eval_base_model = true
 
 [[eval.env]]
 id = "intertwine/sv-env-network-logs"
-args = { max_examples = 50 }
+args = { max_examples = 50, reward_source = "hybrid", strict_schema = true }
 
 [buffer]
 seed = 42

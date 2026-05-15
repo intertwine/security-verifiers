@@ -1,5 +1,107 @@
 {
   "version": "v0.1",
   "scope": "E1/E2 only",
-  "entries": []
+  "entries": [
+    {
+      "environment": "e1",
+      "model": "Qwen/Qwen3.5-2B",
+      "evidence_grade": "exploratory",
+      "matched_claim": false,
+      "exploratory_reason": "E1 judge run used a separate hosted environment identity from executable/hybrid runs.",
+      "reward_source": "executable",
+      "prime_run_id": "bp6qd19u06wzeqkdrf0h24xx",
+      "run_manifest": "results/runs/svbench-research-claim-20260515T141203Z/bp6qd19u06wzeqkdrf0h24xx/run_manifest.json",
+      "metrics": {
+        "avg_at_1": 1.785,
+        "failed_rollouts": 0.0,
+        "is_truncated_mean": 0.0,
+        "no_response_count": 0.0,
+        "step": 50
+      }
+    },
+    {
+      "environment": "e1",
+      "model": "Qwen/Qwen3.5-2B",
+      "evidence_grade": "exploratory",
+      "matched_claim": false,
+      "exploratory_reason": "E1 judge run used a separate hosted environment identity from executable/hybrid runs.",
+      "reward_source": "llm_judge",
+      "prime_run_id": "j1i1ys9rpdcluvtqneql2o4l",
+      "run_manifest": "results/runs/svbench-research-claim-20260515T141203Z/j1i1ys9rpdcluvtqneql2o4l/run_manifest.json",
+      "metrics": {
+        "avg_at_1": 0.44,
+        "pass_at_1": 0.44,
+        "failed_rollouts": 0.0,
+        "is_truncated_mean": 0.0,
+        "no_response_count": 0.0,
+        "step": 50
+      }
+    },
+    {
+      "environment": "e1",
+      "model": "Qwen/Qwen3.5-2B",
+      "evidence_grade": "exploratory",
+      "matched_claim": false,
+      "exploratory_reason": "E1 judge run used a separate hosted environment identity from executable/hybrid runs.",
+      "reward_source": "hybrid",
+      "prime_run_id": "iiy65ubvx5xwke4dfb9vos64",
+      "run_manifest": "results/runs/svbench-research-claim-20260515T141203Z/iiy65ubvx5xwke4dfb9vos64/run_manifest.json",
+      "metrics": {
+        "avg_at_1": 1.7900000000000005,
+        "failed_rollouts": 0.0,
+        "is_truncated_mean": 0.0,
+        "no_response_count": 0.0,
+        "step": 50
+      }
+    },
+    {
+      "environment": "e2",
+      "model": "Qwen/Qwen3.5-9B",
+      "evidence_grade": "claim-grade",
+      "matched_claim": true,
+      "reward_source": "executable",
+      "prime_run_id": "hu1j9b61il8dydv2bh1aj97d",
+      "run_manifest": "results/runs/svbench-research-claim-20260515T141203Z/hu1j9b61il8dydv2bh1aj97d/run_manifest.json",
+      "metrics": {
+        "avg_at_1": 0.15714285714285714,
+        "failed_rollouts": 0.0,
+        "is_truncated_mean": 0.0,
+        "no_response_count": 0.0,
+        "step": 1
+      }
+    },
+    {
+      "environment": "e2",
+      "model": "Qwen/Qwen3.5-9B",
+      "evidence_grade": "claim-grade",
+      "matched_claim": true,
+      "reward_source": "llm_judge",
+      "prime_run_id": "h4y9hb6fjom4xfbclitb2938",
+      "run_manifest": "results/runs/svbench-research-claim-20260515T141203Z/h4y9hb6fjom4xfbclitb2938/run_manifest.json",
+      "metrics": {
+        "avg_at_1": 0.5,
+        "pass_at_1": 0.5,
+        "failed_rollouts": 0.0,
+        "is_truncated_mean": 0.0,
+        "no_response_count": 0.0,
+        "step": 1
+      }
+    },
+    {
+      "environment": "e2",
+      "model": "Qwen/Qwen3.5-9B",
+      "evidence_grade": "claim-grade",
+      "matched_claim": true,
+      "reward_source": "hybrid",
+      "prime_run_id": "hzu95jfm266370x9kr9wwgkz",
+      "run_manifest": "results/runs/svbench-research-claim-20260515T141203Z/hzu95jfm266370x9kr9wwgkz/run_manifest.json",
+      "metrics": {
+        "avg_at_1": 1.157142857142857,
+        "failed_rollouts": 0.0,
+        "is_truncated_mean": 0.0,
+        "no_response_count": 0.0,
+        "step": 1
+      }
+    }
+  ]
 }

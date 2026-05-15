@@ -30,7 +30,7 @@ eval_base_model = true
 
 [[eval.env]]
 id = "intertwine/sv-netlogs-judge"
-args = { max_examples = 50 }
+args = { max_examples = 50, reward_source = "llm_judge", strict_schema = true }
 
 [buffer]
 seed = 42

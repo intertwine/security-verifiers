@@ -1,0 +1,26 @@
+{
+  "base_model": "Qwen/Qwen3.5-9B",
+  "inference": {
+    "cost_usd": 0.3567,
+    "input_tokens": 1152371,
+    "output_tokens": 210408,
+    "tokens": 1362779
+  },
+  "pricing": {
+    "inference_input_per_mtok": 0.2,
+    "inference_output_per_mtok": 0.6,
+    "training_per_mtok": 0.6
+  },
+  "record_count": 6,
+  "run_id": "h4y9hb6fjom4xfbclitb2938",
+  "run_name": "svbench-e2-llm_judge-pilot-svbench-research-claim-20260515T141203Z",
+  "status": "COMPLETED",
+  "total_cost_usd": 0.3931,
+  "total_tokens": 1423468,
+  "training": {
+    "cost_usd": 0.0364,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "tokens": 60689
+  }
+}
