@@ -1,0 +1,10 @@
+[ablation]
+environment = "e1"
+name = "grpo_scalar"
+supported = true
+
+[reward_weights]
+accuracy = 1.0
+calibration = 0.2
+asymmetric_cost = 0.5
+abstention = 0.2

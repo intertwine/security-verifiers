@@ -2,6 +2,7 @@
 
 [eval]
 environment = "intertwine/sv-env-config-verification"
+dataset = "public-mini-e2"
 num_examples = 100
 seed = 42
 

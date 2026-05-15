@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Security Verifiers Suite v1 Leaderboard",
+  "type": "object",
+  "required": ["version", "environments"],
+  "properties": {
+    "version": {"const": "suite-v1"},
+    "environments": {
+      "type": "array",
+      "items": {"enum": ["e1", "e2", "e3", "e4", "e5", "e6"]}
+    }
+  }
+}

@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "security-verifiers"
 version = "0.3.0"
 description = "Security Verifiers monorepo: shared tooling config (no runtime)."
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "jsonschema>=4.25.1",
     "pydantic>=2",
@@ -17,6 +17,8 @@ dependencies = [
 ]
 [project.scripts]
 svbench_report = "bench.report:main"
+svbench_manifest = "bench.run_manifest:main"
+svbench_compare_rewards = "bench.compare_rewards:main"
 
 [tool.setuptools]
 packages = ["bench"]
@@ -41,10 +43,4 @@ filterwarnings = [
     "ignore:.*Scope.user.*setter is deprecated:DeprecationWarning",
     "ignore:.*variable_values and operation_name arguments.*:DeprecationWarning",
     "ignore:.*Accessing the 'model_fields' attribute on the instance is deprecated:DeprecationWarning"
-]
-
-
-[project.optional-dependencies]
-lab = [
-    "prime-rl @ git+https://github.com/PrimeIntellect-ai/prime-rl.git@v0.4.0",
 ]

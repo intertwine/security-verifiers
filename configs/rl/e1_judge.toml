@@ -20,6 +20,8 @@
 #   (holistic binary assessment via gpt-4.1-nano)
 
 model = "Qwen/Qwen3-4B-Instruct-2507"
+reward_source = "llm_judge"
+reward_config_id = "e1_llm_judge_reward_legacy"
 max_steps = 200
 batch_size = 32
 rollouts_per_example = 8

@@ -58,6 +58,9 @@ build-backend = "hatchling.build"
 "utils.py" = "sv_shared/utils.py"
 "dataset_loader.py" = "sv_shared/dataset_loader.py"
 "rollout_logging.py" = "sv_shared/rollout_logging.py"
+"rendering.py" = "sv_shared/rendering.py"
+"sandbox_runner.py" = "sv_shared/sandbox_runner.py"
+"tool_runner.py" = "sv_shared/tool_runner.py"
 "weave_init.py" = "sv_shared/weave_init.py"
 
 [tool.pytest.ini_options]

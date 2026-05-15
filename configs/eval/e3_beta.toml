@@ -1,0 +1,11 @@
+[eval]
+environment = "sv-env-code-vulnerability"
+dataset = "datasets/public_mini/e3.jsonl"
+split = "public_mini"
+num_examples = 10
+seed = 42
+mode = "local-beta-smoke"
+
+[verification]
+sandbox_mode = "local"
+checks = ["pytest", "bandit", "semgrep", "signature_preserved", "minimal_diff"]

@@ -1,0 +1,18 @@
+[eval]
+environment = "sv-env-config-verification"
+dataset = "datasets/public_mini/e2.jsonl"
+split = "public_mini"
+num_examples = 100
+seed = 42
+mode = "local"
+baseline = "tool-only"
+
+[tooling]
+sandbox_mode = "local"
+allowed_tools = ["opa", "kube-linter", "semgrep"]
+tool_budget = 3
+timeout_per_tool_seconds = 30
+timeout_per_episode_seconds = 120
+
+[metadata]
+distinguish_from_model_with_tools = true

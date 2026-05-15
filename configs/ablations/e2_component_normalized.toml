@@ -1,0 +1,8 @@
+[ablation]
+environment = "e2"
+name = "component_normalized"
+supported = true
+
+[normalization]
+mode = "per_component"
+components = ["finding_f1", "patch_success", "hallucination_penalty", "tool_economy"]

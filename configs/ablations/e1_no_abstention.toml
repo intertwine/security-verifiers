@@ -1,0 +1,11 @@
+[ablation]
+environment = "e1"
+name = "no_abstention"
+supported = true
+description = "Disable abstain reward component while preserving parser compatibility."
+
+[reward_weights]
+accuracy = 1.0
+calibration = 0.2
+asymmetric_cost = 0.5
+abstention = 0.0

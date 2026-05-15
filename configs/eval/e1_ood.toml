@@ -1,0 +1,14 @@
+[eval]
+environment = "sv-env-network-logs"
+datasets = ["cic-ids-2017-ood-v1.jsonl", "unsw-nb15-ood-v1.jsonl"]
+split = "ood"
+num_examples = 600
+seed = 42
+mode = "local"
+
+[model]
+id = "gpt-5-mini"
+revision = "default"
+
+[metrics]
+include = ["accuracy", "fpr", "fnr", "expected_cost", "ece", "abstention_rate"]

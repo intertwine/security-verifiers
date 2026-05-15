@@ -16,6 +16,14 @@ Security Verifiers demonstrates how executable rewards can advance both security
 
 ## Environments
 
+## Current Status
+
+SV-Bench v0.1 is the near-term benchmark release and includes only E1/E2. E3-E6 are part of the broader Security Verifiers Suite roadmap and remain alpha/beta work until the v0.1 empirical proof is complete.
+
+- [SV-Bench status](SVBENCH_STATUS.md)
+- [SV-Bench guide](SVBENCH.md)
+- [2026 suite roadmap](plans/ROADMAP-2026-SUITE.md)
+
 | Environment                 | Type       | Task                                            | Status     |
 | --------------------------- | ---------- | ----------------------------------------------- | ---------- |
 | **E1: network-logs**        | SingleTurn | Anomaly detection with calibration & abstention | Production |
@@ -88,6 +96,9 @@ security-verifiers/
 | [Development Guide](docs/development.md)               | Contributing, testing, CI         |
 | [Hub Deployment](docs/hub-deployment.md)               | Deploy to Prime Intellect Hub     |
 | [Prime Lab Integration](docs/PRIME-LAB-INTEGRATION.md) | Hosted RL training and evaluation |
+| [SV-Bench Status](SVBENCH_STATUS.md)                   | Current release boundary and work packages |
+| [SV-Bench Guide](SVBENCH.md)                           | v0.1 commands, artifacts, and release scope |
+| [Suite Roadmap](plans/ROADMAP-2026-SUITE.md)           | v0.1 vs suite-v1 roadmap |
 | [Datasets Guide](docs/datasets.md)                     | Dataset access and management     |
 | [Logging Guide](docs/logging.md)                       | Weave tracing configuration       |
 | [CLAUDE.md](CLAUDE.md)                                 | Agent/LLM instructions            |

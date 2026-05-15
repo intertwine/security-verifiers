@@ -13,7 +13,7 @@ build build-env build-utils deploy update-version update-utils-version hub-valid
 \
 eval eval-e1 eval-e2 report-network-logs e1 e2 e3 e4 e5 e6 \
 baseline-e1 baseline-e2 \
-lab-check lab-run-e1 lab-run-e1-judge lab-run-e2 env-eval-e1 env-eval-e2 \
+lab-check lab-run-e1 lab-run-e1-judge lab-run-e2 env-eval-e1 env-eval-e2 config-validate svbench-v0.1-check suite-v1-check eval-e3 eval-e4 eval-e5 eval-e6 \
 \
 data-e1 data-e1-ood data-e1-test data-e2 data-e2-local data-e2-test data-all data-test-all data-public-mini clone-e2-sources \
 hf-e1-meta hf-e2-meta hf-e1-push hf-e2-push hf-e1p-meta hf-e2p-meta hf-e1p-push hf-e2p-push hf-push-all \
@@ -104,6 +104,9 @@ help:
 	@$(ECHO) "  make lab-run-e2                                   - Hosted RL training for E2 (prime rl run)"
 	@$(ECHO) "  make env-eval-e1 MODEL=... TEAM=intertwine N=100  - Fallback prime env eval wrapper for E1"
 	@$(ECHO) "  make env-eval-e2 MODEL=... TEAM=intertwine N=50   - Fallback prime env eval wrapper for E2"
+	@$(ECHO) "  make config-validate                              - Validate eval/RL/ablation configs"
+	@$(ECHO) "  make svbench-v0.1-check                           - Validate SV-Bench v0.1 release package"
+	@$(ECHO) "  make suite-v1-check                               - Validate suite v1 completion checklist"
 	@$(ECHO) "  make report-network-logs [RUN_IDS=\"id1 id2\"]    - Generate E1 metrics report (JSON)"
 	@$(ECHO) ""
 	@$(ECHO) "$(YELLOW)Hub Dataset Management:$(NC)"
@@ -959,18 +962,39 @@ lab-check: venv
 	@$(ECHO) "$(YELLOW)Running Prime CLI compatibility checks...$(NC)"
 	@$(ACTIVATE) && python scripts/prime_lab_check.py
 
+config-validate: venv
+	@$(ECHO) "$(YELLOW)Validating SV-Bench configs...$(NC)"
+	@$(ACTIVATE) && uv run python scripts/validate_svbench_configs.py
+	@$(ECHO) "$(GREEN)✓ Config validation complete$(NC)"
+
 # Hosted RL training via Prime CLI v0.5+ (WP3a/WP3b)
 lab-run-e1: venv
-	@$(ECHO) "$(YELLOW)Launching hosted RL training for E1 (network-logs)...$(NC)"
-	@$(ACTIVATE) && prime rl run configs/rl/e1.toml
+	@REWARD_SOURCE=$${REWARD_SOURCE:-executable}; \
+	case "$$REWARD_SOURCE" in \
+		executable) CONFIG=configs/rl/e1_executable_reward.toml ;; \
+		llm_judge|judge) CONFIG=configs/rl/e1_llm_judge_reward.toml ;; \
+		hybrid) CONFIG=configs/rl/e1_hybrid_reward.toml ;; \
+		legacy) CONFIG=configs/rl/e1.toml ;; \
+		*) $(ECHO) "$(RED)Error: REWARD_SOURCE must be executable, llm_judge, hybrid, or legacy$(NC)"; exit 1 ;; \
+	esac; \
+	$(ECHO) "$(YELLOW)Launching hosted RL training for E1 with $$REWARD_SOURCE reward ($$CONFIG)...$(NC)"; \
+	$(ACTIVATE) && prime rl run "$$CONFIG"
 
 lab-run-e1-judge: venv
 	@$(ECHO) "$(YELLOW)Launching hosted RL training for E1 judge variant (WP3c)...$(NC)"
 	@$(ACTIVATE) && prime rl run configs/rl/e1_judge.toml
 
 lab-run-e2: venv
-	@$(ECHO) "$(YELLOW)Launching hosted RL training for E2 (config-verification)...$(NC)"
-	@$(ACTIVATE) && prime rl run configs/rl/e2.toml
+	@REWARD_SOURCE=$${REWARD_SOURCE:-executable}; \
+	case "$$REWARD_SOURCE" in \
+		executable) CONFIG=configs/rl/e2_executable_reward.toml ;; \
+		llm_judge|judge) CONFIG=configs/rl/e2_llm_judge_reward.toml ;; \
+		hybrid) CONFIG=configs/rl/e2_hybrid_reward.toml ;; \
+		legacy) CONFIG=configs/rl/e2.toml ;; \
+		*) $(ECHO) "$(RED)Error: REWARD_SOURCE must be executable, llm_judge, hybrid, or legacy$(NC)"; exit 1 ;; \
+	esac; \
+	$(ECHO) "$(YELLOW)Launching hosted RL training for E2 with $$REWARD_SOURCE reward ($$CONFIG)...$(NC)"; \
+	$(ACTIVATE) && prime rl run "$$CONFIG"
 
 # Fallback hosted-style eval parity (WP2.5a)
 env-eval-e1: venv
@@ -982,3 +1006,26 @@ env-eval-e2: venv
 	@MODEL=$${MODEL:-Qwen/Qwen3-4B-Instruct-2507}; \
 	N=$${N:-50}; \
 	$(ACTIVATE) && prime env eval $(TEAM)/sv-env-config-verification --model $$MODEL --num-examples $$N
+
+eval-e3: venv
+	@N=$${N:-10}; $(ACTIVATE) && uv run python scripts/eval_beta_env.py --env e3 --num-examples $$N
+
+eval-e4: venv
+	@N=$${N:-10}; $(ACTIVATE) && uv run python scripts/eval_beta_env.py --env e4 --num-examples $$N
+
+eval-e5: venv
+	@N=$${N:-10}; $(ACTIVATE) && uv run python scripts/eval_beta_env.py --env e5 --num-examples $$N
+
+eval-e6: venv
+	@N=$${N:-10}; $(ACTIVATE) && uv run python scripts/eval_beta_env.py --env e6 --num-examples $$N
+
+svbench-v0.1-check: venv config-validate
+	@$(ECHO) "$(YELLOW)Checking SV-Bench v0.1 release package...$(NC)"
+	@$(ACTIVATE) && uv run svbench_manifest validate bench/fixtures/e1_run_manifest.json bench/fixtures/e2_run_manifest.json
+	@$(ACTIVATE) && uv run python scripts/check_svbench_v01.py --strict
+	@$(ECHO) "$(GREEN)✓ SV-Bench v0.1 checks passed$(NC)"
+
+suite-v1-check: venv config-validate
+	@$(ECHO) "$(YELLOW)Checking Security Verifiers Suite v1 gate...$(NC)"
+	@$(ACTIVATE) && uv run python scripts/check_suite_v1.py
+	@$(ECHO) "$(GREEN)✓ Suite v1 checks passed$(NC)"
