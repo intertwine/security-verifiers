@@ -145,6 +145,10 @@ class ToolRunner:
     ) -> ToolResult:
         image = self.image or "python:3.12-slim"
         workdir = Path(cwd or Path.cwd()).resolve()
+        env_flags: list[str] = []
+        if env:
+            for name in sorted(env):
+                env_flags.extend(["--env", name])
         docker_cmd = [
             "docker",
             "run",
@@ -153,6 +157,7 @@ class ToolRunner:
             f"{workdir}:/workspace",
             "-w",
             "/workspace",
+            *env_flags,
             image,
             *command,
         ]

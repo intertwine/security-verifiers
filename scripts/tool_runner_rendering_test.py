@@ -27,6 +27,17 @@ def test_tool_runner_local_lightweight_command() -> None:
     assert result.duration_ms >= 0
 
 
+def test_tool_runner_docker_dry_run_passes_env_names_without_values() -> None:
+    result = ToolRunner(mode="docker").run(
+        ["python", "-c", "print('ok')"],
+        env={"SVBENCH_TOKEN": "secret-token-value"},
+        dry_run=True,
+    )
+    assert "--env" in result.command
+    assert "SVBENCH_TOKEN" in result.command
+    assert "secret-token-value" not in result.command
+
+
 def test_sandbox_dry_run_does_not_need_credentials() -> None:
     result = dry_run_sandbox(["semgrep", "--version"], image="svbench/e2-policy:local")
     assert result.mode == "prime-sandbox"
