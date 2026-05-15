@@ -1,0 +1,77 @@
+{
+  "run": {
+    "base_model": "Qwen/Qwen3.5-2B",
+    "batch_size": 32,
+    "buffer_config": {
+      "easy_fraction": 0.0,
+      "easy_threshold": null,
+      "env_ratios": null,
+      "hard_fraction": 0.0,
+      "hard_threshold": null,
+      "online_difficulty_filtering": false,
+      "seed": 42,
+      "skip_verification": false
+    },
+    "cluster_id": "b64plo4wnqa4wyqtwytt9u2r",
+    "completed_at": "2026-05-15 14:44:39.947000",
+    "created_at": "2026-05-15 14:19:27.790000",
+    "environments": [
+      {
+        "args": {
+          "max_examples": 50,
+          "reward_source": "llm_judge",
+          "strict_schema": true
+        },
+        "id": "intertwine/sv-netlogs-judge",
+        "name": null,
+        "version": "0.2.18",
+        "version_id": "uccu1wavgj0r0bmblrx49i8r",
+        "visibility": "PUBLIC"
+      }
+    ],
+    "error_message": null,
+    "eval_config": {
+      "environments": [
+        {
+          "args": {
+            "max_examples": 50
+          },
+          "id": "intertwine/sv-netlogs-judge",
+          "name": null,
+          "num_examples": null,
+          "rollouts_per_example": null,
+          "version": "0.2.18",
+          "version_id": "uccu1wavgj0r0bmblrx49i8r",
+          "visibility": "PUBLIC"
+        }
+      ],
+      "eval_base_model": true,
+      "interval": 50,
+      "num_examples": 25,
+      "rollouts_per_example": 1
+    },
+    "failure_analysis": null,
+    "id": "j1i1ys9rpdcluvtqneql2o4l",
+    "learning_rate": 1e-05,
+    "lora_alpha": 32,
+    "max_async_level": null,
+    "max_steps": 50,
+    "max_tokens": 2048,
+    "name": "svbench-e1-llm_judge-pilot-svbench-research-claim-20260515T141203Z",
+    "oversampling_factor": null,
+    "queue_reason": null,
+    "rollouts_per_example": 8,
+    "run_config": null,
+    "runs_ahead": null,
+    "seq_len": 65536,
+    "started_at": "2026-05-15 14:31:04.521000",
+    "status": "COMPLETED",
+    "team_id": "cmf0ohr9s0026ilerf3w68s6p",
+    "updated_at": "2026-05-15 14:44:40.715000",
+    "user_id": "cmey8lo670051g9yl4r79311l",
+    "val_config": null,
+    "wandb_entity": null,
+    "wandb_project": null,
+    "wandb_run_name": null
+  }
+}

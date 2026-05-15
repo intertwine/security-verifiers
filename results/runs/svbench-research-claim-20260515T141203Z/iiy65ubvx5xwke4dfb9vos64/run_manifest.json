@@ -1,0 +1,46 @@
+{
+  "adapter_id": "pending",
+  "budget_group": "e1-v0.1-matched-budget",
+  "compute_profile": "oru5l1lqp3aa853l2kypuz3b",
+  "dataset_id": "datasets/public_mini/e1.jsonl",
+  "dataset_revision": "public-mini-v1",
+  "environment_id": "sv-env-network-logs",
+  "environment_version": "0.2.15",
+  "git_sha": "204d153120a9aec8c870264a2b72d229f2b8ff93",
+  "input_artifacts": [
+    "configs/rl/e1_hybrid_reward.toml",
+    "results/runs/svbench-research-claim-20260515T141203Z/configs/e1_hybrid_pilot.toml"
+  ],
+  "max_steps": 50,
+  "max_tokens": 2048,
+  "max_turns": 1,
+  "metadata_json_path": "results/runs/svbench-research-claim-20260515T141203Z/iiy65ubvx5xwke4dfb9vos64/metadata.json",
+  "metrics_summary_path": "results/runs/svbench-research-claim-20260515T141203Z/iiy65ubvx5xwke4dfb9vos64/metrics_summary.json",
+  "model_id": "Qwen/Qwen3.5-2B",
+  "model_revision_or_digest": "prime-hosted",
+  "notes": "Prime hosted pilot run status=COMPLETED; eval_examples=25; profile=pilot; claim_ready is recorded in metrics_summary_path and requires COMPLETED plus non-empty metrics.",
+  "output_artifacts": [
+    "results/runs/svbench-research-claim-20260515T141203Z/iiy65ubvx5xwke4dfb9vos64/metrics_summary.json",
+    "results/runs/svbench-research-claim-20260515T141203Z/iiy65ubvx5xwke4dfb9vos64/results.jsonl"
+  ],
+  "platform_image": "prime-hosted-training",
+  "platform_mode": "hosted",
+  "prime_environment_id": "intertwine/sv-env-network-logs",
+  "prime_run_id": "iiy65ubvx5xwke4dfb9vos64",
+  "results_jsonl_path": "results/runs/svbench-research-claim-20260515T141203Z/iiy65ubvx5xwke4dfb9vos64/results.jsonl",
+  "reward_config_hash": "c1e92c5467edda4c88e1453fa3947d9e071e89b130d67c6c5663ca3cdccfa9bf",
+  "reward_config_id": "e1_hybrid_reward",
+  "reward_source": "hybrid",
+  "rollouts_per_example": 8,
+  "run_id": "iiy65ubvx5xwke4dfb9vos64",
+  "sampling_params": {
+    "max_tokens": 2048,
+    "temperature": 0.7
+  },
+  "seed": 42,
+  "split": "train",
+  "team": "cmf0ohr9s0026ilerf3w68s6p",
+  "timestamp_utc": "2026-05-15T15:39:38Z",
+  "tool_budget": 0,
+  "trainer": "grpo"
+}

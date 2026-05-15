@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prime CLI v0.5+ compatibility checks for hosted RL training (WP3a/WP3b)."""
+"""Prime CLI compatibility checks for hosted training and evaluation."""
 
 from __future__ import annotations
 
@@ -62,10 +62,11 @@ def main() -> int:
         print(json.dumps({"compatible": False, "checks": [asdict(c) for c in checks]}, indent=2))
         return 1
 
-    # 2) Check prime --version and verify >= 0.5.0
+    # 2) Check prime --version and verify >= 0.6.2. Prime 0.6.2+ has the
+    # `prime train`/`prime eval run` surface used by the hosted workflow.
     ok, version_output = run(["prime", "--version"])
     version_tuple = parse_version(version_output) if ok else None
-    version_ok = version_tuple is not None and version_tuple >= (0, 5, 0)
+    version_ok = version_tuple is not None and version_tuple >= (0, 6, 2)
     checks.append(
         CheckResult(
             name="prime_version",
@@ -75,55 +76,60 @@ def main() -> int:
     )
 
     # 3) Check prime whoami for auth status
-    auth_ok, auth_output = run(["prime", "whoami"])
+    auth_ok, auth_output = run(["prime", "whoami", "--plain"])
     checks.append(
         CheckResult(
             name="prime_auth",
             ok=auth_ok,
-            detail=auth_output or "unable to determine auth state",
+            detail="authenticated" if auth_ok else auth_output or "unable to determine auth state",
         )
     )
 
     # Extract team slug from whoami output if available
     team_slug = None
     if auth_ok and auth_output:
-        # Try to extract team/org info from whoami output
         for line in auth_output.splitlines():
-            lower = line.lower()
-            if "team" in lower or "org" in lower or "slug" in lower:
-                team_slug = line.strip()
+            normalized = " ".join(line.split())
+            if normalized.lower().startswith("team name"):
+                team_slug = normalized.removeprefix("Team Name").strip() or normalized
                 break
-        if team_slug is None:
-            team_slug = auth_output.splitlines()[0].strip()
 
-    # 4) Check prime rl subcommand availability
+    # 4) Check hosted training command availability. Prime 0.6+ uses
+    # `prime train`; older 0.5.x releases exposed `prime rl`.
     ok, help_output = run(["prime", "--help"])
+    train_available = ok and has_subcommand(help_output, "train")
     rl_available = ok and has_subcommand(help_output, "rl")
     checks.append(
         CheckResult(
-            name="prime_rl_command",
-            ok=rl_available,
-            detail="rl subcommand available" if rl_available else "rl subcommand unavailable",
+            name="prime_train_command",
+            ok=train_available or rl_available,
+            detail=(
+                "train command available"
+                if train_available
+                else "rl command available as legacy training command"
+                if rl_available
+                else "hosted training command unavailable"
+            ),
         )
     )
 
-    # 5) Check prime env subcommand availability
-    env_available = ok and has_subcommand(help_output, "env")
+    # 5) Check hosted/local eval command availability.
+    eval_available = ok and has_subcommand(help_output, "eval")
     checks.append(
         CheckResult(
-            name="prime_env_command",
-            ok=env_available,
-            detail="env subcommand available" if env_available else "env subcommand unavailable",
+            name="prime_eval_command",
+            ok=eval_available,
+            detail="eval command available" if eval_available else "eval command unavailable",
         )
     )
 
     hosted_ready = all(
         c.ok
         for c in checks
-        if c.name in {"prime_cli_installed", "prime_version", "prime_rl_command", "prime_auth"}
+        if c.name in {"prime_cli_installed", "prime_version", "prime_train_command", "prime_auth"}
     )
     fallback_ready = all(
-        c.ok for c in checks if c.name in {"prime_cli_installed", "prime_version", "prime_env_command"}
+        c.ok for c in checks if c.name in {"prime_cli_installed", "prime_version", "prime_eval_command"}
     )
     compatible = hosted_ready
 
@@ -136,7 +142,7 @@ def main() -> int:
                 "Run `make config-validate`.",
                 "Launch with `make lab-run-e1 REWARD_SOURCE=executable` "
                 "or `make lab-run-e2 REWARD_SOURCE=executable`.",
-                "Use `make env-eval-e1` / `make env-eval-e2` for fallback hosted-style eval.",
+                "Use `make env-eval-e1` / `make env-eval-e2` for hosted or fallback hosted-style eval.",
             ]
             if compatible
             else [

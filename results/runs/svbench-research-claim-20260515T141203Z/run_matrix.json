@@ -1,0 +1,96 @@
+{
+  "matrix": [
+    {
+      "budget_group": "e1-v0.1-matched-budget",
+      "command": "uv run prime train results/runs/svbench-research-claim-20260515T141203Z/configs/e1_executable_pilot.toml --plain --yes",
+      "environment": "e1",
+      "generated_config": "results/runs/svbench-research-claim-20260515T141203Z/configs/e1_executable_pilot.toml",
+      "model": "Qwen/Qwen3.5-2B",
+      "prime_run_id": "bp6qd19u06wzeqkdrf0h24xx",
+      "profile": "pilot",
+      "reward_config_id": "e1_executable_reward",
+      "reward_source": "executable",
+      "source_config": "configs/rl/e1_executable_reward.toml",
+      "trainer": "grpo"
+    },
+    {
+      "budget_group": "e1-v0.1-matched-budget",
+      "command": "uv run prime train results/runs/svbench-research-claim-20260515T141203Z/configs/e1_llm_judge_pilot.toml --plain --yes --env-file .env",
+      "environment": "e1",
+      "generated_config": "results/runs/svbench-research-claim-20260515T141203Z/configs/e1_llm_judge_pilot.toml",
+      "model": "Qwen/Qwen3.5-2B",
+      "prime_run_id": "j1i1ys9rpdcluvtqneql2o4l",
+      "profile": "pilot",
+      "requires_openai_api_key": true,
+      "reward_config_id": "e1_llm_judge_reward",
+      "reward_source": "llm_judge",
+      "source_config": "configs/rl/e1_llm_judge_reward.toml",
+      "superseded_prime_run_id": "yvnxm5rpvy47a807cxn4634f",
+      "trainer": "grpo"
+    },
+    {
+      "budget_group": "e1-v0.1-matched-budget",
+      "command": "uv run prime train results/runs/svbench-research-claim-20260515T141203Z/configs/e1_hybrid_pilot.toml --plain --yes --env-file .env",
+      "environment": "e1",
+      "generated_config": "results/runs/svbench-research-claim-20260515T141203Z/configs/e1_hybrid_pilot.toml",
+      "model": "Qwen/Qwen3.5-2B",
+      "prime_run_id": "iiy65ubvx5xwke4dfb9vos64",
+      "profile": "pilot",
+      "requires_openai_api_key": true,
+      "reward_config_id": "e1_hybrid_reward",
+      "reward_source": "hybrid",
+      "source_config": "configs/rl/e1_hybrid_reward.toml",
+      "trainer": "grpo"
+    },
+    {
+      "budget_group": "e2-v0.1-matched-budget",
+      "command": "uv run prime train results/runs/svbench-research-claim-20260515T141203Z/configs/e2_executable_pilot.toml --plain --yes",
+      "environment": "e2",
+      "generated_config": "results/runs/svbench-research-claim-20260515T141203Z/configs/e2_executable_pilot.toml",
+      "model": "Qwen/Qwen3.5-9B",
+      "prime_run_id": "hu1j9b61il8dydv2bh1aj97d",
+      "profile": "pilot",
+      "reward_config_id": "e2_executable_reward",
+      "reward_source": "executable",
+      "source_config": "configs/rl/e2_executable_reward.toml",
+      "superseded_prime_run_id": "dlfj0osvujufy016atjpo3rr",
+      "trainer": "grpo"
+    },
+    {
+      "budget_group": "e2-v0.1-matched-budget",
+      "command": "uv run prime train results/runs/svbench-research-claim-20260515T141203Z/configs/e2_llm_judge_pilot.toml --plain --yes --env-file .env",
+      "environment": "e2",
+      "generated_config": "results/runs/svbench-research-claim-20260515T141203Z/configs/e2_llm_judge_pilot.toml",
+      "model": "Qwen/Qwen3.5-9B",
+      "prime_run_id": "h4y9hb6fjom4xfbclitb2938",
+      "profile": "pilot",
+      "requires_openai_api_key": true,
+      "reward_config_id": "e2_llm_judge_reward",
+      "reward_source": "llm_judge",
+      "source_config": "configs/rl/e2_llm_judge_reward.toml",
+      "superseded_prime_run_id": "qjlz4x1u9ozix74gwyla8ra2",
+      "trainer": "grpo"
+    },
+    {
+      "budget_group": "e2-v0.1-matched-budget",
+      "command": "uv run prime train results/runs/svbench-research-claim-20260515T141203Z/configs/e2_hybrid_pilot.toml --plain --yes --env-file .env",
+      "environment": "e2",
+      "generated_config": "results/runs/svbench-research-claim-20260515T141203Z/configs/e2_hybrid_pilot.toml",
+      "model": "Qwen/Qwen3.5-9B",
+      "prime_run_id": "hzu95jfm266370x9kr9wwgkz",
+      "profile": "pilot",
+      "requires_openai_api_key": true,
+      "reward_config_id": "e2_hybrid_reward",
+      "reward_source": "hybrid",
+      "source_config": "configs/rl/e2_hybrid_reward.toml",
+      "superseded_prime_run_id": "lfhieh12xfdnrf9mf9f8neui",
+      "trainer": "grpo"
+    }
+  ],
+  "profile": "pilot",
+  "run_set_id": "svbench-research-claim-20260515T141203Z",
+  "selected_model": {
+    "name": "Qwen/Qwen3.5-9B",
+    "selection": "manual-after-hosted-signal-check"
+  }
+}

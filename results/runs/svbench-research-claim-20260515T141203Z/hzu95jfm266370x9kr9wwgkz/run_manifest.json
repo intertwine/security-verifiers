@@ -1,0 +1,47 @@
+{
+  "adapter_id": "pending",
+  "budget_group": "e2-v0.1-matched-budget",
+  "compute_profile": "yu39z3fv8igmz00jds6uzszz",
+  "dataset_id": "datasets/public_mini/e2.jsonl",
+  "dataset_revision": "public-mini-v1",
+  "environment_id": "sv-env-config-verification",
+  "environment_version": "0.2.19",
+  "git_sha": "204d153120a9aec8c870264a2b72d229f2b8ff93",
+  "input_artifacts": [
+    "configs/rl/e2_hybrid_reward.toml",
+    "results/runs/svbench-research-claim-20260515T141203Z/configs/e2_hybrid_pilot.toml"
+  ],
+  "max_steps": 1,
+  "max_tokens": 4096,
+  "max_turns": 5,
+  "metadata_json_path": "results/runs/svbench-research-claim-20260515T141203Z/hzu95jfm266370x9kr9wwgkz/metadata.json",
+  "metrics_summary_path": "results/runs/svbench-research-claim-20260515T141203Z/hzu95jfm266370x9kr9wwgkz/metrics_summary.json",
+  "model_id": "Qwen/Qwen3.5-9B",
+  "model_revision_or_digest": "prime-hosted",
+  "notes": "Prime hosted pilot run status=COMPLETED; eval_examples=20; profile=pilot; claim_ready is recorded in metrics_summary_path and requires COMPLETED plus non-empty metrics.",
+  "output_artifacts": [
+    "results/runs/svbench-research-claim-20260515T141203Z/hzu95jfm266370x9kr9wwgkz/metrics_summary.json",
+    "results/runs/svbench-research-claim-20260515T141203Z/hzu95jfm266370x9kr9wwgkz/results.jsonl"
+  ],
+  "platform_image": "prime-hosted-training",
+  "platform_mode": "hosted",
+  "prime_environment_id": "intertwine/sv-env-config-verification",
+  "prime_run_id": "hzu95jfm266370x9kr9wwgkz",
+  "results_jsonl_path": "results/runs/svbench-research-claim-20260515T141203Z/hzu95jfm266370x9kr9wwgkz/results.jsonl",
+  "reward_config_hash": "7ca6a5963b79283c137beb8f0b8a8e241d123c07fe42a21862415cbc54dcd0a2",
+  "reward_config_id": "e2_hybrid_reward",
+  "reward_source": "hybrid",
+  "rollouts_per_example": 8,
+  "run_id": "hzu95jfm266370x9kr9wwgkz",
+  "sampling_params": {
+    "max_tokens": 4096,
+    "temperature": 0.7
+  },
+  "seed": 42,
+  "split": "train",
+  "team": "unknown",
+  "timestamp_utc": "2026-05-15T15:39:51Z",
+  "tool_budget": 3,
+  "tool_backend_provenance": "sv-env-config-verification.2.19 emitted tool observations without per-finding backend labels; hosted fallback scanners are enabled for kube-linter and semgrep, and current code emits tool_backend for future runs.",
+  "trainer": "grpo"
+}

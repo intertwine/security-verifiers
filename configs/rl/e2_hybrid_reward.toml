@@ -31,7 +31,8 @@ revision = "public-mini-v1"
 
 [[env]]
 id = "intertwine/sv-env-config-verification"
-args = { max_examples = 100, reward_source = "hybrid", sandbox_mode = "local" }
+version = "0.2.19"
+args = { max_examples = 100, reward_source = "hybrid" }
 
 [eval]
 interval = 50
@@ -41,7 +42,8 @@ eval_base_model = true
 
 [[eval.env]]
 id = "intertwine/sv-env-config-verification"
-args = { max_examples = 30 }
+version = "0.2.19"
+args = { max_examples = 30, reward_source = "hybrid" }
 
 [buffer]
 seed = 42

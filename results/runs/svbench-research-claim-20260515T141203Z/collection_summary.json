@@ -1,0 +1,40 @@
+{
+  "runs": [
+    {
+      "claim_ready": true,
+      "manifest": "results/runs/svbench-research-claim-20260515T141203Z/bp6qd19u06wzeqkdrf0h24xx/run_manifest.json",
+      "run_id": "bp6qd19u06wzeqkdrf0h24xx",
+      "status": "COMPLETED"
+    },
+    {
+      "claim_ready": true,
+      "manifest": "results/runs/svbench-research-claim-20260515T141203Z/j1i1ys9rpdcluvtqneql2o4l/run_manifest.json",
+      "run_id": "j1i1ys9rpdcluvtqneql2o4l",
+      "status": "COMPLETED"
+    },
+    {
+      "claim_ready": true,
+      "manifest": "results/runs/svbench-research-claim-20260515T141203Z/iiy65ubvx5xwke4dfb9vos64/run_manifest.json",
+      "run_id": "iiy65ubvx5xwke4dfb9vos64",
+      "status": "COMPLETED"
+    },
+    {
+      "claim_ready": true,
+      "manifest": "results/runs/svbench-research-claim-20260515T141203Z/hu1j9b61il8dydv2bh1aj97d/run_manifest.json",
+      "run_id": "hu1j9b61il8dydv2bh1aj97d",
+      "status": "COMPLETED"
+    },
+    {
+      "claim_ready": true,
+      "manifest": "results/runs/svbench-research-claim-20260515T141203Z/h4y9hb6fjom4xfbclitb2938/run_manifest.json",
+      "run_id": "h4y9hb6fjom4xfbclitb2938",
+      "status": "COMPLETED"
+    },
+    {
+      "claim_ready": true,
+      "manifest": "results/runs/svbench-research-claim-20260515T141203Z/hzu95jfm266370x9kr9wwgkz/run_manifest.json",
+      "run_id": "hzu95jfm266370x9kr9wwgkz",
+      "status": "COMPLETED"
+    }
+  ]
+}

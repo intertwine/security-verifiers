@@ -1,0 +1,77 @@
+{
+  "run": {
+    "base_model": "Qwen/Qwen3.5-9B",
+    "batch_size": 16,
+    "buffer_config": {
+      "easy_fraction": 0.0,
+      "easy_threshold": null,
+      "env_ratios": null,
+      "hard_fraction": 0.0,
+      "hard_threshold": null,
+      "online_difficulty_filtering": false,
+      "seed": 42,
+      "skip_verification": false
+    },
+    "cluster_id": "yu39z3fv8igmz00jds6uzszz",
+    "completed_at": "2026-05-15 15:38:30.631000",
+    "created_at": "2026-05-15 15:35:09.269000",
+    "environments": [
+      {
+        "args": {
+          "max_examples": 60,
+          "reward_source": "executable"
+        },
+        "id": "intertwine/sv-env-config-verification",
+        "name": null,
+        "version": "0.2.19",
+        "version_id": "mcu99ym5fsjbh93cf8sg0f64",
+        "visibility": "PUBLIC"
+      }
+    ],
+    "error_message": null,
+    "eval_config": {
+      "environments": [
+        {
+          "args": {
+            "max_examples": 20,
+            "reward_source": "executable"
+          },
+          "id": "intertwine/sv-env-config-verification",
+          "name": null,
+          "num_examples": null,
+          "rollouts_per_example": null,
+          "version": "0.2.19",
+          "version_id": "mcu99ym5fsjbh93cf8sg0f64",
+          "visibility": "PUBLIC"
+        }
+      ],
+      "eval_base_model": true,
+      "interval": 50,
+      "num_examples": 20,
+      "rollouts_per_example": 1
+    },
+    "failure_analysis": null,
+    "id": "hu1j9b61il8dydv2bh1aj97d",
+    "learning_rate": 8e-06,
+    "lora_alpha": 32,
+    "max_async_level": null,
+    "max_steps": 1,
+    "max_tokens": 4096,
+    "name": "svbench-e2-executable-pilot-svbench-research-claim-20260515T141203Z",
+    "oversampling_factor": null,
+    "queue_reason": null,
+    "rollouts_per_example": 8,
+    "run_config": null,
+    "runs_ahead": null,
+    "seq_len": 65536,
+    "started_at": "2026-05-15 15:35:16.692000",
+    "status": "COMPLETED",
+    "team_id": null,
+    "updated_at": "2026-05-15 15:38:30.709000",
+    "user_id": "cmey8lo670051g9yl4r79311l",
+    "val_config": null,
+    "wandb_entity": null,
+    "wandb_project": null,
+    "wandb_run_name": null
+  }
+}

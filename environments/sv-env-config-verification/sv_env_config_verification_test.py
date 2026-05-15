@@ -14,6 +14,9 @@ from sv_env_config_verification import (
     ConfigVerificationParser,
     load_environment,
     reward_config_auditing,
+    run_kubelinter,
+    run_semgrep,
+    tool_observation_reward,
 )
 from adapters import kubelinter_adapter, opa_adapter, semgrep_adapter
 from adapters.types import ToolFinding, Violation
@@ -92,6 +95,47 @@ class TestConfigVerification:
         reward = reward_config_auditing(completion, answer)
         assert reward == 0.0
 
+    def test_reward_text_rule_ids_without_json_do_not_score(self) -> None:
+        """Natural-language rule IDs alone are not executable reward evidence."""
+        completion = "The pod violates kube-linter/latest-tag and should pin its image tag."
+        answer = {
+            "oracle": [{"id": "kube-linter/latest-tag", "severity": "med"}],
+            "fixture_path": "",
+            "fixture_type": "k8s",
+        }
+        reward = reward_config_auditing(completion, answer)
+        assert reward == 0.0
+
+    def test_tool_observation_reward_scores_observed_findings(self) -> None:
+        """Tool observations provide executable signal even before final JSON is correct."""
+        completion = [
+            {
+                "role": "tool",
+                "content": "[{'tool': 'kube-linter', 'rule_id': 'latest-tag', 'severity': 'medium', 'message': 'x'}]",
+            }
+        ]
+        answer = {
+            "oracle": [{"id": "kube-linter/latest-tag", "severity": "med"}],
+            "fixture_path": "",
+            "fixture_type": "k8s",
+        }
+        assert tool_observation_reward(completion, answer) > 0.9
+
+    def test_tool_observation_reward_filters_to_primary_tool(self) -> None:
+        """OPA side findings do not satisfy the kube-linter scoring contract."""
+        completion = [
+            {
+                "role": "tool",
+                "content": json.dumps([{"tool": "opa", "rule_id": "GEN_001", "severity": "med", "message": "x"}]),
+            }
+        ]
+        answer = {
+            "oracle": [{"id": "kube-linter/latest-tag", "severity": "med"}],
+            "fixture_path": "",
+            "fixture_type": "k8s",
+        }
+        assert tool_observation_reward(completion, answer) == 0.0
+
     def test_reward_empty_violations(self) -> None:
         """Test reward with empty violations list."""
         completion = '{"violations":[],"patch":"","confidence":1.0}'
@@ -112,6 +156,7 @@ class TestConfigVerification:
         sample = env.dataset[0]
         assert "answer" in sample
         assert "question" in sample
+        assert "File path:" in sample["question"]
 
     def test_load_environment_with_tools(self) -> None:
         """Test loading environment with tools enabled."""
@@ -121,6 +166,42 @@ class TestConfigVerification:
         assert env.tools[0].__name__ == "run_kubelinter"
         assert env.tools[1].__name__ == "run_semgrep"
         assert env.tools[2].__name__ == "run_opa"
+
+    def test_kubelinter_tool_fallback_when_binary_missing(self, monkeypatch: Any, tmp_path: Path) -> None:
+        """Hosted runs still get executable findings when kube-linter is unavailable."""
+        fixture = tmp_path / "pod.yaml"
+        fixture.write_text("image: nginx:latest\nsecurityContext:\n  runAsNonRoot: false\n", encoding="utf-8")
+
+        def missing_binary(*args, **kwargs):  # pylint: disable=unused-argument
+            raise FileNotFoundError("kube-linter")
+
+        monkeypatch.setattr("sv_env_config_verification.kubelinter_lint", missing_binary)
+        findings = run_kubelinter([str(fixture)])
+        assert {finding["rule_id"] for finding in findings} == {"latest-tag", "run-as-non-root"}
+        assert {finding["tool_backend"] for finding in findings} == {"deterministic_fallback"}
+
+    def test_semgrep_tool_fallback_when_binary_missing(self, monkeypatch: Any, tmp_path: Path) -> None:
+        """Hosted runs still get executable Terraform findings when semgrep is unavailable."""
+        fixture = tmp_path / "bad.tf"
+        fixture.write_text('resource "aws_s3_bucket" "bad" {\n  acl    = "public-read"\n}\n', encoding="utf-8")
+
+        def missing_binary(*args, **kwargs):  # pylint: disable=unused-argument
+            raise FileNotFoundError("semgrep")
+
+        monkeypatch.setattr("sv_env_config_verification.semgrep_scan", missing_binary)
+        findings = run_semgrep([str(fixture)])
+        assert findings == [
+            {
+                "tool": "semgrep",
+                "rule_id": "terraform-acl-public-read",
+                "severity": "high",
+                "message": "S3 bucket ACL is public-read.",
+                "file": str(fixture),
+                "start_line": None,
+                "end_line": None,
+                "tool_backend": "deterministic_fallback",
+            }
+        ]
 
 
 class TestKubeLinterAdapter:
@@ -558,5 +639,28 @@ class TestIntegration:
         env = load_environment(max_examples=1, include_tools=False)
         assert env.system_prompt is not None
         assert "security auditor" in env.system_prompt
+        assert "call the relevant tool" in env.system_prompt
         assert "JSON" in env.system_prompt
         assert "violations" in env.system_prompt
+
+    def test_environment_accepts_executable_reward_source(self) -> None:
+        """Hosted training configs can select executable reward explicitly."""
+        env = load_environment(max_examples=1, include_tools=False, reward_source="executable")
+        assert env.rubric is not None
+
+    def test_environment_accepts_judge_reward_source(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Hosted training configs can select judge reward explicitly."""
+        monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+        env = load_environment(max_examples=1, include_tools=False, reward_source="llm_judge")
+        assert env.rubric is not None
+
+    def test_environment_accepts_hybrid_reward_source(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Hosted training configs can select hybrid reward explicitly."""
+        monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+        env = load_environment(max_examples=1, include_tools=False, reward_source="hybrid")
+        assert env.rubric is not None
+
+    def test_environment_rejects_unknown_reward_source(self) -> None:
+        """Invalid reward source values fail fast."""
+        with pytest.raises(ValueError, match="reward_source"):
+            load_environment(max_examples=1, include_tools=False, reward_source="not-real")

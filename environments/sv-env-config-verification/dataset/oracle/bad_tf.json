@@ -1,1 +1,3 @@
-[]
+[
+  {"id": "semgrep/terraform-acl-public-read", "severity": "high"}
+]
