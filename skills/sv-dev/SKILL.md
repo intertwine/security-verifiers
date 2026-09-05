@@ -12,6 +12,14 @@ Testing, linting, formatting, and development workflow for the Security Verifier
 
 ## Quick Start
 
+For a scoped review with dependencies already installed:
+
+```bash
+make review-check REVIEW_PATHS="<relevant source paths>" REVIEW_TESTS="<relevant tests>"
+```
+
+This uses non-fixing checks and selected tests without dependency sync. Install dependencies only when missing and needed for the task. Full setup/check below is for an intentionally broad workflow; `make check` and `make lint` can run fixing hooks over unrelated files.
+
 ```bash
 # Full setup (creates venv, installs all deps)
 make setup
@@ -71,7 +79,7 @@ uv run pytest environments/sv-env-network-logs/sv_env_network_logs_test.py::Test
 
 ## Linting and Formatting
 
-### Check Linting (no changes)
+### Full lint workflow (may fix files)
 
 ```bash
 make lint
@@ -165,9 +173,7 @@ security-verifiers/
 
 ### Before Committing
 
-```bash
-make check  # or make quick-check
-```
+Use scoped `review-check` for touched behavior. Use `make check` or the applicable CI gate when broad validation is required, understanding that fixing hooks may change files. Inspect the diff before staging; do not include unrelated formatting.
 
 ### After Changing Environment Code
 
