@@ -7,7 +7,7 @@ SHELL := /bin/bash
 .PHONY: \
 help setup venv install install-dev install-all install-linux check-tools \
 \
-test test-env test-utils test-cov lint lint-fix format check quick-test quick-fix quick-check \
+review-check test test-env test-utils test-cov lint lint-fix format check quick-test quick-fix quick-check \
 \
 build build-env build-utils deploy update-version update-utils-version hub-validate hub-deploy hub-push-datasets hub-test-datasets pypi-publish-utils pypi-publish-utils-test ci cd \
 \
@@ -1058,3 +1058,12 @@ suite-v1-check: venv config-validate
 	@$(ECHO) "$(YELLOW)Checking Security Verifiers Suite v1 gate...$(NC)"
 	@$(ACTIVATE) && uv run python scripts/check_suite_v1.py
 	@$(ECHO) "$(GREEN)✓ Suite v1 checks passed$(NC)"
+
+# Non-mutating review checks. Requires existing dependencies; never installs or fixes.
+# Example: make review-check REVIEW_PATHS="src/path.py" REVIEW_TESTS="tests/test_path.py"
+.PHONY: review-check
+review-check:
+	@test -n "$(REVIEW_PATHS)" -a -n "$(REVIEW_TESTS)" || { echo 'Set REVIEW_PATHS and REVIEW_TESTS to the relevant source and tests'; exit 2; }
+	uv run --no-sync ruff check $(REVIEW_PATHS)
+	uv run --no-sync ruff format --check $(REVIEW_PATHS)
+	uv run --no-sync pytest -q $(REVIEW_TESTS)
