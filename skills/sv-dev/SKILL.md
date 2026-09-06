@@ -25,8 +25,8 @@ This uses non-fixing checks and selected tests without dependency sync. Install 
 make setup
 source .venv/bin/activate
 
-# Run all checks
-make check  # lint + format + test
+# Full run (lint + format + test); fixing hooks may modify unrelated files
+make check
 ```
 
 ## Testing

@@ -20,7 +20,8 @@ make pre-commit
 ### Linting and Formatting
 
 ```bash
-make check    # Run all checks (lint + format + tests)
+make review-check REVIEW_PATHS="<source paths>" REVIEW_TESTS="<test paths>"  # default: scoped, non-fixing checks
+make check    # full run (lint + fixing hooks + format + tests); may modify unrelated files
 make lint     # Ruff linting only
 make format   # Ruff formatting only
 ```
@@ -145,7 +146,8 @@ The GitHub Actions workflow (`.github/workflows/ci.yml`) runs:
 ### Local CI Simulation
 
 ```bash
-make check  # Runs lint + format + tests
+make review-check REVIEW_PATHS="<source paths>" REVIEW_TESTS="<test paths>"  # scoped, non-fixing
+make check  # full lint + format + tests; fixing hooks may modify unrelated files
 ```
 
 ## Version Management

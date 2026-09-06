@@ -63,7 +63,8 @@ make validate-data
 
 ### Development
 ```bash
-make check    # lint + format + test
+make review-check REVIEW_PATHS="<source paths>" REVIEW_TESTS="<test paths>"  # scoped, non-fixing
+make check    # full lint + format + test; may modify unrelated files
 make e1       # test E1 environment
 ```
 

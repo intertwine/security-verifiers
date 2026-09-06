@@ -19,7 +19,8 @@ See [docs/development.md](docs/development.md) for detailed setup instructions.
 2. **Make focused changes**: One feature/fix per PR
 3. **Run quality checks**:
    ```bash
-   make check  # lint + format + tests
+   make review-check REVIEW_PATHS="<source paths>" REVIEW_TESTS="<test paths>"  # scoped, non-fixing
+   # make check runs the full lint + format + tests pass and may modify unrelated files
    ```
 4. **Update documentation** if needed
 5. **Submit PR** with a clear description
@@ -71,7 +72,7 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`
 
 - [GitHub Issues](https://github.com/intertwine/security-verifiers/issues)
 - [Development Guide](docs/development.md)
-- [CLAUDE.md](CLAUDE.md) for command reference
+- [AGENTS.md](AGENTS.md) for the agent workflow; `make help` for the command reference
 
 ## License
 
