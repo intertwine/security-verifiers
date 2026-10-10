@@ -7,6 +7,7 @@
 ```python
 # Just import and use - logging happens automatically!
 from sv_env_network_logs import load_environment
+
 env = load_environment()
 ```
 
@@ -14,6 +15,7 @@ env = load_environment()
 
 ```python
 from sv_shared import build_rollout_logger
+
 logger = build_rollout_logger({"enabled": True})
 env = load_environment(logger=logger)
 ```
@@ -71,11 +73,13 @@ WANDB_PROJECT=security-verifiers-rl
 # Both systems for comprehensive monitoring
 os.environ["WEAVE_PROJECT"] = "production"
 
-logger = build_rollout_logger({
-    "enabled": True,
-    "step_filter": lambda e: e.reward < 0.5,  # Focus on failures
-    "default_tags": ["production"]
-})
+logger = build_rollout_logger(
+    {
+        "enabled": True,
+        "step_filter": lambda e: e.reward < 0.5,  # Focus on failures
+        "default_tags": ["production"],
+    }
+)
 
 env = load_environment(logger=logger)
 ```
@@ -86,23 +90,21 @@ env = load_environment(logger=logger)
 # Disable remote logging
 os.environ["WEAVE_DISABLED"] = "true"
 
-logger = build_rollout_logger({
-    "enabled": True,
-    "weave_enabled": False,
-    "wandb_enabled": False
-})
+logger = build_rollout_logger({"enabled": True, "weave_enabled": False, "wandb_enabled": False})
 ```
 
 ### Selective Logging
 
 ```python
-logger = build_rollout_logger({
-    "step_filter": lambda e: (
-        e.reward < 0.3 or      # Failures
-        e.reward > 0.95 or     # Successes
-        e.step_index % 100 == 0  # Sample
-    )
-})
+logger = build_rollout_logger(
+    {
+        "step_filter": lambda e: (
+            e.reward < 0.3  # Failures
+            or e.reward > 0.95  # Successes
+            or e.step_index % 100 == 0  # Sample
+        )
+    }
+)
 ```
 
 ### Event Querying
@@ -110,9 +112,7 @@ logger = build_rollout_logger({
 ```python
 # Find specific events
 failures = logger.find_reward_dips(0.5)
-critical = logger.query_events(
-    lambda e: e.metrics and e.metrics.get("is_critical")
-)
+critical = logger.query_events(lambda e: e.metrics and e.metrics.get("is_critical"))
 ```
 
 ## 🎯 When to Use What
@@ -167,9 +167,7 @@ pip list | grep weave
 print(logger.enabled)  # Should be True
 
 # Remove filters for testing
-logger = build_rollout_logger({
-    "step_filter": lambda e: True
-})
+logger = build_rollout_logger({"step_filter": lambda e: True})
 ```
 
 ## 📚 Full Documentation

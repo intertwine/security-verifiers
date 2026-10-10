@@ -53,7 +53,13 @@ jobs:
 
           # Install Semgrep
           echo "Installing Semgrep v${SEMGREP_VERSION}..."
-          python -m pip install "semgrep==${SEMGREP_VERSION}"
+          python -m venv "${RUNNER_TEMP}/sv-semgrep"
+          "${RUNNER_TEMP}/sv-semgrep/bin/python" -m pip install \
+            "semgrep==${SEMGREP_VERSION}" "pydantic==${SEMGREP_PYDANTIC_VERSION}"
+          mkdir -p "${RUNNER_TEMP}/sv-tools-bin"
+          ln -sf "${RUNNER_TEMP}/sv-semgrep/bin/semgrep" "${RUNNER_TEMP}/sv-tools-bin/semgrep"
+          echo "${RUNNER_TEMP}/sv-tools-bin" >> "$GITHUB_PATH"
+          "${RUNNER_TEMP}/sv-semgrep/bin/semgrep" --version
 
       - name: Install uv and dependencies
         run: |

@@ -8,14 +8,15 @@ violations, an optional patch, and a confidence score.
 
 from __future__ import annotations
 
-import json
 import ast
+import json
+import logging
 
 # Allow importing shared utilities when developing from the repo
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
 
 # Ensure repository root is on sys.path so `sv_shared` is importable when running from source
 # __file__ .../environments/sv-env-config-verification/sv_env_config_verification.py
@@ -23,15 +24,14 @@ from typing import Any, Dict, List, Literal, Optional
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 # Initialize Weave before importing verifiers for automatic tracing
-from sv_shared import weave_init  # type: ignore  # noqa: F401, E402
+from sv_shared import weave_init  # type: ignore  # noqa: F401
 
+# isort: split
 import verifiers as vf
 import yaml  # noqa: F401 - used in run_opa function
 from datasets import Dataset
 from openai import APIError, APITimeoutError, RateLimitError
 from pydantic import BaseModel, ConfigDict
-from verifiers.utils.async_utils import maybe_await
-
 from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
     DatasetSource,
     RolloutLogger,
@@ -39,6 +39,7 @@ from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
     get_response_text,
     load_dataset_with_fallback,
 )
+from verifiers.utils.async_utils import maybe_await
 
 # pylint: disable=wrong-import-position
 from adapters.kubelinter_adapter import kubelinter_lint
@@ -46,9 +47,11 @@ from adapters.opa_adapter import opa_eval
 from adapters.semgrep_adapter import semgrep_scan
 from adapters.types import Violation
 from mapping import normalize_findings
-from patching import try_apply_patch
+from patching import preserves_config_structure, try_apply_patch
 from reward import final_reward
 from schema import parse_model_output
+
+_LOGGER = logging.getLogger(__name__)
 
 
 # Pydantic model for tool finding dictionaries
@@ -59,9 +62,9 @@ class ToolFindingModel(BaseModel):
     rule_id: str
     severity: str
     message: str
-    file: Optional[str] = None
-    start_line: Optional[int] = None
-    end_line: Optional[int] = None
+    file: str | None = None
+    start_line: int | None = None
+    end_line: int | None = None
 
     model_config = ConfigDict(extra="forbid")
 
@@ -94,14 +97,15 @@ and does not invent unsupported findings. Respond "no" otherwise.\
 """
 
 
-def run_kubelinter(paths: List[str]) -> List[Dict[str, Any]]:
+def run_kubelinter(paths: list[str]) -> list[dict[str, Any]]:
     """Expose ``kubelinter_lint`` as a simple tool."""
 
     findings = []
     tool_backend = "adapter"
     try:
         raw_findings = kubelinter_lint(paths)
-    except Exception:
+    except Exception as exc:
+        _LOGGER.exception("KubeLinter adapter failed (%s); using fallback", type(exc).__name__, exc_info=False)
         tool_backend = "deterministic_fallback"
         raw_findings = []
         for path in paths:
@@ -146,7 +150,7 @@ def run_kubelinter(paths: List[str]) -> List[Dict[str, Any]]:
     return findings
 
 
-def run_semgrep(paths: List[str]) -> List[Dict[str, Any]]:
+def run_semgrep(paths: list[str]) -> list[dict[str, Any]]:
     """Expose ``semgrep_scan`` as a simple tool."""
 
     findings: list[dict[str, Any]] = []
@@ -162,7 +166,8 @@ def run_semgrep(paths: List[str]) -> List[Dict[str, Any]]:
         tool_backend = "adapter"
         try:
             raw_findings = semgrep_scan(grouped_paths, rules=ruleset)
-        except Exception:
+        except Exception as exc:
+            _LOGGER.exception("Semgrep adapter failed (%s); using fallback", type(exc).__name__, exc_info=False)
             tool_backend = "deterministic_fallback"
             raw_findings = []
             if ruleset == "p/terraform":
@@ -197,7 +202,7 @@ def run_semgrep(paths: List[str]) -> List[Dict[str, Any]]:
     return findings
 
 
-def run_opa(paths: List[str]) -> List[Dict[str, Any]]:
+def run_opa(paths: list[str]) -> list[dict[str, Any]]:
     """Expose ``opa_eval`` as a simple tool for configuration files."""
 
     findings = []
@@ -238,7 +243,8 @@ def run_opa(paths: List[str]) -> List[Dict[str, Any]]:
                     "end_line": f.end_line,
                 }
                 findings.append(finding_dict)
-        except Exception:
+        except Exception as exc:
+            _LOGGER.exception("OPA file evaluation failed (%s); skipping file", type(exc).__name__, exc_info=False)
             # Skip files that can't be parsed
             continue
 
@@ -248,7 +254,7 @@ def run_opa(paths: List[str]) -> List[Dict[str, Any]]:
 class ConfigVerificationParser(vf.Parser):
     """Parser validating the PRD JSON schema."""
 
-    def parse_answer(self, completion: Any) -> Dict[str, Any]:
+    def parse_answer(self, completion: Any) -> dict[str, Any]:
         text = get_response_text(completion)
         # Try raw JSON first, then extract from markdown code blocks
         try:
@@ -384,7 +390,7 @@ def _normalize_severity(value: Any) -> str:
     return sev if sev in {"low", "med", "high"} else "med"
 
 
-def _answer_to_dict(answer: Dict[str, Any] | str | None) -> Dict[str, Any]:
+def _answer_to_dict(answer: dict[str, Any] | str | None) -> dict[str, Any]:
     if isinstance(answer, str):
         try:
             return json.loads(answer)
@@ -393,7 +399,7 @@ def _answer_to_dict(answer: Dict[str, Any] | str | None) -> Dict[str, Any]:
     return answer or {}
 
 
-def _oracle_from_answer(answer_obj: Dict[str, Any], kwargs: Dict[str, Any]) -> tuple[list[Violation], str]:
+def _oracle_from_answer(answer_obj: dict[str, Any], kwargs: dict[str, Any]) -> tuple[list[Violation], str]:
     fixture_type = answer_obj.get("fixture_type") or kwargs.get("fixture_type") or "k8s"
     fixture_type = str(fixture_type).lower().strip()
     fixture_type = "tf" if fixture_type in {"tf", "terraform"} else "k8s"
@@ -501,7 +507,7 @@ def _extract_tool_observation_violations(completion: Any) -> list[Violation]:
     return list(deduped.values())
 
 
-def tool_observation_reward(completion, answer: Dict[str, Any] | str | None = None, **kwargs) -> float:
+def tool_observation_reward(completion, answer: dict[str, Any] | str | None = None, **kwargs) -> float:
     """Reward executable evidence surfaced by actual tool observations."""
 
     observed = _extract_tool_observation_violations(completion)
@@ -541,8 +547,8 @@ def _build_judge_rubric(
 # pylint: disable=unused-argument
 def reward_config_auditing(
     completion,
-    answer: Dict[str, Any] | str | None = None,
-    **kwargs: Dict[str, Any],
+    answer: dict[str, Any] | str | None = None,
+    **kwargs: dict[str, Any],
 ) -> float:
     """Reward combining detection accuracy and patch verification.
 
@@ -583,12 +589,17 @@ def reward_config_auditing(
     # Datasets may include extra tool findings; ignore them for scoring to avoid oracle/tool mismatch.
     violations_pred, oracle = _primary_tool_filter(violations_pred, oracle, fixture_type)
 
-    post: List[Violation] | None = None
+    post: list[Violation] | None = None
     if patch:
         fixture_path = (answer_obj or {}).get("fixture_path") or kwargs.get("fixture_path") or ""
-        applied, new_text = try_apply_patch(fixture_path, patch)
-        if applied:
-            with tempfile.NamedTemporaryFile("w", delete=False) as tmp:
+        try:
+            original = Path(fixture_path).read_text(encoding="utf-8")
+            applied, new_text = try_apply_patch(fixture_path, patch)
+        except OSError:
+            applied, new_text, original = False, "", ""
+        if applied and preserves_config_structure(original, new_text, fixture_type):
+            suffix = ".yaml" if fixture_type == "k8s" else ".tf"
+            with tempfile.NamedTemporaryFile("w", suffix=suffix, delete=False) as tmp:
                 tmp.write(new_text)
                 tmp_path = tmp.name
             try:
@@ -621,7 +632,7 @@ def _create_builtin_fixtures() -> Dataset:
             "oracle": DATASET_ROOT / "oracle" / "bad_tf.json",
         },
     ]
-    items: List[Dict[str, Any]] = []
+    items: list[dict[str, Any]] = []
     for item in fixtures:
         fixture_path = str(item["path"])
         config_text = Path(item["path"]).read_text(encoding="utf-8")
@@ -637,7 +648,7 @@ def _create_builtin_fixtures() -> Dataset:
     return Dataset.from_list(items)
 
 
-def _convert_e2_format(example: Dict[str, Any]) -> Dict[str, Any]:
+def _convert_e2_format(example: dict[str, Any]) -> dict[str, Any]:
     """Convert E2 build format to environment format.
 
     Supported input formats:
@@ -830,7 +841,7 @@ def load_environment(
 
 __all__ = [
     "ConfigVerificationParser",
+    "load_environment",
     "reward_config_auditing",
     "tool_observation_reward",
-    "load_environment",
 ]

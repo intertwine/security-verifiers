@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import json
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Sequence
+from typing import Any
 
 from .types import ToolFinding
 
@@ -15,13 +16,13 @@ class OPAError(RuntimeError):
 
 
 def opa_eval(
-    input_data: str | Dict[str, Any],
+    input_data: str | dict[str, Any],
     policy_paths: Sequence[str | Path],
     query: str = "data.security.deny",
     opa_bin: str | Path = "opa",
     timeout_s: int = 15,
-    env: Dict[str, str] | None = None,
-) -> List[ToolFinding]:
+    env: dict[str, str] | None = None,
+) -> list[ToolFinding]:
     """Run ``opa eval`` and return findings.
 
     Parameters are defined in the project canvas. The function expects the
@@ -60,7 +61,7 @@ def opa_eval(
 
         # OPA returns deny rules as a set, which appears as an object/dict in JSON
         # We need to extract the values from the set
-        findings: List[ToolFinding] = []
+        findings: list[ToolFinding] = []
 
         if results and "expressions" in results[0]:
             value = results[0]["expressions"][0]["value"]
@@ -144,4 +145,4 @@ def opa_eval(
     return findings
 
 
-__all__ = ["opa_eval", "OPAError"]
+__all__ = ["OPAError", "opa_eval"]

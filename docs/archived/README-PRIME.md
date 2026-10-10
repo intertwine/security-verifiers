@@ -206,26 +206,41 @@ def load_environment(
    import os
    import pytest
 
+
    @pytest.mark.integration
    def test_vfeval_e1_synthetic():
        """Test vf-eval with E1 using synthetic dataset."""
-       result = subprocess.run([
-           "vf-eval", "sv-env-network-logs",
-           "--model", "gpt-5-mini",
-           "--num-examples", "3",
-           "--dataset", "synthetic"
-       ], env={**os.environ, "DATASET_SOURCE": "synthetic"})
+       result = subprocess.run(
+           [
+               "vf-eval",
+               "sv-env-network-logs",
+               "--model",
+               "gpt-5-mini",
+               "--num-examples",
+               "3",
+               "--dataset",
+               "synthetic",
+           ],
+           env={**os.environ, "DATASET_SOURCE": "synthetic"},
+       )
        assert result.returncode == 0
+
 
    @pytest.mark.integration
    def test_vfeval_e2_fixtures():
        """Test vf-eval with E2 using builtin fixtures."""
-       result = subprocess.run([
-           "vf-eval", "sv-env-config-verification",
-           "--model", "gpt-5-mini",
-           "--num-examples", "2",
-           "--dataset", "builtin"
-       ])
+       result = subprocess.run(
+           [
+               "vf-eval",
+               "sv-env-config-verification",
+               "--model",
+               "gpt-5-mini",
+               "--num-examples",
+               "2",
+               "--dataset",
+               "builtin",
+           ]
+       )
        assert result.returncode == 0
    ```
 
@@ -361,7 +376,7 @@ def load_environment(
    env = vf.load_environment(
        "intertwine/sv-env-network-logs",
        dataset_source="hub",  # Use Hub datasets
-       max_examples=100
+       max_examples=100,
    )
    ```
    ```

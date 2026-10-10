@@ -53,7 +53,7 @@ env = vf.load_environment("sv-env-config-verification", dataset_source="syntheti
 env = vf.load_environment(
     "sv-env-config-verification",
     dataset_name="k8s-labeled-v1.jsonl",  # Kubernetes only
-    dataset_source="local"
+    dataset_source="local",
 )
 ```
 
@@ -69,11 +69,7 @@ os.environ["HF_TOKEN"] = "hf_your_token_here"
 os.environ["E2_HF_REPO"] = "your-org/security-verifiers-e2-private"
 
 # Load from your repository
-env = vf.load_environment(
-    "sv-env-config-verification",
-    dataset_source="hub",
-    max_examples=100
-)
+env = vf.load_environment("sv-env-config-verification", dataset_source="hub", max_examples=100)
 ```
 
 **See [docs/user-dataset-guide.md](../../docs/user-dataset-guide.md) for instructions on building and pushing datasets to your own HuggingFace repository.**
@@ -184,11 +180,7 @@ import verifiers as vf
 env = vf.load_environment("intertwine/sv-env-config-verification", include_tools=True)
 
 # Evaluate a model
-results = env.evaluate(
-    client=vf.OpenAIClient(),
-    model="gpt-5-mini",
-    num_examples=10
-)
+results = env.evaluate(client=vf.OpenAIClient(), model="gpt-5-mini", num_examples=10)
 
 print(f"Average reward: {results.stats['mean_reward']:.2%}")
 print(f"Detection F1: {results.stats.get('detection_f1', 0):.2%}")
@@ -287,11 +279,7 @@ weave.init(project="config-security")
 
 # Load and evaluate
 env = vf.load_environment("intertwine/sv-env-config-verification", include_tools=True)
-results = env.evaluate(
-    client=vf.OpenAIClient(),
-    model="gpt-5-mini",
-    num_examples=50
-)
+results = env.evaluate(client=vf.OpenAIClient(), model="gpt-5-mini", num_examples=50)
 
 # Results automatically traced to W&B
 ```
@@ -326,11 +314,7 @@ env = vf.load_environment("intertwine/sv-env-config-verification", include_tools
 # Compare with and without tools
 for use_tools in [True, False]:
     results = env.evaluate(
-        client=vf.OpenAIClient(),
-        model="gpt-5-mini",
-        num_examples=100,
-        include_tools=use_tools,
-        seed=42
+        client=vf.OpenAIClient(), model="gpt-5-mini", num_examples=100, include_tools=use_tools, seed=42
     )
 
     mode = "with tools" if use_tools else "without tools"
@@ -394,6 +378,25 @@ The environment includes:
 - **Terraform configurations**: AWS, GCP, Azure resources with misconfigurations
 - **Oracle labels**: Ground-truth violations from tool outputs for validation
 
+Detection reward counts each violation ID once. Repeating a correct finding does
+not increase recall or F1; repeated false findings use their highest reported
+severity once, independent of output order. This prevents duplicate findings
+from inflating partial-detection scores.
+
+Patch-removal credit requires retained Kubernetes resource identities and named
+containers at their original structural paths, or retained Terraform resource
+declarations. Empty, malformed
+Kubernetes, resource-deleting, and container-deleting patches receive no patch
+bonus. Missing local fixture files also receive no patch bonus. This structural
+guard does not prove functional equivalence or rule out unrelated over-fixing;
+semantic preservation still requires separate evaluation. Post-patch scans use
+the original configuration's file extension.
+Terraform declarations inside block or line comments do not count as retained
+resources; comment-like text inside quoted strings remains literal text.
+The structural Terraform guard conservatively withholds patch credit when either
+configuration contains heredoc syntax, because it does not parse HCL. Detection
+reward remains available for those configurations.
+
 ## Future Improvements
 
 - **Expanded Tool Suite**: Add Checkov, Terrascan, and Trivy
@@ -421,3 +424,8 @@ For issues or questions:
 - Report issues on the [Prime Intellect Environments Hub](https://app.primeintellect.ai/dashboard/environments)
 - Check the [Security Verifiers GitHub repository](https://github.com/intertwine/security-verifiers)
 - Contact the Intertwine team
+
+Adapter exceptions emit diagnostics containing the exception type, without error
+payloads or tracebacks. KubeLinter/Semgrep fallback findings retain their backend
+labels, and OPA failures retain per-file isolation. Research evaluations require
+the bounded runner's real-scanner checks and separate verification evidence.

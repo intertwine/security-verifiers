@@ -54,7 +54,8 @@ def initialize_weave_if_enabled() -> bool:
 
         try:
             existing_client = weave.get_client()
-        except Exception:  # pragma: no cover - defensive
+        except Exception as exc:  # pragma: no cover - defensive
+            _LOGGER.exception("Weave client lookup failed (%s)", type(exc).__name__, exc_info=False)
             existing_client = None
 
         if existing_client is not None:
@@ -81,7 +82,7 @@ def initialize_weave_if_enabled() -> bool:
         _LOGGER.debug("Weave is not installed; automatic tracing will be skipped")
         return False
     except Exception as e:
-        _LOGGER.warning(f"Failed to initialize Weave: {e}")
+        _LOGGER.exception("Failed to initialize Weave (%s)", type(e).__name__, exc_info=False)
         return False
 
 

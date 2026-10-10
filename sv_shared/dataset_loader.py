@@ -22,11 +22,15 @@ Environment Variables:
 from __future__ import annotations
 
 import json
+import logging
 import os
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Dict, Literal, Optional
+from typing import Literal
 
 from datasets import Dataset
+
+_LOGGER = logging.getLogger(__name__)
 
 # Default HuggingFace repositories (intertwine's repos)
 DEFAULT_E1_HF_REPO = "intertwine-ai/security-verifiers-e1"
@@ -105,8 +109,8 @@ def _local_dataset_exists(dataset_path: Path) -> bool:
 
 def _load_local_jsonl(
     dataset_path: Path,
-    max_examples: Optional[int] = None,
-    field_mapping: Optional[Dict[str, str]] = None,
+    max_examples: int | None = None,
+    field_mapping: dict[str, str] | None = None,
 ) -> Dataset:
     """Load dataset from local JSONL file.
 
@@ -167,8 +171,8 @@ def _coerce_e1_answer_to_string(example: dict) -> dict:
 
 def _load_from_hub(
     dataset_name: str,
-    max_examples: Optional[int] = None,
-    field_mapping: Optional[Dict[str, str]] = None,
+    max_examples: int | None = None,
+    field_mapping: dict[str, str] | None = None,
 ) -> Dataset:
     """Load dataset from HuggingFace Hub.
 
@@ -318,9 +322,9 @@ def load_dataset_with_fallback(
     dataset_name: str,
     env_root: Path,
     dataset_source: DatasetSource = "auto",
-    max_examples: Optional[int] = None,
-    field_mapping: Optional[Dict[str, str]] = None,
-    synthetic_generator: Optional[Callable[[], Dataset]] = None,
+    max_examples: int | None = None,
+    field_mapping: dict[str, str] | None = None,
+    synthetic_generator: Callable[[], Dataset] | None = None,
 ) -> tuple[Dataset, str]:
     """Load dataset with multi-tiered fallback strategy.
 
@@ -381,8 +385,9 @@ def load_dataset_with_fallback(
             try:
                 dataset = _load_from_hub(dataset_name, max_examples, field_mapping)
                 return dataset, f"hub::{dataset_name}"
-            except (ValueError, Exception) as e:
-                print(f"Warning: Failed to load from Hub: {e}")
+            except Exception as e:
+                _LOGGER.exception("Hub loading failed (%s); trying fallback", type(e).__name__, exc_info=False)
+                print(f"Warning: Failed to load from Hub: {type(e).__name__}")
                 # Continue to fallback
 
         # Strategy 3: Fall back to synthetic if available
@@ -424,9 +429,9 @@ def load_dataset_with_fallback(
 
 
 __all__ = [
-    "DatasetSource",
-    "load_dataset_with_fallback",
-    "HF_DATASET_MAP",
     "DEFAULT_E1_HF_REPO",
     "DEFAULT_E2_HF_REPO",
+    "HF_DATASET_MAP",
+    "DatasetSource",
+    "load_dataset_with_fallback",
 ]

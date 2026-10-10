@@ -78,10 +78,7 @@ from sv_shared import build_rollout_logger
 from sv_env_network_logs import load_environment
 
 # Always needed logger
-logger = build_rollout_logger({
-    "enabled": True,
-    "wandb_project": "my-project"
-})
+logger = build_rollout_logger({"enabled": True, "wandb_project": "my-project"})
 
 env = load_environment(logger=logger)
 results = env.evaluate(client, model)
@@ -112,10 +109,12 @@ from sv_shared import build_rollout_logger
 from sv_env_network_logs import load_environment
 
 # Use RolloutLogger for custom logic
-logger = build_rollout_logger({
-    "enabled": True,
-    "step_filter": lambda e: e.reward < 0.5,  # Only log failures
-})
+logger = build_rollout_logger(
+    {
+        "enabled": True,
+        "step_filter": lambda e: e.reward < 0.5,  # Only log failures
+    }
+)
 
 # Both Weave and RolloutLogger work together
 env = load_environment(logger=logger)
@@ -154,12 +153,14 @@ results = env.evaluate(client, "gpt-5-mini", num_examples=10)
 **Before:**
 
 ```python
-logger = build_rollout_logger({
-    "enabled": True,
-    "wandb_enabled": True,
-    "wandb_project": "production",
-    "default_tags": ["prod", "monitoring"]
-})
+logger = build_rollout_logger(
+    {
+        "enabled": True,
+        "wandb_enabled": True,
+        "wandb_project": "production",
+        "default_tags": ["prod", "monitoring"],
+    }
+)
 env = load_environment(logger=logger)
 ```
 
@@ -170,11 +171,13 @@ env = load_environment(logger=logger)
 os.environ["WEAVE_PROJECT"] = "production"
 
 # Keep RolloutLogger for alerts
-logger = build_rollout_logger({
-    "enabled": True,
-    "step_filter": lambda e: e.reward < 0.3,  # Alert on failures
-    "default_tags": ["prod", "monitoring"]
-})
+logger = build_rollout_logger(
+    {
+        "enabled": True,
+        "step_filter": lambda e: e.reward < 0.3,  # Alert on failures
+        "default_tags": ["prod", "monitoring"],
+    }
+)
 env = load_environment(logger=logger)
 ```
 
@@ -209,10 +212,7 @@ env = load_environment(logger=logger)
 # Manual metric logging
 for episode in range(100):
     # ... run episode ...
-    logger.log_metrics({
-        "episode": episode,
-        "custom_metric": calculate_metric()
-    })
+    logger.log_metrics({"episode": episode, "custom_metric": calculate_metric()})
 ```
 
 **After:**

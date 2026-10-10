@@ -7,17 +7,18 @@ simulates hostile users trying to elicit unsafe responses.
 
 from __future__ import annotations
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 # Initialize Weave before importing verifiers for automatic tracing
-from sv_shared import weave_init  # type: ignore  # noqa: F401, E402
+from sv_shared import weave_init  # type: ignore  # noqa: F401
+
+# isort: split
 
 import verifiers as vf
 from datasets import Dataset
-
 from sv_shared import RolloutLogger  # type: ignore  # pylint: disable=wrong-import-position
 
 

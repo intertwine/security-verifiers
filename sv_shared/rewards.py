@@ -38,7 +38,7 @@ def _coerce_answer(answer: Any) -> str:
     return str(answer)
 
 
-def _extract(parser, completion: Any) -> tuple[str, float]:  # noqa: ANN001
+def _extract(parser, completion: Any) -> tuple[str, float]:
     """Helper to extract parsed label and confidence."""
 
     label = parser.parse_answer(completion)
@@ -133,6 +133,6 @@ def reward_asymmetric_cost(
 
 __all__ = [
     "reward_accuracy",
-    "reward_calibration",
     "reward_asymmetric_cost",
+    "reward_calibration",
 ]

@@ -2,21 +2,22 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
-from pathlib import Path
 import re
 import sys
+from collections.abc import Iterable
+from pathlib import Path
 from typing import Any
 
 # Enable importing shared components when running from source.
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 # Initialize Weave before importing verifiers for automatic tracing
-from sv_shared import weave_init  # type: ignore  # noqa: F401, E402
+from sv_shared import weave_init  # type: ignore  # noqa: F401
+
+# isort: split
 
 import verifiers as vf
 from datasets import Dataset, load_dataset
-
 from sv_shared import (  # type: ignore  # pylint: disable=wrong-import-position
     JsonClassificationParser,
     RolloutLogger,
@@ -108,7 +109,7 @@ class PhishingEmailParser(JsonClassificationParser):
                 return canonical
         return ""
 
-    def parse_evidence(self, completion: Any) -> list[str]:  # noqa: D401
+    def parse_evidence(self, completion: Any) -> list[str]:
         """Return evidence strings if provided."""
 
         data = self._parse_json(completion)
@@ -126,7 +127,7 @@ class PhishingEmailParser(JsonClassificationParser):
     def get_format_reward_func(self):  # type: ignore[override]
         parser = self
 
-        def format_reward(completion: Any, **kwargs: Any) -> float:  # noqa: ANN401
+        def format_reward(completion: Any, **kwargs: Any) -> float:
             data = parser._parse_json(completion)
             if not data:
                 return 0.0
@@ -188,7 +189,7 @@ def _extract_phishing_indicators(
     if sender and _is_suspicious_sender(sender):
         indicators.append(sender)
 
-    if subject and any(term in subject.lower() for term in {"urgent", "action required", "verify"}):
+    if subject and any(term in subject.lower() for term in ("urgent", "action required", "verify")):
         indicators.append(subject)
 
     # Deduplicate while preserving order.

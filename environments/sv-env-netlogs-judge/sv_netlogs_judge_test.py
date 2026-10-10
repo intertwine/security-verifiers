@@ -8,6 +8,7 @@ from unittest.mock import Mock
 import pytest
 import verifiers as vf
 
+from sv_netlogs_judge import load_environment as load_short_environment
 from sv_netlogs_judge_impl import (
     DEFAULT_ENV_NAME,
     JUDGE_PROMPT,
@@ -15,7 +16,6 @@ from sv_netlogs_judge_impl import (
     judge_reward,
     load_environment,
 )
-from sv_netlogs_judge import load_environment as load_short_environment
 
 
 class TestJudgeVariantParser:

@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 import subprocess
 import time
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Mapping, Sequence
 
 SECRET_MARKERS = ("KEY", "TOKEN", "SECRET", "PASSWORD", "CREDENTIAL")
+_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass
@@ -61,7 +63,8 @@ def _version_for(command: Sequence[str]) -> str | None:
                 timeout=10,
                 check=False,
             )
-        except Exception:
+        except Exception as exc:
+            _LOGGER.exception("Tool version probe failed (%s)", type(exc).__name__, exc_info=False)
             continue
         output = (result.stdout or result.stderr).strip()
         if output:

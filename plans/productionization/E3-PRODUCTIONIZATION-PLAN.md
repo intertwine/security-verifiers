@@ -168,6 +168,7 @@ Key features:
 ```python
 class VulnerabilityExample(BaseModel):
     """Pydantic model for vulnerability dataset entries."""
+
     id: str  # e.g., "cve-2023-12345-sql-injection"
     language: Literal["python"]  # Expand later: "javascript", "java", "go"
     cwe_id: Optional[str]  # e.g., "CWE-89"
@@ -373,11 +374,7 @@ def load_environment(
         include_tools: Enable tool access
         logger: Optional rollout logger
     """
-    dataset = load_vulnerability_dataset(
-        name=dataset_name,
-        source=dataset_source,
-        max_examples=max_examples
-    )
+    dataset = load_vulnerability_dataset(name=dataset_name, source=dataset_source, max_examples=max_examples)
     # ... rest of environment setup
 ```
 
@@ -535,6 +532,7 @@ def run_bandit(code: str) -> Dict[str, Any]:
     """Run Bandit SAST on Python code snippet."""
     # Write to temp file, run bandit, parse JSON output
     # Return normalized findings with CWE mappings
+
 
 # environments/sv-env-code-vulnerability/adapters/semgrep_adapter.py
 def run_semgrep(code: str, rules: str = "p/python") -> Dict[str, Any]:
@@ -865,6 +863,7 @@ Other CWEs:                           8%
 ```python
 # sv_shared/dataset_loader.py additions for E3
 
+
 def load_vulnerability_dataset(
     name: str | None = None,
     source: Literal["auto", "local", "hub", "synthetic"] = "auto",
@@ -904,6 +903,7 @@ def load_vulnerability_dataset(
 
 ```python
 # scripts/eval_code_vulnerability.py
+
 
 def evaluate_code_vulnerability(
     models: List[str],
@@ -948,6 +948,7 @@ def evaluate_code_vulnerability(
 
 ```python
 # scripts/generate_e3_eval_report.py
+
 
 def generate_e3_report(run_ids: List[str]) -> Dict[str, Any]:
     """Generate comprehensive E3 evaluation report."""

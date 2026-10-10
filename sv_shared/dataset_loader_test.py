@@ -130,15 +130,13 @@ class TestLoadFromHub:
 
     def test_load_without_credentials(self) -> None:
         """Test loading from Hub without HF_TOKEN raises ValueError."""
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="HF_TOKEN not found"):
-                _load_from_hub("iot23-train-dev-test-v1.jsonl")
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError, match="HF_TOKEN not found"):
+            _load_from_hub("iot23-train-dev-test-v1.jsonl")
 
     def test_load_unknown_dataset(self) -> None:
         """Test loading unknown dataset raises ValueError."""
-        with patch.dict(os.environ, {"HF_TOKEN": "test_token"}):
-            with pytest.raises(ValueError, match="Unknown dataset"):
-                _load_from_hub("nonexistent.jsonl")
+        with patch.dict(os.environ, {"HF_TOKEN": "test_token"}), pytest.raises(ValueError, match="Unknown dataset"):
+            _load_from_hub("nonexistent.jsonl")
 
     @patch("datasets.load_dataset")
     def test_load_e1_dataset(self, mock_load_dataset: MagicMock) -> None:
@@ -288,13 +286,12 @@ class TestLoadDatasetWithFallback:
 
     def test_auto_no_fallback_raises(self, tmp_path: Path) -> None:
         """Test auto mode raises when no fallback available."""
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(FileNotFoundError, match="Dataset .* not found"):
-                load_dataset_with_fallback(
-                    dataset_name="nonexistent.jsonl",
-                    env_root=tmp_path,
-                    dataset_source="auto",
-                )
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(FileNotFoundError, match="Dataset .* not found"):
+            load_dataset_with_fallback(
+                dataset_name="nonexistent.jsonl",
+                env_root=tmp_path,
+                dataset_source="auto",
+            )
 
     def test_local_mode_requires_file(self, tmp_path: Path) -> None:
         """Test local mode raises when file not found."""
@@ -307,13 +304,12 @@ class TestLoadDatasetWithFallback:
 
     def test_hub_mode_requires_credentials(self, tmp_path: Path) -> None:
         """Test hub mode raises when credentials not available."""
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="HF_TOKEN not found"):
-                load_dataset_with_fallback(
-                    dataset_name="iot23-train-dev-test-v1.jsonl",
-                    env_root=tmp_path,
-                    dataset_source="hub",
-                )
+        with patch.dict(os.environ, {}, clear=True), pytest.raises(ValueError, match="HF_TOKEN not found"):
+            load_dataset_with_fallback(
+                dataset_name="iot23-train-dev-test-v1.jsonl",
+                env_root=tmp_path,
+                dataset_source="hub",
+            )
 
     def test_invalid_source_raises(self, tmp_path: Path) -> None:
         """Test invalid dataset_source raises ValueError."""
@@ -329,7 +325,7 @@ class TestLoadDatasetWithFallback:
         dataset_file = tmp_path / "test.jsonl"
         dataset_file.write_text('{"id": 1}\n')
 
-        dataset, name = load_dataset_with_fallback(
+        dataset, _name = load_dataset_with_fallback(
             dataset_name=str(dataset_file),
             env_root=Path("/different/path"),
             dataset_source="auto",
@@ -369,3 +365,23 @@ class TestHFDatasetMap:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+def test_hub_error_payload_is_omitted_without_changing_fallback(tmp_path, capsys, caplog):
+    private_payload = "fixture-private-input-in-upstream-error"
+    synthetic = Dataset.from_list([{"question": "fixture", "answer": "Benign"}])
+    with (
+        patch("sv_shared.dataset_loader._has_hf_credentials", return_value=True),
+        patch("sv_shared.dataset_loader._load_from_hub", side_effect=RuntimeError(private_payload)),
+    ):
+        dataset, name = load_dataset_with_fallback(
+            dataset_name="unavailable-fixture.jsonl",
+            env_root=tmp_path,
+            dataset_source="auto",
+            synthetic_generator=lambda: synthetic,
+        )
+    captured = capsys.readouterr()
+    assert dataset is synthetic
+    assert name == "synthetic::unavailable-fixture.jsonl"
+    assert "Failed to load from Hub: RuntimeError" in captured.out
+    assert private_payload not in captured.out + captured.err + caplog.text

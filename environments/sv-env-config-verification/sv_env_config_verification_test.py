@@ -10,6 +10,13 @@ from typing import Any
 import pytest
 import verifiers as vf
 
+from adapters import kubelinter_adapter, opa_adapter, semgrep_adapter
+from adapters.types import ToolFinding, Violation
+from mapping import normalize_findings
+from oracle import load_golden_oracle
+from patching import try_apply_patch
+from reward import final_reward
+from schema import parse_model_output
 from sv_env_config_verification import (
     ConfigVerificationParser,
     load_environment,
@@ -18,13 +25,6 @@ from sv_env_config_verification import (
     run_semgrep,
     tool_observation_reward,
 )
-from adapters import kubelinter_adapter, opa_adapter, semgrep_adapter
-from adapters.types import ToolFinding, Violation
-from mapping import normalize_findings
-from oracle import load_golden_oracle
-from patching import try_apply_patch
-from reward import final_reward
-from schema import parse_model_output
 
 
 class TestConfigVerification:
@@ -551,6 +551,21 @@ class TestSchema:
 
 class TestReward:
     """Tests for reward calculation."""
+
+    def test_repeating_correct_finding_does_not_inflate_partial_detection(self) -> None:
+        """Repeating a known rule cannot hide a missed oracle rule."""
+        correct = Violation(id="kube-linter/test1", severity="high")
+        oracle = [correct, Violation(id="kube-linter/test2", severity="high")]
+        assert final_reward([correct] * 100, oracle) == final_reward([correct], oracle)
+
+    def test_duplicate_false_positive_penalty_is_order_independent(self) -> None:
+        """A repeated false finding uses its strongest severity once."""
+        correct = Violation(id="kube-linter/test1", severity="high")
+        low = Violation(id="kube-linter/false1", severity="low")
+        high = Violation(id="kube-linter/false1", severity="high")
+        expected = final_reward([correct, high], [correct])
+        assert final_reward([correct, high, low], [correct]) == expected
+        assert final_reward([correct, low, high], [correct]) == expected
 
     def test_perfect_detection(self) -> None:
         """Test reward for perfect detection."""

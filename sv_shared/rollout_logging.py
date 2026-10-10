@@ -26,8 +26,9 @@ from __future__ import annotations
 import importlib
 import logging
 import threading
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
-from typing import Any, Callable, List, Mapping, Sequence
+from typing import Any
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ class RolloutLoggingConfig:
     wandb_run_name: str | None = None
     wandb_config: Mapping[str, Any] = field(default_factory=dict)
     default_tags: Sequence[str] = field(default_factory=tuple)
-    step_filter: Callable[["RolloutLoggingState"], bool] | None = None
+    step_filter: Callable[[RolloutLoggingState], bool] | None = None
     episode_filter: Callable[[Mapping[str, Any]], bool] | None = None
 
 
@@ -114,7 +115,7 @@ class RolloutLogger:
     def __init__(self, config: RolloutLoggingConfig | None = None) -> None:
         self._config = config or RolloutLoggingConfig()
         self._lock = threading.Lock()
-        self._events: List[RolloutLoggingState] = []
+        self._events: list[RolloutLoggingState] = []
         self._weave_module: Any | None = None
         self._weave_log_fn: Callable[[Mapping[str, Any]], Any] | None = None
         self._wandb_module: Any | None = None
@@ -351,13 +352,13 @@ class RolloutLogger:
             try:
                 self._weave_log_fn(payload)
             except Exception as exc:  # pragma: no cover - defensive logging
-                _LOGGER.debug("Failed to log payload to Weave: %s", exc)
+                _LOGGER.exception("Failed to log payload to Weave (%s)", type(exc).__name__, exc_info=False)
 
         if self._wandb_module and hasattr(self._wandb_module, "log"):
             try:
                 self._wandb_module.log(dict(payload))
             except Exception as exc:  # pragma: no cover - defensive logging
-                _LOGGER.debug("Failed to log payload to wandb: %s", exc)
+                _LOGGER.exception("Failed to log payload to wandb (%s)", type(exc).__name__, exc_info=False)
 
 
 DEFAULT_ROLLOUT_LOGGING_CONFIG = RolloutLoggingConfig(
@@ -392,9 +393,9 @@ def build_rollout_logger(
 
 
 __all__ = [
+    "DEFAULT_ROLLOUT_LOGGING_CONFIG",
     "RolloutLogger",
     "RolloutLoggingConfig",
     "RolloutLoggingState",
-    "DEFAULT_ROLLOUT_LOGGING_CONFIG",
     "build_rollout_logger",
 ]

@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "launch_ready": false,
+  "billing": {
+    "workspace_id": "cmf0ohr9s0026ilerf3w68s6p",
+    "endpoint": null,
+    "api_key_env": "PRIME_API_KEY",
+    "hard_cap_usd": 0,
+    "input_usd_per_million": null,
+    "output_usd_per_million": null,
+    "fixed_charges_usd": null,
+    "quote_source": null,
+    "quote_checked_at": null,
+    "token_only_billing_verified": false,
+    "workspace_scope_verified": false,
+    "request_headers": {
+      "X-Prime-Team-ID": "cmf0ohr9s0026ilerf3w68s6p"
+    }
+  },
+  "environments": {
+    "e1": {
+      "environment": "e1",
+      "case_count": 200,
+      "dataset": "outputs/completion_20261010/e1_candidate_freeze/cases.jsonl",
+      "manifest": "outputs/completion_20261010/e1_candidate_freeze/manifest.json",
+      "system_prompt_file": "configs/eval/preserved-e1-system-20261010.txt",
+      "tool_versions": {},
+      "policies": [
+        {
+          "role": "base",
+          "model": null,
+          "base_revision": null,
+          "identity_evidence": null,
+          "adapter_sha256": null,
+          "training_run_id": null,
+          "candidate_base_model": "Qwen/Qwen3.5-2B",
+          "candidate_base_revision": "15852e8c16360a2fea060d615a32b45270f8a8fc"
+        },
+        {
+          "role": "exec",
+          "model": null,
+          "base_revision": null,
+          "identity_evidence": null,
+          "adapter_sha256": "55afd65a082d4d7b37ecb40ad07d40abd3184d087211f1d026361efb3ce3ae99",
+          "training_run_id": "bp6qd19u06wzeqkdrf0h24xx",
+          "candidate_base_model": "Qwen/Qwen3.5-2B",
+          "candidate_base_revision": "15852e8c16360a2fea060d615a32b45270f8a8fc"
+        },
+        {
+          "role": "judge",
+          "model": null,
+          "base_revision": null,
+          "identity_evidence": null,
+          "adapter_sha256": "a448ecd6e64d3f1a018f297c2619498ea1a263ec529b268f86af647e056b6e26",
+          "training_run_id": "j1i1ys9rpdcluvtqneql2o4l",
+          "candidate_base_model": "Qwen/Qwen3.5-2B",
+          "candidate_base_revision": "15852e8c16360a2fea060d615a32b45270f8a8fc"
+        }
+      ],
+      "limits": {
+        "input_tokens_per_request": 32768,
+        "output_tokens_per_episode": 2048,
+        "requests_per_episode": 1,
+        "turns_per_episode": 1,
+        "tool_calls_per_episode": 0,
+        "tool_seconds": 30,
+        "episode_seconds": 120,
+        "request_seconds": 60
+      },
+      "case_independence_verified": false,
+      "scientific_review_evidence": null,
+      "analysis": {
+        "primary": "expected_cost",
+        "loss": {
+          "false_negative": 10,
+          "false_positive": 1,
+          "abstain": 1,
+          "invalid": 10
+        },
+        "bootstrap_seed": 20261010,
+        "bootstrap_unit": "independent_case"
+      }
+    },
+    "e2": {
+      "environment": "e2",
+      "case_count": 100,
+      "dataset": "outputs/completion_20261010/e2_candidate_freeze_builtin_excluded/cases.jsonl",
+      "manifest": "outputs/completion_20261010/e2_candidate_freeze_builtin_excluded/manifest.json",
+      "system_prompt_file": "configs/eval/preserved-e2-system-20261010.txt",
+      "tool_versions": {},
+      "policies": [
+        {
+          "role": "base",
+          "model": null,
+          "base_revision": null,
+          "identity_evidence": null,
+          "adapter_sha256": null,
+          "training_run_id": null,
+          "candidate_base_model": "Qwen/Qwen3.5-9B",
+          "candidate_base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a"
+        },
+        {
+          "role": "exec",
+          "model": null,
+          "base_revision": null,
+          "identity_evidence": null,
+          "adapter_sha256": "ee3822b5d1bb4e770b322638579d49e1de95d3b57f9c4322fc27a97ef4440d1c",
+          "training_run_id": "hu1j9b61il8dydv2bh1aj97d",
+          "candidate_base_model": "Qwen/Qwen3.5-9B",
+          "candidate_base_revision": "c202236235762e1c871ad0ccb60c8ee5ba337b9a"
+        }
+      ],
+      "limits": {
+        "input_tokens_per_request": 32768,
+        "output_tokens_per_episode": 4096,
+        "requests_per_episode": 5,
+        "turns_per_episode": 5,
+        "tool_calls_per_episode": 3,
+        "tool_seconds": 30,
+        "episode_seconds": 120,
+        "request_seconds": 60
+      },
+      "case_independence_verified": false,
+      "scientific_review_evidence": null,
+      "semgrep_rules": null,
+      "analysis": {
+        "primary": "verified_patch_success_without_semantic_regression",
+        "bootstrap_seed": 20261010,
+        "bootstrap_unit": "independent_case"
+      }
+    }
+  }
+}

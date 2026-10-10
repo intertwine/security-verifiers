@@ -394,11 +394,7 @@ os.environ["E2_HF_REPO"] = "your-org/security-verifiers-e2-private"
 print("Testing E1 (Network Logs)...")
 from sv_env_network_logs import load_environment as load_e1
 
-env_e1 = load_e1(
-    dataset_name="iot23-train-dev-test-v1.jsonl",
-    dataset_source="hub",
-    max_examples=10
-)
+env_e1 = load_e1(dataset_name="iot23-train-dev-test-v1.jsonl", dataset_source="hub", max_examples=10)
 print(f"✅ E1: Loaded {len(env_e1.dataset)} examples")
 print(f"   First example keys: {list(env_e1.dataset[0].keys())}")
 
@@ -406,11 +402,7 @@ print(f"   First example keys: {list(env_e1.dataset[0].keys())}")
 print("\nTesting E2 (Config Verification)...")
 from sv_env_config_verification import load_environment as load_e2
 
-env_e2 = load_e2(
-    dataset_name="k8s-labeled-v1.jsonl",
-    dataset_source="hub",
-    max_examples=10
-)
+env_e2 = load_e2(dataset_name="k8s-labeled-v1.jsonl", dataset_source="hub", max_examples=10)
 print(f"✅ E2: Loaded {len(env_e2.dataset)} examples")
 print(f"   First example keys: {list(env_e2.dataset[0].keys())}")
 
@@ -437,11 +429,7 @@ os.environ["E1_HF_REPO"] = "your-org/security-verifiers-e1-private"
 os.environ["E2_HF_REPO"] = "your-org/security-verifiers-e2-private"
 
 # Load E1 from Hub
-env = vf.load_environment(
-    "your-org/sv-env-network-logs",
-    dataset_source="hub",
-    max_examples=100
-)
+env = vf.load_environment("your-org/sv-env-network-logs", dataset_source="hub", max_examples=100)
 ```
 
 ### With vf-eval

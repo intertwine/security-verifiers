@@ -14,7 +14,7 @@ build build-env build-utils deploy update-version update-utils-version hub-valid
 eval eval-e1 eval-e2 report-network-logs e1 e2 e3 e4 e5 e6 \
 baseline-e1 baseline-e2 \
 lab-check lab-run-e1 lab-run-e1-judge lab-run-e2 env-eval-e1 env-eval-e2 config-validate svbench-v0.1-check suite-v1-check eval-e3 eval-e4 eval-e5 eval-e6 \
-prime-models prime-plan-research-claim \
+prime-models prime-plan-research-claim preserved-eval-check preserved-eval-run \
 \
 data-e1 data-e1-ood data-e1-test data-e2 data-e2-local data-e2-test data-all data-test-all data-public-mini clone-e2-sources \
 hf-e1-meta hf-e2-meta hf-e1-push hf-e2-push hf-e1p-meta hf-e2p-meta hf-e1p-push hf-e2p-push hf-push-all \
@@ -34,6 +34,8 @@ export UV_PYTHON := python3.12
 TEAM ?= intertwine
 PRIME_TRAIN_FLAGS ?= --plain
 PRIME_SECRET_FLAGS ?=
+PRESERVED_PACKET ?= configs/eval/preserved-primary-20261010.json
+PRESERVED_OUTPUT ?= outputs/evals/preserved-primary-20261010
 
 # Version bump type for deployments (patch, minor, major, or none)
 BUMP ?= patch
@@ -109,6 +111,8 @@ help:
 	@$(ECHO) "  make env-eval-e2 MODEL=... TEAM=intertwine N=50   - Prime eval wrapper for E2"
 	@$(ECHO) "  make prime-models                                 - List available hosted-training models"
 	@$(ECHO) "  make prime-plan-research-claim PROFILE=pilot      - Generate matched launch configs"
+	@$(ECHO) "  make preserved-eval-check                        - Inspect bounded E1/E2 recovery packet offline"
+	@$(ECHO) "  make preserved-eval-run                          - Execute a fully verified, capped recovery packet"
 	@$(ECHO) "  make config-validate                              - Validate eval/RL/ablation configs"
 	@$(ECHO) "  make svbench-v0.1-check                           - Validate SV-Bench v0.1 release package"
 	@$(ECHO) "  make suite-v1-check                               - Validate suite v1 completion checklist"
@@ -974,6 +978,12 @@ config-validate: venv
 
 prime-models: venv
 	@$(ACTIVATE) && prime train models --output json --plain
+
+preserved-eval-check: venv
+	@$(ACTIVATE) && python scripts/run_preserved_evaluation.py --packet "$(PRESERVED_PACKET)"
+
+preserved-eval-run: venv
+	@$(ACTIVATE) && python scripts/run_preserved_evaluation.py --packet "$(PRESERVED_PACKET)" --output "$(PRESERVED_OUTPUT)" --execute
 
 prime-plan-research-claim: venv
 	@PROFILE=$${PROFILE:-pilot}; \

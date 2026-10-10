@@ -46,21 +46,15 @@ from adapters.opa_adapter import opa_eval
 # For Kubernetes YAML
 findings = opa_eval(
     input_data=k8s_yaml_content,
-    policy_paths=[
-        "policies/lib.rego",
-        "policies/kubernetes_security.rego"
-    ],
-    query="data.security.deny"
+    policy_paths=["policies/lib.rego", "policies/kubernetes_security.rego"],
+    query="data.security.deny",
 )
 
 # For Terraform JSON
 findings = opa_eval(
     input_data=terraform_json,
-    policy_paths=[
-        "policies/terraform_lib.rego",
-        "policies/terraform_security.rego"
-    ],
-    query="data.security.deny"
+    policy_paths=["policies/terraform_lib.rego", "policies/terraform_security.rego"],
+    query="data.security.deny",
 )
 ```
 
