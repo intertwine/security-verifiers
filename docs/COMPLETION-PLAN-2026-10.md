@@ -26,6 +26,8 @@ The October preservation audit found 43 personal training records plus 2 evaluat
 
 The older E1 run `kvyp3sz2afit54dv3apgoozp` is documented as completed at 200 steps in the Q1 roadmap and confirmed in the preserved account evidence. Its recorded debugging/version history must accompany any analysis; recovery of a final adapter alone does not establish a clean before/after experiment.
 
+Every exported evaluation object and sample was inspected. The 170 team objects preserve E1/E2 dataset-like snapshots without model outputs, model identity, linked runs or evaluation configuration; split provenance is unknown. The two personal objects contain E5/E6 Claude evaluations outside v0.1. No usable held-out E1/E2 policy comparison was recovered from these objects. Private per-object inventories retain version joins, fingerprints and source candidates for recovering original data provenance.
+
 Current May evidence has specific limits:
 
 - E1 judge uses a different hosted environment/version from executable and hybrid. It remains exploratory unless a controlled comparison is recovered elsewhere.

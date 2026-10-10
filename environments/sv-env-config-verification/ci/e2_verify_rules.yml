@@ -68,7 +68,13 @@ jobs:
       - name: Install Semgrep
         run: |
           source ci/versions.txt
-          pip install semgrep==${SEMGREP_VERSION}
+          python -m venv "${RUNNER_TEMP}/sv-semgrep"
+          "${RUNNER_TEMP}/sv-semgrep/bin/python" -m pip install \
+            "semgrep==${SEMGREP_VERSION}" "pydantic==${SEMGREP_PYDANTIC_VERSION}"
+          mkdir -p "${RUNNER_TEMP}/sv-tools-bin"
+          ln -sf "${RUNNER_TEMP}/sv-semgrep/bin/semgrep" "${RUNNER_TEMP}/sv-tools-bin/semgrep"
+          echo "${RUNNER_TEMP}/sv-tools-bin" >> "$GITHUB_PATH"
+          "${RUNNER_TEMP}/sv-semgrep/bin/semgrep" --version
 
       - name: Validate OPA policies
         run: |
