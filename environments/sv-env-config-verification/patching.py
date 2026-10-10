@@ -4,16 +4,125 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Literal, Tuple
+from typing import Literal
+
+import yaml
 
 PatchFormat = Literal["unified-diff", "json-patch"]
 
 
 class PatchError(RuntimeError):
     """Raised when a patch cannot be applied."""
+
+
+def preserves_config_structure(original: str, patched: str, fixture_type: str) -> bool:
+    """Reject resource/container deletion before awarding scanner-removal credit.
+
+    This is a structural safeguard, not a proof of functional equivalence.
+    """
+    if not patched.strip():
+        return False
+    if fixture_type == "tf":
+        resource = re.compile(r'^\s*resource\s+"([^"\n]+)"\s+"([^"\n]+)"\s*\{', re.MULTILINE)
+
+        def without_comments(text: str) -> str:
+            # HCL comment delimiters inside strings are literal text. Replace
+            # real comments with whitespace so inactive declarations cannot
+            # count as retained resources or concatenate neighboring tokens.
+            output: list[str] = []
+            index = 0
+            quoted = False
+            while index < len(text):
+                char = text[index]
+                if quoted:
+                    if char in "\r\n":
+                        return ""  # HCL quoted strings cannot span raw lines.
+                    output.append(char)
+                    index += 1
+                    if char == "\\" and index < len(text):
+                        output.append(text[index])
+                        index += 1
+                    elif char == '"':
+                        quoted = False
+                elif char == '"':
+                    quoted = True
+                    output.append(char)
+                    index += 1
+                elif text.startswith("<<", index):
+                    # This guard is not an HCL parser. Fail closed on heredocs
+                    # rather than treating resource-looking string contents as
+                    # active declarations.
+                    return ""
+                elif text.startswith("/*", index):
+                    end = text.find("*/", index + 2)
+                    if end < 0:
+                        return ""
+                    output.extend("\n" if c == "\n" else " " for c in text[index : end + 2])
+                    index = end + 2
+                elif char == "#" or text.startswith("//", index):
+                    end = text.find("\n", index)
+                    if end < 0:
+                        break
+                    output.append("\n")
+                    index = end + 1
+                else:
+                    output.append(char)
+                    index += 1
+            return "" if quoted else "".join(output)
+
+        before = set(resource.findall(without_comments(original)))
+        after = set(resource.findall(without_comments(patched)))
+        return bool(before) and before <= after
+    if fixture_type != "k8s":
+        return False
+
+    def identities(text: str) -> dict[tuple[str, ...], set[tuple[tuple[str, ...], str]]]:
+        resources = {}
+        for doc in yaml.safe_load_all(text):
+            if not isinstance(doc, dict):
+                raise TypeError("expected Kubernetes resource")
+            docs = doc.get("items", []) if doc.get("kind") == "List" else [doc]
+            for item in docs:
+                metadata = item.get("metadata", {})
+                identity = (
+                    item["apiVersion"],
+                    item["kind"],
+                    metadata.get("namespace", "default"),
+                    metadata["name"],
+                )
+                containers: set[tuple[tuple[str, ...], str]] = set()
+
+                def collect(
+                    value: object,
+                    names: set[tuple[tuple[str, ...], str]],
+                    path: tuple[str, ...] = (),
+                ) -> None:
+                    if isinstance(value, dict):
+                        for key, child in value.items():
+                            if key in {"containers", "initContainers", "ephemeralContainers"}:
+                                for container in child:
+                                    names.add(((*path, key), container["name"]))
+                            else:
+                                collect(child, names, (*path, key))
+                    elif isinstance(value, list):
+                        for index, child in enumerate(value):
+                            collect(child, names, (*path, str(index)))
+
+                collect(item, containers)
+                if identity in resources:
+                    raise ValueError("duplicate Kubernetes resource")
+                resources[identity] = containers
+        return resources
+
+    try:
+        before, after = identities(original), identities(patched)
+        return bool(before) and all(key in after and names <= after[key] for key, names in before.items())
+    except (yaml.YAMLError, KeyError, TypeError, AttributeError, ValueError):
+        return False
 
 
 def detect_patch_format(patch: str) -> PatchFormat:
@@ -114,7 +223,7 @@ def apply_json_patch(obj: dict, patch_ops: list[dict]) -> object:
     return data
 
 
-def try_apply_patch(path: str, patch: str) -> Tuple[bool, str]:
+def try_apply_patch(path: str, patch: str) -> tuple[bool, str]:
     """Apply ``patch`` to the file at ``path`` and return ``(applied, text)``."""
 
     original = Path(path).read_text(encoding="utf-8")
@@ -134,10 +243,10 @@ def try_apply_patch(path: str, patch: str) -> Tuple[bool, str]:
 
 
 __all__ = [
-    "PatchFormat",
     "PatchError",
-    "detect_patch_format",
-    "apply_patch_to_text",
+    "PatchFormat",
     "apply_json_patch",
+    "apply_patch_to_text",
+    "detect_patch_format",
     "try_apply_patch",
 ]

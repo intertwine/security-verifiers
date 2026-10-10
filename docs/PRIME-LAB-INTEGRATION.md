@@ -1,6 +1,18 @@
 # Prime Lab Integration for Hosted Training and Evaluation
 
-This document defines the GA hosted-training, hosted-evaluation, fallback hosted-style eval, and local eval workflow for SV-Bench E1/E2.
+This document records the hosted-training, hosted-evaluation, fallback hosted-style eval, and local eval workflow for SV-Bench E1/E2.
+
+## October 2026 platform transition
+
+Prime's [current training documentation](https://docs.primeintellect.ai/hosted-training/models-and-pricing) says shared LoRA training stopped accepting new runs on October 8, 2026. Dedicated training is in closed beta. The legacy launch examples below document historical runs; verify current access and APIs before attempting new training. Existing adapters remain downloadable and deployable [until further notice](https://docs.primeintellect.ai/inference/adapter-deployments).
+
+Legacy evaluation/training sample storage retires November 6, 2026. [Request and download an export](https://docs.primeintellect.ai/traces/legacy-storage) separately in each personal/team workspace. Sample archives exclude model adapters/checkpoints and cannot be uploaded directly as Prime Traces import packages. The October preservation task downloaded both accessible workspace archives and ten adapters; raw research copies remain private.
+
+[Prime Traces charges](https://docs.primeintellect.ai/traces/pricing-and-settings) are $1/GiB ingested and $0.10/GiB/month retained, billed hourly, with no request/egress fees. Workspace uploads default to On. Keep authoritative local artifacts and a bounded hosted retention policy. Account-level opt-out also disables SDK/CLI trace reads; it does not delete retained traces.
+
+For a single run/client, Prime CLI v0.9.4 documents `prime_runs.init(..., traces_opt_out=True)`, `PRIME_TRACES_OPT_OUT=true`, and `prime config set-traces-opt-out true`. Verify installed SDK support before using them. These controls route samples to legacy storage while it remains available; they are a temporary transition mechanism, not permanent free storage after November 6. Standalone Traces API permissions remain separate. For offline analysis, do not initialize an online run at all.
+
+Before resuming paid experiments, follow the [completion plan](COMPLETION-PLAN-2026-10.md): evaluate recovered adapters first, freeze independent evaluation cases, verify model/scorer/backend provenance, and quote a hard budget for any remaining work.
 
 > **Note:** All examples below use `intertwine` as the team slug. Verify yours with `prime whoami`.
 

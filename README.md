@@ -146,8 +146,8 @@ See [plans/ROADMAP-Q1-2026.md](plans/ROADMAP-Q1-2026.md) for current development
 | **WP2**       | Baselines and public mini sets                     | Complete |
 | **WP2.5**     | Prime Lab integration (v0.3.0)                     | Complete |
 | **WP2.5a**    | Hosted-eval fallback parity                        | Complete |
-| **WP3a/WP3b** | Hosted RL proof on E1 and E2                       | Next     |
-| **WP3c**      | Reward-source comparator (executable vs LLM-judge) | Next     |
+| **WP3a/WP3b** | Hosted RL proof on E1 and E2                       | Training recovered; held-out proof pending |
+| **WP3c**      | Reward-source comparator (executable vs LLM-judge) | Exploratory pilots; matched proof pending |
 | **WP4**       | Multi-reward RL stability research                 | Planned  |
 | **WP5**       | SV-Bench v0.1 release + technical report           | Planned  |
 

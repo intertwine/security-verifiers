@@ -46,7 +46,7 @@ from adapters.opa_adapter import opa_eval
 from adapters.semgrep_adapter import semgrep_scan
 from adapters.types import Violation
 from mapping import normalize_findings
-from patching import try_apply_patch
+from patching import preserves_config_structure, try_apply_patch
 from reward import final_reward
 from schema import parse_model_output
 
@@ -586,9 +586,14 @@ def reward_config_auditing(
     post: List[Violation] | None = None
     if patch:
         fixture_path = (answer_obj or {}).get("fixture_path") or kwargs.get("fixture_path") or ""
-        applied, new_text = try_apply_patch(fixture_path, patch)
-        if applied:
-            with tempfile.NamedTemporaryFile("w", delete=False) as tmp:
+        try:
+            original = Path(fixture_path).read_text(encoding="utf-8")
+            applied, new_text = try_apply_patch(fixture_path, patch)
+        except OSError:
+            applied, new_text, original = False, "", ""
+        if applied and preserves_config_structure(original, new_text, fixture_type):
+            suffix = ".yaml" if fixture_type == "k8s" else ".tf"
+            with tempfile.NamedTemporaryFile("w", suffix=suffix, delete=False) as tmp:
                 tmp.write(new_text)
                 tmp_path = tmp.name
             try:

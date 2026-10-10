@@ -5,14 +5,14 @@ from __future__ import annotations
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from adapters.kubelinter_adapter import kubelinter_lint
 from adapters.semgrep_adapter import semgrep_scan
 from adapters.types import Violation
 from mapping import normalize_findings
 from oracle import build_oracle_for_k8s, build_oracle_for_tf
-from patching import try_apply_patch
+from patching import preserves_config_structure, try_apply_patch
 from reward import final_reward
 from schema import parse_model_output
 
@@ -30,18 +30,20 @@ class ConfigAuditingEnv:
         else:
             self.oracle = build_oracle_for_tf([self.fixture_path])
 
-    def reset(self) -> Dict[str, Any]:  # pragma: no cover - simple
+    def reset(self) -> dict[str, Any]:  # pragma: no cover - simple
         """Reset the environment."""
         return {"fixture": self.fixture_path}
 
-    def step(self, model_json: Dict[str, Any]) -> Dict[str, Any]:
+    def step(self, model_json: dict[str, Any]) -> dict[str, Any]:
         """Step the environment."""
         violations_pred, patch, _confidence = parse_model_output(model_json)
-        post: List[Violation] | None = None
+        post: list[Violation] | None = None
         if patch:
             applied, new_text = try_apply_patch(self.fixture_path, patch)
-            if applied:
-                with tempfile.NamedTemporaryFile("w", delete=False) as tmp:
+            original = Path(self.fixture_path).read_text(encoding="utf-8")
+            if applied and preserves_config_structure(original, new_text, self.fixture_type):
+                suffix = ".yaml" if self.fixture_type == "k8s" else ".tf"
+                with tempfile.NamedTemporaryFile("w", suffix=suffix, delete=False) as tmp:
                     tmp.write(new_text)
                     tmp_path = tmp.name
                 if self.fixture_type == "k8s":
@@ -57,7 +59,7 @@ class ConfigAuditingEnv:
             "info": {"oracle": self.oracle, "post": [v.__dict__ for v in (post or [])]},
         }
 
-    def _oracle_violations(self) -> List[Violation]:
+    def _oracle_violations(self) -> list[Violation]:
         return [Violation(id=v["id"], severity=v["severity"]) for v in self.oracle]
 
 

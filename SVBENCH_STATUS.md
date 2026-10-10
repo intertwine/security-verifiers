@@ -38,9 +38,9 @@ E5/E6 offensive or adversarial corpora must not be expanded or publicly released
 
 | Package | Status | Required Outcome |
 |---|---|---|
-| WP3a | Ready to run | Hosted RL proof for E1 executable reward. |
-| WP3b | Ready to run | Hosted RL proof for E2 executable reward. |
-| WP3c | Configured | Reward-source comparator for executable, LLM-judge, and hybrid rewards. |
+| WP3a | Training recovered; held-out proof pending | Completed E1 runs and adapters preserved; establish independent before/after operational deltas. |
+| WP3b | Pilot and older training recovered; held-out proof pending | Preserve E2 tool/backend limitations; establish verified before/after task performance. |
+| WP3c | Exploratory pilots recovered | E1 judge environment differs; controlled common-evaluator comparison remains required. |
 | WP4 | Planned | Multi-reward stability ablations. |
 | WP5 | In progress | SV-Bench v0.1 release package and technical report. |
 
@@ -53,9 +53,17 @@ E5/E6 offensive or adversarial corpora must not be expanded or publicly released
 - README, `SVBENCH.md`, status, roadmap, scoreboards, and technical report all state that v0.1 includes E1/E2 only.
 - E5/E6 unsafe or offensive corpora are absent from public release artifacts.
 
+These packaging checks do not establish the original empirical proof. Research completion also requires E1/E2 learning evidence, independent held-out operational improvement and a matched E1 executable/judge comparison with common evaluator, immutable provenance and audited disjoint splits. `scripts/check_svbench_v01.py --research-complete` checks that evidence separately; it currently fails because authentic completion evidence has not yet been assembled. See [the completion plan](docs/COMPLETION-PLAN-2026-10.md).
+
+## October 2026 Preservation and Completion
+
+Both Prime legacy workspace exports were downloaded before the November 6 retirement. They preserve 70 training records and 172 evaluation datasets. All 123 committed curated samples match the exported shared fields; each curated E1 run has 160 archived samples across five steps. Ten model adapters were saved separately because sample exports exclude model weights. Raw exports and reconstructed records remain private, outside tracked release artifacts.
+
+The offline importer preserves repeated historical IDs with member/row provenance. Recovered training samples and source-specific reward curves remain training diagnostics, not independent evaluations. E2 duplicate-finding reward inflation and structural deletion bypasses now have focused guards and regression coverage; these guards do not prove functional equivalence, and historical results retain their original scorer behavior.
+
 ## Known Blockers and Unknowns
 
-- Hosted training budget/results are not included until runs are actually launched and manifests are attached.
+- Hosted training has occurred; preserved results still lack sufficient immutable provenance and common held-out evidence for the original research claims.
 - GDPO support is represented as a clearly named decoupled-normalization placeholder until runtime support is confirmed.
 - Prime Lab CLI naming can drift; `make lab-check` is the compatibility gate before live hosted runs.
 - E2 semantic patch preservation is the highest-risk scoring area and must be re-reviewed before using results in a paper claim.

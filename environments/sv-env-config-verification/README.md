@@ -394,6 +394,25 @@ The environment includes:
 - **Terraform configurations**: AWS, GCP, Azure resources with misconfigurations
 - **Oracle labels**: Ground-truth violations from tool outputs for validation
 
+Detection reward counts each violation ID once. Repeating a correct finding does
+not increase recall or F1; repeated false findings use their highest reported
+severity once, independent of output order. This prevents duplicate findings
+from inflating partial-detection scores.
+
+Patch-removal credit requires retained Kubernetes resource identities and named
+containers at their original structural paths, or retained Terraform resource
+declarations. Empty, malformed
+Kubernetes, resource-deleting, and container-deleting patches receive no patch
+bonus. Missing local fixture files also receive no patch bonus. This structural
+guard does not prove functional equivalence or rule out unrelated over-fixing;
+semantic preservation still requires separate evaluation. Post-patch scans use
+the original configuration's file extension.
+Terraform declarations inside block or line comments do not count as retained
+resources; comment-like text inside quoted strings remains literal text.
+The structural Terraform guard conservatively withholds patch credit when either
+configuration contains heredoc syntax, because it does not parse HCL. Detection
+reward remains available for those configurations.
+
 ## Future Improvements
 
 - **Expanded Tool Suite**: Add Checkov, Terrascan, and Trivy
