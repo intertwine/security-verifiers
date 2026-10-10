@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 import pytest
 import verifiers as vf
+
 from sv_env_redteam_attack import (
     RedTeamAttackParser,
     _build_scenarios,

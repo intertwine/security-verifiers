@@ -51,11 +51,7 @@ import verifiers as vf
 env = vf.load_environment("intertwine/sv-env-redteam-attack")
 
 # Evaluate a red-team model
-results = env.evaluate(
-    client=vf.OpenAIClient(),
-    model="gpt-5-mini",
-    num_examples=10
-)
+results = env.evaluate(client=vf.OpenAIClient(), model="gpt-5-mini", num_examples=10)
 
 print(f"Average reward: {results.stats['mean_reward']:.2%}")
 print(f"Success rate: {results.stats.get('success_rate', 0):.2%}")
@@ -132,11 +128,7 @@ weave.init(project="redteam-attack")
 
 # Load and evaluate
 env = vf.load_environment("intertwine/sv-env-redteam-attack")
-results = env.evaluate(
-    client=vf.OpenAIClient(),
-    model="gpt-5-mini",
-    num_examples=50
-)
+results = env.evaluate(client=vf.OpenAIClient(), model="gpt-5-mini", num_examples=50)
 
 # Results automatically traced to W&B
 ```
@@ -166,12 +158,7 @@ weave.init(project="redteam-eval")
 env = vf.load_environment("intertwine/sv-env-redteam-attack")
 
 # Evaluate attack strategies
-results = env.evaluate(
-    client=vf.OpenAIClient(),
-    model="gpt-5-mini",
-    num_examples=100,
-    seed=42
-)
+results = env.evaluate(client=vf.OpenAIClient(), model="gpt-5-mini", num_examples=100, seed=42)
 
 print(f"Mean Reward: {results.stats['mean_reward']:.2%}")
 print(f"Success Rate: {results.stats.get('success_rate', 0):.2%}")

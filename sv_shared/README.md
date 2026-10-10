@@ -43,9 +43,7 @@ dataset = load_dataset_with_fallback(
 ```python
 from sv_shared import JsonClassificationParser
 
-parser = JsonClassificationParser(
-    allowed_labels=["Benign", "Malicious", "Abstain"]
-)
+parser = JsonClassificationParser(allowed_labels=["Benign", "Malicious", "Abstain"])
 
 # Parse and validate JSON response
 result = parser(response)
@@ -63,18 +61,11 @@ from sv_shared import (
 )
 
 # Accuracy reward (0.0 to 1.0)
-acc_reward = reward_accuracy(
-    predicted="Malicious",
-    ground_truth="Malicious",
-    abstain_label="Abstain"
-)
+acc_reward = reward_accuracy(predicted="Malicious", ground_truth="Malicious", abstain_label="Abstain")
 
 # Calibration reward (encourages well-calibrated confidence)
 cal_reward = reward_calibration(
-    predicted="Malicious",
-    ground_truth="Malicious",
-    confidence=0.85,
-    abstain_label="Abstain"
+    predicted="Malicious", ground_truth="Malicious", confidence=0.85, abstain_label="Abstain"
 )
 
 # Asymmetric cost (penalizes false negatives more than false positives)
@@ -82,8 +73,8 @@ cost_reward = reward_asymmetric_cost(
     predicted="Benign",
     ground_truth="Malicious",
     fn_cost=10.0,  # False negative cost
-    fp_cost=1.0,   # False positive cost
-    abstain_label="Abstain"
+    fp_cost=1.0,  # False positive cost
+    abstain_label="Abstain",
 )
 ```
 
@@ -93,11 +84,13 @@ cost_reward = reward_asymmetric_cost(
 from sv_shared import build_rollout_logger
 
 # Build logger with Weave and W&B backends
-logger = build_rollout_logger({
-    "weave_project": "my-project",
-    "wandb_project": "my-project",
-    "wandb_entity": "my-org",
-})
+logger = build_rollout_logger(
+    {
+        "weave_project": "my-project",
+        "wandb_project": "my-project",
+        "wandb_entity": "my-org",
+    }
+)
 
 # Use with environment
 env = load_environment(logger=logger)

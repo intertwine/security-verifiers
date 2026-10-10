@@ -203,9 +203,7 @@ python scripts/analyze_results.py \
        if vuln_type == "privileged_container":
            config["spec"]["containers"][0]["securityContext"]["privileged"] = True
        elif vuln_type == "exposed_secret":
-           config["spec"]["containers"][0]["env"].append({
-               "name": "API_KEY", "value": "hardcoded-secret-123"
-           })
+           config["spec"]["containers"][0]["env"].append({"name": "API_KEY", "value": "hardcoded-secret-123"})
        return config
    ```
 
@@ -215,9 +213,7 @@ python scripts/analyze_results.py \
    # Use GPT-4o with tool-calling to generate oracle data
    tools = [run_kubelinter, run_semgrep, run_opa]
    response = client.chat.completions.create(
-       model="gpt-4o",
-       messages=[{"role": "user", "content": audit_prompt}],
-       tools=tools
+       model="gpt-4o", messages=[{"role": "user", "content": audit_prompt}], tools=tools
    )
    # Extract violations and patches from tool outputs
    ```
@@ -277,10 +273,7 @@ python scripts/analyze_tool_usage.py \
 
    ```python
    # Inject common vulnerabilities into clean code
-   vulnerabilities = [
-       "sql_injection", "buffer_overflow", "xss",
-       "path_traversal", "insecure_deserialization"
-   ]
+   vulnerabilities = ["sql_injection", "buffer_overflow", "xss", "path_traversal", "insecure_deserialization"]
    # Use mutation-based fuzzing to create vulnerable variants
    ```
 
@@ -431,7 +424,7 @@ python scripts/analyze_results.py \
    templates = [
        "role_play: 'Act as a {role} who needs to...'",
        "hypothetical: 'In a fictional scenario where...'",
-       "obfuscation: '{behavior} but using code/metaphor/foreign language'"
+       "obfuscation: '{behavior} but using code/metaphor/foreign language'",
    ]
    ```
 
@@ -617,6 +610,7 @@ For all environments:
 from openai import OpenAI
 from sv_shared import build_rollout_logger
 
+
 def distill_examples(env_name, task_prompts, n_examples=1000):
     client = OpenAI()
     examples = []
@@ -626,9 +620,9 @@ def distill_examples(env_name, task_prompts, n_examples=1000):
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a security expert."},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": prompt},
             ],
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
         )
         example = parse_and_validate(response, env_name)
         examples.append(example)
@@ -688,8 +682,12 @@ model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen3-32B-Instruct")
 
 # LoRA config (parameter-efficient)
 lora_config = LoraConfig(
-    r=16, lora_alpha=32, target_modules=["q_proj", "v_proj"],
-    lora_dropout=0.05, bias="none", task_type="CAUSAL_LM"
+    r=16,
+    lora_alpha=32,
+    target_modules=["q_proj", "v_proj"],
+    lora_dropout=0.05,
+    bias="none",
+    task_type="CAUSAL_LM",
 )
 model = get_peft_model(model, lora_config)
 
@@ -705,7 +703,7 @@ training_args = TrainingArguments(
     save_strategy="epoch",
     evaluation_strategy="epoch",
     bf16=True,
-    report_to="wandb"
+    report_to="wandb",
 )
 
 # Train
@@ -750,12 +748,7 @@ rl_config = {
 }
 
 # Train
-trainer = RLTrainer(
-    policy=policy_model,
-    env=env,
-    config=rl_config,
-    vllm_config={"tensor_parallel_size": 2}
-)
+trainer = RLTrainer(policy=policy_model, env=env, config=rl_config, vllm_config={"tensor_parallel_size": 2})
 trainer.train(num_steps=10000)
 ```
 
@@ -891,11 +884,11 @@ Evaluate → Analyze failures → Generate targeted data → Fine-tune → Re-ev
 # Categorize failures for targeted improvement
 def analyze_failures(results):
     categories = {
-        "format_errors": [],      # Schema violations
-        "calibration_errors": [], # Overconfident mistakes
-        "tool_errors": [],        # Incorrect tool usage
-        "edge_cases": [],         # Rare/difficult examples
-        "systematic_bias": [],    # Consistent error patterns
+        "format_errors": [],  # Schema violations
+        "calibration_errors": [],  # Overconfident mistakes
+        "tool_errors": [],  # Incorrect tool usage
+        "edge_cases": [],  # Rare/difficult examples
+        "systematic_bias": [],  # Consistent error patterns
     }
 
     for example in results:
@@ -956,7 +949,7 @@ wandb.init(
         "learning_rate": 2e-5,
         "batch_size": 4,
         "epochs": 3,
-    }
+    },
 )
 
 # Log metrics during training
@@ -1343,10 +1336,12 @@ ENVIRONMENTS = [
     ("redteam-defense", 100),
 ]
 
+
 def run_eval(env, model, n):
     cmd = f"make eval-{env.split('-')[0]} MODELS={model} N={n}"
     print(f"Running: {cmd}")
     subprocess.run(cmd, shell=True, check=True)
+
 
 if __name__ == "__main__":
     for env, n in ENVIRONMENTS:
@@ -1371,6 +1366,7 @@ import json
 from openai import OpenAI
 from tqdm import tqdm
 
+
 def generate_network_logs_examples(client, n=1000):
     """Generate network log anomaly examples using GPT-5."""
     examples = []
@@ -1389,13 +1385,14 @@ def generate_network_logs_examples(client, n=1000):
         response = client.chat.completions.create(
             model="gpt-5",  # Updated to GPT-5 (2025)
             messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
         )
 
         example = json.loads(response.choices[0].message.content)
         examples.append(example)
 
     return examples
+
 
 if __name__ == "__main__":
     client = OpenAI()
@@ -1414,31 +1411,28 @@ if __name__ == "__main__":
 #!/usr/bin/env python3
 """Train SFT model on synthetic data."""
 
-from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    TrainingArguments,
-    Trainer
-)
+from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer
 from peft import LoraConfig, get_peft_model
 from datasets import load_dataset
+
 
 def train_sft(model_name, data_path, output_dir):
     # Load model and tokenizer (2025: use Qwen3-32B or DeepSeek-R1-Distill)
     model = AutoModelForCausalLM.from_pretrained(
         model_name,  # e.g., "Qwen/Qwen3-32B-Instruct" or "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B"
         torch_dtype="auto",
-        device_map="auto"
+        device_map="auto",
     )
     tokenizer = AutoTokenizer.from_pretrained(model_name)
 
     # LoRA config
     lora_config = LoraConfig(
-        r=16, lora_alpha=32,
+        r=16,
+        lora_alpha=32,
         target_modules=["q_proj", "v_proj"],
         lora_dropout=0.05,
         bias="none",
-        task_type="CAUSAL_LM"
+        task_type="CAUSAL_LM",
     )
     model = get_peft_model(model, lora_config)
 
@@ -1456,26 +1450,23 @@ def train_sft(model_name, data_path, output_dir):
         logging_steps=10,
         save_strategy="epoch",
         bf16=True,
-        report_to="wandb"
+        report_to="wandb",
     )
 
     # Train
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=dataset["train"]
-    )
+    trainer = Trainer(model=model, args=training_args, train_dataset=dataset["train"])
     trainer.train()
 
     # Save
     model.save_pretrained(output_dir)
     tokenizer.save_pretrained(output_dir)
 
+
 if __name__ == "__main__":
     train_sft(
         model_name="Qwen/Qwen3-32B-Instruct",  # Updated to Qwen3-32B (2025)
         data_path="data/network-logs/synthetic-v1.jsonl",
-        output_dir="models/qwen3-32b-network-logs-sft"
+        output_dir="models/qwen3-32b-network-logs-sft",
     )
 ```
 
@@ -1505,11 +1496,11 @@ for result_file in results_dir.rglob("results.jsonl"):
 df = pd.DataFrame(all_results)
 
 # Aggregate metrics
-summary = df.groupby(["model", "environment"]).agg({
-    "reward": ["mean", "std"],
-    "accuracy": "mean",
-    "calibration_error": "mean"
-}).round(3)
+summary = (
+    df.groupby(["model", "environment"])
+    .agg({"reward": ["mean", "std"], "accuracy": "mean", "calibration_error": "mean"})
+    .round(3)
+)
 
 print(summary)
 

@@ -82,7 +82,7 @@ Extend the early failure detection system (currently implemented in E1/eval_netw
        type=int,
        default=3,
        help="Stop evaluation after this many consecutive errors (default: 3). "
-            "Set to 0 to disable early stopping.",
+       "Set to 0 to disable early stopping.",
    )
    ```
 
@@ -94,10 +94,7 @@ Extend the early failure detection system (currently implemented in E1/eval_netw
    error_tracker = None
    if args.max_consecutive_errors > 0:
        window_size = max(5, args.max_consecutive_errors)
-       error_tracker = ErrorTracker(
-           max_consecutive_errors=args.max_consecutive_errors,
-           window_size=window_size
-       )
+       error_tracker = ErrorTracker(max_consecutive_errors=args.max_consecutive_errors, window_size=window_size)
    ```
 
 3. **Wrap Multi-Turn Evaluation Call**

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Dict, List, Sequence
 
 from .types import ToolFinding
 
@@ -21,8 +21,8 @@ def semgrep_scan(
     timeout_s: int = 60,
     include: Sequence[str] | None = None,
     exclude: Sequence[str] | None = None,
-    env: Dict[str, str] | None = None,
-) -> List[ToolFinding]:
+    env: dict[str, str] | None = None,
+) -> list[ToolFinding]:
     """Run ``semgrep`` and return findings."""
 
     cmd = [str(semgrep_bin), "--json", "--quiet"]
@@ -56,7 +56,7 @@ def semgrep_scan(
     except json.JSONDecodeError as exc:  # pragma: no cover - defensive
         raise SemgrepError("invalid semgrep output") from exc
 
-    findings: List[ToolFinding] = []
+    findings: list[ToolFinding] = []
     for item in findings_json:
         findings.append(
             ToolFinding(
@@ -73,4 +73,4 @@ def semgrep_scan(
     return findings
 
 
-__all__ = ["semgrep_scan", "SemgrepError"]
+__all__ = ["SemgrepError", "semgrep_scan"]

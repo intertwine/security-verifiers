@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from adapters.kubelinter_adapter import kubelinter_lint
 from adapters.opa_adapter import opa_eval
@@ -24,7 +25,7 @@ def build_oracle_for_tf(paths: Sequence[str], semgrep_rules: Sequence[str] | str
     return to_prd_schema(normalize_findings(findings))
 
 
-def build_oracle_with_opa(input_data: str | Dict[str, Any], policy_paths: Sequence[str]) -> list[dict]:
+def build_oracle_with_opa(input_data: str | dict[str, Any], policy_paths: Sequence[str]) -> list[dict]:
     """Example helper for org-specific OPA policies."""
 
     findings = opa_eval(input_data, policy_paths)
@@ -34,6 +35,7 @@ def build_oracle_with_opa(input_data: str | Dict[str, Any], policy_paths: Sequen
 def load_golden_oracle(path: str) -> list:
     """Load golden oracle violations from a JSON file."""
     import json
+
     from adapters.types import Violation
 
     with open(path, "r") as f:

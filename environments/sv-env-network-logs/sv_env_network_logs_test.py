@@ -6,13 +6,13 @@ from unittest.mock import Mock
 
 import pytest
 import verifiers as vf
-
-from sv_env_network_logs import NetworkLogParser, load_environment
 from sv_shared.rewards import (
     reward_accuracy,
-    reward_calibration,
     reward_asymmetric_cost,
+    reward_calibration,
 )
+
+from sv_env_network_logs import NetworkLogParser, load_environment
 
 
 class TestNetworkLogParser:

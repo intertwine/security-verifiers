@@ -46,12 +46,15 @@ from typing import Optional
 from datasets import load_dataset, DownloadConfig
 from huggingface_hub.utils import GatedRepoError, RepositoryNotFoundError
 
+
 class DatasetAccessError(RuntimeError): ...
+
 
 def _get_hf_token() -> Optional[str]:
     return os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_TOKEN")
 
-def load_hf_split(repo_id: str, split: str, streaming: bool=False):
+
+def load_hf_split(repo_id: str, split: str, streaming: bool = False):
     """
     Robust HF loader for gated/private datasets.
     - Uses `token` (datasets>=2.14) with DownloadConfig fallback.
@@ -91,7 +94,8 @@ def load_hf_split(repo_id: str, split: str, streaming: bool=False):
 # inside environment dataset resolver
 from sv_shared.hf_datasets import load_hf_split, DatasetAccessError
 
-def _resolve_dataset(dataset_source: str | None=None, split: str="default"):
+
+def _resolve_dataset(dataset_source: str | None = None, split: str = "default"):
     """
     Auto: local -> hub -> synthetic  (already documented in README)
     """
@@ -104,9 +108,11 @@ def _resolve_dataset(dataset_source: str | None=None, split: str="default"):
 
     # Hub path (gated)
     try:
-        repo_id = os.getenv("E1_HF_REPO") if ENV_NAME=="sv-env-network-logs" else os.getenv("E2_HF_REPO")
+        repo_id = os.getenv("E1_HF_REPO") if ENV_NAME == "sv-env-network-logs" else os.getenv("E2_HF_REPO")
         if not repo_id:
-            raise DatasetAccessError(f"Set {'E1_HF_REPO' if ENV_NAME=='sv-env-network-logs' else 'E2_HF_REPO'} to your private HF dataset repo id.")
+            raise DatasetAccessError(
+                f"Set {'E1_HF_REPO' if ENV_NAME == 'sv-env-network-logs' else 'E2_HF_REPO'} to your private HF dataset repo id."
+            )
         return load_hf_split(repo_id, split=split)
     except DatasetAccessError as e:
         if dataset_source == "hub":
@@ -154,6 +160,7 @@ This complements the existing `hf-*push*` targets mentioned in the README and gi
 import argparse, os, pathlib, sys
 from huggingface_hub import HfApi, HfFolder, upload_folder, create_repo
 
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", required=True, help="e.g. your-org/security-verifiers-e1-private")
@@ -163,15 +170,20 @@ def main():
 
     token = os.getenv("HF_TOKEN") or HfFolder.get_token()
     if not token:
-        print("HF_TOKEN is required.", file=sys.stderr); sys.exit(2)
+        print("HF_TOKEN is required.", file=sys.stderr)
+        sys.exit(2)
 
     api = HfApi(token=token)
     create_repo(args.repo, repo_type="dataset", private=True, exist_ok=True, token=token)
     upload_folder(
-        repo_id=args.repo, repo_type="dataset",
-        folder_path=args.dir, commit_message="push canonical split(s)", token=token
+        repo_id=args.repo,
+        repo_type="dataset",
+        folder_path=args.dir,
+        commit_message="push canonical split(s)",
+        token=token,
     )
     print(f"Pushed to https://huggingface.co/datasets/{args.repo}")
+
 
 if __name__ == "__main__":
     main()
@@ -239,10 +251,12 @@ Granting access preserves benchmark integrity and prevents training contaminatio
 import os
 from sv_shared.hf_datasets import load_hf_split
 
+
 def check(repo_id: str, split: str):
     ds = load_hf_split(repo_id, split=split)
     print(repo_id, split, len(ds))
     print(ds[0])
+
 
 if __name__ == "__main__":
     # Expect E1_HF_REPO / E2_HF_REPO and HF_TOKEN set

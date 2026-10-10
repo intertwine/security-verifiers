@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from adapters.types import E2Severity, ToolFinding, Violation
 
 TOOL_SEV_TO_E2: dict[str, dict[str, E2Severity]] = {
@@ -13,10 +11,10 @@ TOOL_SEV_TO_E2: dict[str, dict[str, E2Severity]] = {
 }
 
 
-def normalize_findings(findings: List[ToolFinding]) -> List[Violation]:
+def normalize_findings(findings: list[ToolFinding]) -> list[Violation]:
     """Map tool-specific findings to the common :class:`Violation` schema."""
 
-    out: List[Violation] = []
+    out: list[Violation] = []
     for f in findings:
         sev_map = TOOL_SEV_TO_E2.get(f.tool, {})
         e2_sev = sev_map.get((f.severity or "").strip(), "med")
@@ -35,7 +33,7 @@ def normalize_findings(findings: List[ToolFinding]) -> List[Violation]:
     return out
 
 
-def to_prd_schema(violations: List[Violation]) -> list[dict]:
+def to_prd_schema(violations: list[Violation]) -> list[dict]:
     """Reduce :class:`Violation` objects to PRD-mandated dict form."""
 
     return [{"id": v.id, "severity": v.severity} for v in violations]

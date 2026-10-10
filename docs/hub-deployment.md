@@ -370,11 +370,7 @@ os.environ["HF_TOKEN"] = "your_token_here"
 os.environ["E1_HF_REPO"] = "your-org/security-verifiers-e1"
 
 # Load from Hub (works with gated datasets if you have access)
-env = vf.load_environment(
-    "sv-env-network-logs",
-    dataset_source="hub",
-    max_examples=100
-)
+env = vf.load_environment("sv-env-network-logs", dataset_source="hub", max_examples=100)
 ```
 
 **For users without gated access**, the error message will guide them to:
@@ -479,18 +475,15 @@ os.environ["HF_TOKEN"] = "your-hf-token-here"
 env = vf.load_environment(
     "your-org/sv-env-network-logs",
     dataset_source="hub",  # Use Hub datasets
-    max_examples=100
+    max_examples=100,
 )
 
 # Or use synthetic data for testing
-env = vf.load_environment(
-    "your-org/sv-env-network-logs",
-    dataset_source="synthetic",
-    max_examples=10
-)
+env = vf.load_environment("your-org/sv-env-network-logs", dataset_source="synthetic", max_examples=10)
 
 # Run a sample
 from verifiers.llms import get_llm
+
 llm = get_llm("openai/gpt-5-mini")
 
 result = env.sample(llm)

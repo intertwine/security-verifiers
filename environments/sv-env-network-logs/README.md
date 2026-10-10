@@ -62,11 +62,7 @@ os.environ["HF_TOKEN"] = "hf_your_token_here"
 os.environ["E1_HF_REPO"] = "your-org/security-verifiers-e1-private"
 
 # Load from your repository
-env = vf.load_environment(
-    "sv-env-network-logs",
-    dataset_source="hub",
-    max_examples=100
-)
+env = vf.load_environment("sv-env-network-logs", dataset_source="hub", max_examples=100)
 ```
 
 **See [docs/user-dataset-guide.md](../../docs/user-dataset-guide.md) for instructions on building and pushing datasets to your own HuggingFace repository.**
@@ -162,11 +158,7 @@ import verifiers as vf
 env = vf.load_environment("sv-env-network-logs")
 
 # Evaluate a model
-results = env.evaluate(
-    client=vf.OpenAIClient(),
-    model="gpt-5-mini",
-    num_examples=100
-)
+results = env.evaluate(client=vf.OpenAIClient(), model="gpt-5-mini", num_examples=100)
 
 print(f"Average reward: {results.stats['mean_reward']:.2%}")
 ```
@@ -294,11 +286,7 @@ weave.init(project="network-logs-security")
 
 # Load and evaluate
 env = vf.load_environment("intertwine/sv-env-network-logs")
-results = env.evaluate(
-    client=vf.OpenAIClient(),
-    model="gpt-5-mini",
-    num_examples=100
-)
+results = env.evaluate(client=vf.OpenAIClient(), model="gpt-5-mini", num_examples=100)
 
 # Results are automatically traced to W&B
 ```
@@ -331,12 +319,7 @@ weave.init(project="security-eval")
 env = vf.load_environment("intertwine/sv-env-network-logs")
 
 # Run evaluation
-results = env.evaluate(
-    client=vf.OpenAIClient(),
-    model="gpt-5-mini",
-    num_examples=500,
-    seed=42
-)
+results = env.evaluate(client=vf.OpenAIClient(), model="gpt-5-mini", num_examples=500, seed=42)
 
 print(f"Mean Reward: {results.stats['mean_reward']:.2%}")
 print(f"Accuracy: {results.stats.get('accuracy', 0):.2%}")

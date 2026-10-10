@@ -70,10 +70,7 @@ from sv_shared import build_rollout_logger
 from sv_env_network_logs import load_environment
 
 # Create logger with custom config
-logger = build_rollout_logger({
-    "enabled": True,
-    "weave_project": "my-project"
-})
+logger = build_rollout_logger({"enabled": True, "weave_project": "my-project"})
 
 # Pass to environment
 env = load_environment(logger=logger)
@@ -165,12 +162,7 @@ env = load_environment(max_examples=100)
 
 # Run evaluation - automatically traced
 client = OpenAI()
-results = env.evaluate(
-    client,
-    "gpt-5-mini",
-    num_examples=10,
-    rollouts_per_example=2
-)
+results = env.evaluate(client, "gpt-5-mini", num_examples=10, rollouts_per_example=2)
 
 # View traces at: https://wandb.ai/<entity>/<project>/weave
 ```
@@ -231,17 +223,19 @@ Create a logger with custom configuration:
 from sv_shared import build_rollout_logger, RolloutLoggingConfig
 
 # Option 1: Using build_rollout_logger helper
-logger = build_rollout_logger({
-    "enabled": True,
-    "weave_enabled": True,
-    "wandb_enabled": True,
-    "weave_project": "security-verifiers",
-    "wandb_project": "security-verifiers-rl",
-    "wandb_entity": "my-team",
-    "default_tags": ["experiment-1", "security"],
-    "step_filter": lambda event: event.reward < 0.5,  # Only log low rewards
-    "episode_filter": lambda summary: summary["total_reward"] > 0.8
-})
+logger = build_rollout_logger(
+    {
+        "enabled": True,
+        "weave_enabled": True,
+        "wandb_enabled": True,
+        "weave_project": "security-verifiers",
+        "wandb_project": "security-verifiers-rl",
+        "wandb_entity": "my-team",
+        "default_tags": ["experiment-1", "security"],
+        "step_filter": lambda event: event.reward < 0.5,  # Only log low rewards
+        "episode_filter": lambda summary: summary["total_reward"] > 0.8,
+    }
+)
 
 # Option 2: Using RolloutLoggingConfig directly
 from sv_shared import RolloutLogger, RolloutLoggingConfig
@@ -252,7 +246,7 @@ config = RolloutLoggingConfig(
     wandb_enabled=True,
     weave_project="security-verifiers",
     wandb_project="security-verifiers-rl",
-    default_tags=["production", "v1.0"]
+    default_tags=["production", "v1.0"],
 )
 logger = RolloutLogger(config)
 ```
@@ -280,22 +274,16 @@ logger.log_step(
     action={"classification": "phishing"},
     reward=0.95,
     info={"confidence": 0.92},
-    metrics={"processing_time": 0.23}
+    metrics={"processing_time": 0.23},
 )
 
 # Log episode summaries
 logger.log_episode_summary(
-    episode_id="episode-001",
-    total_reward=0.95,
-    length=1,
-    metrics={"accuracy": 0.95, "false_positives": 0}
+    episode_id="episode-001", total_reward=0.95, length=1, metrics={"accuracy": 0.95, "false_positives": 0}
 )
 
 # Log custom metrics
-logger.log_metrics(
-    {"batch_accuracy": 0.94, "avg_confidence": 0.89},
-    step=100
-)
+logger.log_metrics({"batch_accuracy": 0.94, "avg_confidence": 0.89}, step=100)
 ```
 
 ### Event Querying
@@ -308,17 +296,15 @@ low_rewards = logger.find_reward_dips(threshold=0.3)
 
 # Custom queries
 high_confidence_errors = logger.query_events(
-    lambda event: (
-        event.metrics and
-        event.metrics.get("confidence", 0) > 0.9 and
-        event.reward < 0.5
-    )
+    lambda event: event.metrics and event.metrics.get("confidence", 0) > 0.9 and event.reward < 0.5
 )
 
 # Analyze results
 for event in high_confidence_errors:
-    print(f"Step {event.step_index}: High confidence ({event.metrics['confidence']}) "
-          f"but low reward ({event.reward})")
+    print(
+        f"Step {event.step_index}: High confidence ({event.metrics['confidence']}) "
+        f"but low reward ({event.reward})"
+    )
 ```
 
 ## Environment Configuration
@@ -357,6 +343,7 @@ pip install python-dotenv
 
 ```python
 from dotenv import load_dotenv
+
 load_dotenv()
 ```
 
@@ -388,40 +375,34 @@ from openai import OpenAI
 os.environ["WEAVE_PROJECT"] = "production-security-audit"
 
 # Create supplementary logger for custom metrics
-logger = build_rollout_logger({
-    "enabled": True,
-    "wandb_project": "security-production",
-    "default_tags": ["production", "config-audit"],
-    "step_filter": lambda e: e.reward < 0.7  # Focus on failures
-})
+logger = build_rollout_logger(
+    {
+        "enabled": True,
+        "wandb_project": "security-production",
+        "default_tags": ["production", "config-audit"],
+        "step_filter": lambda e: e.reward < 0.7,  # Focus on failures
+    }
+)
 
 # Load environment with logger
-env = load_environment(
-    max_examples=100,
-    include_tools=True,
-    logger=logger
-)
+env = load_environment(max_examples=100, include_tools=True, logger=logger)
 
 # Run evaluation - both Weave and RolloutLogger capture data
 client = OpenAI()
-results = env.evaluate(
-    client,
-    "gpt-4o",
-    num_examples=50,
-    rollouts_per_example=3,
-    max_concurrent=8
-)
+results = env.evaluate(client, "gpt-4o", num_examples=50, rollouts_per_example=3, max_concurrent=8)
 
 # Query for analysis
 failures = logger.find_reward_dips(0.5)
 print(f"Found {len(failures)} failed security audits")
 
 # Log summary metrics
-logger.log_metrics({
-    "total_audits": 50,
-    "success_rate": sum(r > 0.7 for r in results) / len(results),
-    "avg_reward": sum(results) / len(results)
-})
+logger.log_metrics(
+    {
+        "total_audits": 50,
+        "success_rate": sum(r > 0.7 for r in results) / len(results),
+        "avg_reward": sum(results) / len(results),
+    }
+)
 ```
 
 ### Example 2: Training with Selective Logging
@@ -434,17 +415,19 @@ from sv_env_redteam_defense import load_environment
 import verifiers as vf
 
 # Configure selective logging
-logger = build_rollout_logger({
-    "enabled": True,
-    "weave_enabled": False,  # Disable Weave for training
-    "wandb_enabled": True,   # Use W&B for training metrics
-    "wandb_project": "redteam-defense-training",
-    "step_filter": lambda e: (
-        e.step_index % 100 == 0 or  # Log every 100th step
-        e.reward < 0.2 or            # Log failures
-        e.reward > 0.95              # Log successes
-    )
-})
+logger = build_rollout_logger(
+    {
+        "enabled": True,
+        "weave_enabled": False,  # Disable Weave for training
+        "wandb_enabled": True,  # Use W&B for training metrics
+        "wandb_project": "redteam-defense-training",
+        "step_filter": lambda e: (
+            e.step_index % 100 == 0  # Log every 100th step
+            or e.reward < 0.2  # Log failures
+            or e.reward > 0.95  # Log successes
+        ),
+    }
+)
 
 env = load_environment(logger=logger)
 
@@ -465,7 +448,7 @@ for episode in range(1000):
             action=action,
             reward=reward,
             info=info,
-            metrics={"q_value": agent.get_q_value(state, action)}
+            metrics={"q_value": agent.get_q_value(state, action)},
         )
 
         total_reward += reward
@@ -477,7 +460,7 @@ for episode in range(1000):
         episode_id=f"ep-{episode}",
         total_reward=total_reward,
         length=step + 1,
-        metrics={"epsilon": agent.epsilon}
+        metrics={"epsilon": agent.epsilon},
     )
 ```
 
@@ -490,18 +473,12 @@ from sv_shared import build_rollout_logger
 import importlib
 
 # Environments to compare
-ENVIRONMENTS = [
-    "sv_env_network_logs",
-    "sv_env_phishing_detection",
-    "sv_env_code_vulnerability"
-]
+ENVIRONMENTS = ["sv_env_network_logs", "sv_env_phishing_detection", "sv_env_code_vulnerability"]
 
 # Create logger for comparison
-logger = build_rollout_logger({
-    "enabled": True,
-    "weave_project": "security-comparison",
-    "default_tags": ["comparison", "benchmark"]
-})
+logger = build_rollout_logger(
+    {"enabled": True, "weave_project": "security-comparison", "default_tags": ["comparison", "benchmark"]}
+)
 
 results = {}
 
@@ -518,24 +495,22 @@ for env_name in ENVIRONMENTS:
         environment_name=env_name,
         dataset_name="benchmark",
         total_examples=50,
-        metadata={"comparison_run": True}
+        metadata={"comparison_run": True},
     )
 
     # Run evaluation
     client = OpenAI()
-    env_results = env.evaluate(
-        client,
-        "gpt-5-mini",
-        num_examples=50
-    )
+    env_results = env.evaluate(client, "gpt-5-mini", num_examples=50)
 
     results[env_name] = env_results
 
     # Log comparison metrics
-    logger.log_metrics({
-        f"{env_name}_avg_reward": sum(env_results) / len(env_results),
-        f"{env_name}_success_rate": sum(r > 0.7 for r in env_results) / len(env_results)
-    })
+    logger.log_metrics(
+        {
+            f"{env_name}_avg_reward": sum(env_results) / len(env_results),
+            f"{env_name}_success_rate": sum(r > 0.7 for r in env_results) / len(env_results),
+        }
+    )
 
 # Analyze logged events
 all_events = logger.query_events(lambda e: True)
@@ -552,11 +527,13 @@ from sv_env_network_logs import load_environment
 import json
 
 # Create logger with all events captured locally
-logger = build_rollout_logger({
-    "enabled": True,
-    "weave_enabled": False,  # No remote logging
-    "wandb_enabled": False,  # Keep everything local
-})
+logger = build_rollout_logger(
+    {
+        "enabled": True,
+        "weave_enabled": False,  # No remote logging
+        "wandb_enabled": False,  # Keep everything local
+    }
+)
 
 env = load_environment(logger=logger)
 
@@ -564,9 +541,7 @@ env = load_environment(logger=logger)
 results = env.evaluate(client, "gpt-5-mini", num_examples=100)
 
 # Analyze failures locally
-failures = logger.query_events(
-    lambda e: e.reward is not None and e.reward < 0.5
-)
+failures = logger.query_events(lambda e: e.reward is not None and e.reward < 0.5)
 
 print(f"Found {len(failures)} failures to analyze")
 
@@ -587,12 +562,7 @@ for event in failures[:5]:  # Examine first 5 failures
 
 # Find patterns in failures
 high_confidence_failures = logger.query_events(
-    lambda e: (
-        e.reward is not None and
-        e.reward < 0.5 and
-        e.action and
-        e.action.get("confidence", 0) > 0.8
-    )
+    lambda e: e.reward is not None and e.reward < 0.5 and e.action and e.action.get("confidence", 0) > 0.8
 )
 
 print(f"\nHigh confidence failures: {len(high_confidence_failures)}")
@@ -607,6 +577,7 @@ For most use cases, Weave auto-tracing provides sufficient observability:
 ```python
 # Just import and use - no configuration needed!
 from sv_env_network_logs import load_environment
+
 env = load_environment()
 ```
 
@@ -616,11 +587,13 @@ In production, combine both systems for comprehensive monitoring:
 
 ```python
 # Weave for tracing, RolloutLogger for alerts
-logger = build_rollout_logger({
-    "enabled": True,
-    "step_filter": lambda e: e.reward < 0.3,  # Alert on failures
-    "default_tags": ["production", "monitoring"]
-})
+logger = build_rollout_logger(
+    {
+        "enabled": True,
+        "step_filter": lambda e: e.reward < 0.3,  # Alert on failures
+        "default_tags": ["production", "monitoring"],
+    }
+)
 ```
 
 ### 3. Use Filters to Reduce Noise
@@ -628,13 +601,15 @@ logger = build_rollout_logger({
 Filter events to focus on what matters:
 
 ```python
-logger = build_rollout_logger({
-    "step_filter": lambda e: (
-        e.reward < 0.5 or  # Failures
-        e.step_index == 0 or  # First steps
-        (e.metrics and e.metrics.get("is_critical"))  # Critical events
-    )
-})
+logger = build_rollout_logger(
+    {
+        "step_filter": lambda e: (
+            e.reward < 0.5  # Failures
+            or e.step_index == 0  # First steps
+            or (e.metrics and e.metrics.get("is_critical"))  # Critical events
+        )
+    }
+)
 ```
 
 ### 4. Tag Your Experiments
@@ -642,14 +617,16 @@ logger = build_rollout_logger({
 Use tags for organization:
 
 ```python
-logger = build_rollout_logger({
-    "default_tags": [
-        f"model-{model_name}",
-        f"dataset-{dataset_version}",
-        f"experiment-{experiment_id}",
-        "security"
-    ]
-})
+logger = build_rollout_logger(
+    {
+        "default_tags": [
+            f"model-{model_name}",
+            f"dataset-{dataset_version}",
+            f"experiment-{experiment_id}",
+            "security",
+        ]
+    }
+)
 ```
 
 ### 5. Local Development Settings
@@ -658,7 +635,7 @@ For local development, disable remote logging:
 
 ```python
 # .env.local
-WEAVE_DISABLED=true
+WEAVE_DISABLED = true
 
 # Or in code
 if os.getenv("ENV") == "local":
@@ -673,19 +650,13 @@ Use local querying to validate before sending to remote:
 
 ```python
 # Capture locally first
-logger = build_rollout_logger({
-    "enabled": True,
-    "weave_enabled": False,
-    "wandb_enabled": False
-})
+logger = build_rollout_logger({"enabled": True, "weave_enabled": False, "wandb_enabled": False})
 
 # Run experiment
 # ...
 
 # Analyze locally
-interesting_events = logger.query_events(
-    lambda e: e.reward > 0.9 or e.reward < 0.1
-)
+interesting_events = logger.query_events(lambda e: e.reward > 0.9 or e.reward < 0.1)
 
 if len(interesting_events) > 0:
     # Now log to remote
@@ -738,10 +709,12 @@ pip list | grep weave
 # WRONG - Weave initializes after verifiers import
 import verifiers as vf
 import weave
+
 weave.init("project")
 
 # CORRECT - Weave initializes before verifiers
 import weave
+
 weave.init("project")
 import verifiers as vf
 ```
@@ -750,6 +723,7 @@ import verifiers as vf
 
 ```python
 import logging
+
 logging.basicConfig(level=logging.DEBUG)
 
 from sv_shared import weave_init
@@ -773,9 +747,11 @@ print(f"Logger enabled: {logger.enabled}")  # Should be True
 
 ```python
 # Filters might be too restrictive
-logger = build_rollout_logger({
-    "step_filter": lambda e: True,  # Accept all events for testing
-})
+logger = build_rollout_logger(
+    {
+        "step_filter": lambda e: True,  # Accept all events for testing
+    }
+)
 ```
 
 1. Ensure logger is passed to environment:
@@ -803,9 +779,11 @@ env = load_environment(logger=logger)
 1. Use filters to reduce local buffer size:
 
 ```python
-logger = build_rollout_logger({
-    "step_filter": lambda e: e.step_index % 100 == 0  # Sample events
-})
+logger = build_rollout_logger(
+    {
+        "step_filter": lambda e: e.step_index % 100 == 0  # Sample events
+    }
+)
 ```
 
 1. Clear local buffer periodically:
@@ -884,9 +862,11 @@ variables:
 ```python
 # Test connection
 import wandb
+
 wandb.init(project="test-project")
 
 import weave
+
 weave.init("test-project")
 ```
 
@@ -898,6 +878,7 @@ Extend RolloutLogger for custom backends:
 
 ```python
 from sv_shared import RolloutLogger
+
 
 class CustomLogger(RolloutLogger):
     def _log_to_backends(self, payload):
@@ -917,6 +898,7 @@ For high-throughput scenarios:
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
+
 class AsyncLogger(RolloutLogger):
     def __init__(self, config):
         super().__init__(config)
@@ -935,8 +917,9 @@ Connect to monitoring systems:
 from prometheus_client import Counter, Histogram
 
 # Metrics
-evaluation_counter = Counter('evaluations_total', 'Total evaluations')
-reward_histogram = Histogram('reward_distribution', 'Reward distribution')
+evaluation_counter = Counter("evaluations_total", "Total evaluations")
+reward_histogram = Histogram("reward_distribution", "Reward distribution")
+
 
 class MonitoringLogger(RolloutLogger):
     def log_step(self, **kwargs):
@@ -944,8 +927,8 @@ class MonitoringLogger(RolloutLogger):
 
         # Update metrics
         evaluation_counter.inc()
-        if kwargs.get('reward'):
-            reward_histogram.observe(kwargs['reward'])
+        if kwargs.get("reward"):
+            reward_histogram.observe(kwargs["reward"])
 ```
 
 ## References

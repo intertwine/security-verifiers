@@ -23,7 +23,7 @@ from verifiers.utils.async_utils import maybe_await
 
 try:
     # Try importing from installed package first
-    from sv_shared import weave_init  # type: ignore  # noqa: F401
+    from sv_shared import weave_init  # type: ignore
 except ImportError:
     # Fall back to local development import
     import sys
@@ -201,35 +201,32 @@ class StructuredResponseJudgeRubric(vf.JudgeRubric):
         except RateLimitError as e:
             self.logger.warning(
                 f"Rate limit exceeded when calling judge model '{self.judge_model}'. "
-                f"Try reducing concurrency or waiting before retrying. Error: {str(e)}"
+                f"Try reducing concurrency or waiting before retrying. Error: {e!s}"
             )
             raise RuntimeError(
                 f"Judge model rate limit exceeded. Try reducing concurrency or waiting before retrying. "
-                f"Model: {self.judge_model}, Error: {str(e)}"
+                f"Model: {self.judge_model}, Error: {e!s}"
             ) from e
         except APITimeoutError as e:
             self.logger.warning(
                 f"Timeout when calling judge model '{self.judge_model}'. "
-                f"Increase timeout in judge_sampling_args or check model responsiveness. Error: {str(e)}"
+                f"Increase timeout in judge_sampling_args or check model responsiveness. Error: {e!s}"
             )
             raise RuntimeError(
                 f"Judge model timeout. Increase timeout in judge_sampling_args or check model responsiveness. "
-                f"Model: {self.judge_model}, Error: {str(e)}"
+                f"Model: {self.judge_model}, Error: {e!s}"
             ) from e
         except APIError as e:
             self.logger.warning(
                 f"API error when calling judge model '{self.judge_model}'. "
-                f"Check model availability and API key. Error: {str(e)}"
+                f"Check model availability and API key. Error: {e!s}"
             )
             raise RuntimeError(
-                f"Judge model API error. Check model availability and API key. "
-                f"Model: {self.judge_model}, Error: {str(e)}"
+                f"Judge model API error. Check model availability and API key. Model: {self.judge_model}, Error: {e!s}"
             ) from e
         except Exception as e:
-            self.logger.warning(f"Unexpected error when calling judge model '{self.judge_model}'. Error: {str(e)}")
-            raise RuntimeError(
-                f"Unexpected error when calling judge model '{self.judge_model}'. Error: {str(e)}"
-            ) from e
+            self.logger.warning(f"Unexpected error when calling judge model '{self.judge_model}'. Error: {e!s}")
+            raise RuntimeError(f"Unexpected error when calling judge model '{self.judge_model}'. Error: {e!s}") from e
 
         if state:
             if not isinstance(cached, dict):

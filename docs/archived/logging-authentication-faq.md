@@ -161,6 +161,7 @@ docker run --env-file=.env my-image
 
    ```python
    import wandb
+
    wandb.login()
    ```
 

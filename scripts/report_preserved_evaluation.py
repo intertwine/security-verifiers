@@ -187,13 +187,35 @@ def report(
 ) -> dict:
     if resamples < 100:
         raise ValueError("At least 100 bootstrap resamples required")
-    costs = costs or {"fn": 10.0, "fp": 1.0, "abstain": 1.0, "invalid": 10.0}
+    costs = {"fn": 10.0, "fp": 1.0, "abstain": 1.0, "invalid": 10.0} if costs is None else costs
     if set(costs) != {"fn", "fp", "abstain", "invalid"} or any(
         isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) or v < 0
         for v in costs.values()
     ):
         raise ValueError("Explicit finite nonnegative loss weights required")
     packet = json.loads((run_dir / "packet.json").read_text())
+    frozen_loss = packet.get("environments", {}).get("e1", {}).get("analysis", {}).get("loss")
+    if frozen_loss is not None:
+        if (
+            not isinstance(frozen_loss, dict)
+            or set(frozen_loss) != {"false_negative", "false_positive", "abstain", "invalid"}
+            or any(
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or value < 0
+                for value in frozen_loss.values()
+            )
+        ):
+            raise ValueError("Frozen loss weights must be explicit finite nonnegative numbers")
+        frozen_costs = {
+            "fn": frozen_loss["false_negative"],
+            "fp": frozen_loss["false_positive"],
+            "abstain": frozen_loss["abstain"],
+            "invalid": frozen_loss["invalid"],
+        }
+        if costs != frozen_costs:
+            raise ValueError("Reporting loss weights differ from frozen execution packet")
     packet_hash = hashlib.sha256(json.dumps(packet, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
     verification = {}
     for row in rows(verification_path) if verification_path else []:
@@ -331,10 +353,12 @@ def report(
                 "case_scores": scores,
                 "supporting_metrics": supporting,
             }
-        baseline, base_observed = scored["base"]
-        for role, (scores, observed_ids) in scored.items():
-            if role == "base":
-                continue
+        contrasts = [(role, "base") for role in scored if role != "base"]
+        if env == "e1" and "exec" in scored and "judge" in scored:
+            contrasts.append(("exec", "judge"))
+        for role, reference_role in contrasts:
+            baseline, base_observed = scored[reference_role]
+            scores, observed_ids = scored[role]
             common = [
                 identity
                 for identity in ids
@@ -350,9 +374,11 @@ def report(
                     "excluded_pairs": len(ids) - len(common),
                     "improvement_direction": "negative" if env == "e1" else "positive",
                     "independence_verified": section["independence_verified"],
+                    "policy_role": role,
+                    "reference_role": reference_role,
                 }
             )
-            section["comparisons"][f"{role}_minus_base"] = comparison
+            section["comparisons"][f"{role}_minus_{reference_role}"] = comparison
         output["environments"][env] = section
     return output
 
@@ -385,7 +411,7 @@ def markdown(summary: dict) -> str:
         for role, data in section["policies"].items():
             lines.append(f"{role} outcomes: `{json.dumps(data['outcomes'], sort_keys=True)}`")
             lines.append("")
-        lines += ["", "Paired differences (policy minus base):", ""]
+        lines += ["", "Paired differences (policy minus named reference):", ""]
         for role, data in section["comparisons"].items():
             lines.append(
                 f"- {role}: delta {data['delta']}, 95% interval {data['ci95']}; "

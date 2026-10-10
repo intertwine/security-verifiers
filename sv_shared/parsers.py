@@ -6,8 +6,9 @@ import json
 import logging
 import os
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any
 
 import verifiers as vf
 
@@ -181,7 +182,7 @@ class JsonClassificationParser(vf.Parser):
     def get_format_reward_func(self):  # type: ignore[override]
         parser = self
 
-        def format_reward(completion: Any, **kwargs: Any) -> float:  # noqa: ANN401
+        def format_reward(completion: Any, **kwargs: Any) -> float:
             data = parser._parse_json(completion)
             label = data.get("label")
             conf = data.get("confidence")

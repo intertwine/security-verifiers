@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple, cast
+from typing import Any, cast
 
 from pydantic import BaseModel, Field
 
@@ -19,14 +19,14 @@ class ViolationModel(BaseModel):
 class AuditOutputModel(BaseModel):
     """Audit output model."""
 
-    violations: List[ViolationModel]
+    violations: list[ViolationModel]
     patch: str | None = ""
     confidence: float
 
 
 def parse_model_output(
-    model_json: Dict[str, Any],
-) -> Tuple[List[Violation], str | None, float]:
+    model_json: dict[str, Any],
+) -> tuple[list[Violation], str | None, float]:
     """Validate model output against the PRD schema."""
 
     parsed = AuditOutputModel.model_validate(model_json)
@@ -34,4 +34,4 @@ def parse_model_output(
     return violations, parsed.patch, parsed.confidence
 
 
-__all__ = ["parse_model_output", "AuditOutputModel", "ViolationModel"]
+__all__ = ["AuditOutputModel", "ViolationModel", "parse_model_output"]

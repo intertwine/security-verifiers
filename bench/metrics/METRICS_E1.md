@@ -68,9 +68,9 @@ def compute_ece(predictions, actuals, confidences, num_bins=10):
     ece = 0.0
     for i in range(num_bins):
         if i == num_bins - 1:
-            mask = (confidences >= bins[i]) & (confidences <= bins[i+1])
+            mask = (confidences >= bins[i]) & (confidences <= bins[i + 1])
         else:
-            mask = (confidences >= bins[i]) & (confidences < bins[i+1])
+            mask = (confidences >= bins[i]) & (confidences < bins[i + 1])
         if mask.sum() > 0:
             bin_acc = (predictions[mask] == actuals[mask]).mean()
             bin_conf = confidences[mask].mean()

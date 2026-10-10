@@ -17,7 +17,7 @@ from pathlib import Path
 
 try:
     # Try importing from installed package first
-    from sv_shared import weave_init  # type: ignore  # noqa: F401
+    from sv_shared import weave_init  # type: ignore
 except ImportError:
     # Fall back to local development import
     import sys
@@ -38,8 +38,8 @@ try:
         RolloutLogger,
         load_dataset_with_fallback,
         reward_accuracy,
-        reward_calibration,
         reward_asymmetric_cost,
+        reward_calibration,
     )
 except ImportError:
     # Fall back to local development import
@@ -52,8 +52,8 @@ except ImportError:
         RolloutLogger,
         load_dataset_with_fallback,
         reward_accuracy,
-        reward_calibration,
         reward_asymmetric_cost,
+        reward_calibration,
     )
 
 

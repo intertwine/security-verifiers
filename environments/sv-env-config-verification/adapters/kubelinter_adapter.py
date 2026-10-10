@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Dict, List, Sequence
 
 from .types import ToolFinding
 
@@ -19,8 +19,8 @@ def kubelinter_lint(
     kube_linter_bin: str | Path = "kube-linter",
     timeout_s: int = 30,
     config_yaml: str | Path | None = None,
-    env: Dict[str, str] | None = None,
-) -> List[ToolFinding]:
+    env: dict[str, str] | None = None,
+) -> list[ToolFinding]:
     """Run ``kube-linter lint`` and return findings."""
 
     cmd = [str(kube_linter_bin), "lint", "--format", "json"]
@@ -47,7 +47,7 @@ def kubelinter_lint(
             raise KubeLinterError(proc.stderr.strip() or "kube-linter failed") from exc
         raise KubeLinterError("invalid kube-linter output") from exc
 
-    findings: List[ToolFinding] = []
+    findings: list[ToolFinding] = []
     for item in findings_json:
         diagnostic = item.get("Diagnostic", {})
         metadata = item.get("Object", {}).get("Metadata", {})
@@ -68,4 +68,4 @@ def kubelinter_lint(
     return findings
 
 
-__all__ = ["kubelinter_lint", "KubeLinterError"]
+__all__ = ["KubeLinterError", "kubelinter_lint"]

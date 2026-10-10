@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
 
 E2Severity = Literal["low", "med", "high"]
 
@@ -16,10 +16,10 @@ class ToolFinding:
     rule_id: str
     severity: str
     message: str
-    file: Optional[str] = None
-    start_line: Optional[int] = None
-    end_line: Optional[int] = None
-    extra: Optional[Dict[str, Any]] = None
+    file: str | None = None
+    start_line: int | None = None
+    end_line: int | None = None
+    extra: dict[str, Any] | None = None
 
 
 @dataclass
@@ -28,27 +28,27 @@ class Violation:
 
     id: str
     severity: E2Severity
-    message: Optional[str] = None
-    file: Optional[str] = None
-    start_line: Optional[int] = None
-    end_line: Optional[int] = None
-    source_tool: Optional[str] = None
-    native_rule_id: Optional[str] = None
+    message: str | None = None
+    file: str | None = None
+    start_line: int | None = None
+    end_line: int | None = None
+    source_tool: str | None = None
+    native_rule_id: str | None = None
 
 
 @dataclass
 class AuditOutput:
     """Model or baseline output after schema parsing."""
 
-    violations: List[Violation]
-    patch: Optional[str]
+    violations: list[Violation]
+    patch: str | None
     confidence: float
-    tools_used: Optional[List[str]] = None
+    tools_used: list[str] | None = None
 
 
 __all__ = [
+    "AuditOutput",
     "E2Severity",
     "ToolFinding",
     "Violation",
-    "AuditOutput",
 ]

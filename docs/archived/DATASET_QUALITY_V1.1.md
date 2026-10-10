@@ -230,7 +230,9 @@ def get_port(row: Dict[str, Any], port_type: str) -> str:
 **File:** [scripts/data/build_e1_iot23.py](../scripts/data/build_e1_iot23.py)
 
 ```python
-def split_by_scenario(rows: List[Dict[str, Any]], train_p=0.70, dev_p=0.15) -> List[Tuple[Dict[str, Any], str]]:
+def split_by_scenario(
+    rows: List[Dict[str, Any]], train_p=0.70, dev_p=0.15
+) -> List[Tuple[Dict[str, Any], str]]:
     """Split dataset into train/dev/test with proper distribution."""
     from collections import defaultdict
 
@@ -282,6 +284,7 @@ def is_valid_k8s_manifest(path: Path) -> bool:
     k8s_markers = ["apiVersion:", "kind:", "metadata:", "spec:"]
     marker_count = sum(1 for marker in k8s_markers if marker in content)
     return marker_count >= 2
+
 
 def is_valid_hcl(path: Path) -> bool:
     """Check if file contains valid Terraform HCL."""

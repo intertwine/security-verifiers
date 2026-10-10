@@ -156,11 +156,7 @@ from datasets import load_dataset
 os.environ["HF_TOKEN"] = "hf_your_token"
 
 # Load from private repo
-dataset = load_dataset(
-    "your-org/security-verifiers-e1",
-    split="train",
-    token=os.environ["HF_TOKEN"]
-)
+dataset = load_dataset("your-org/security-verifiers-e1", split="train", token=os.environ["HF_TOKEN"])
 ```
 
 ## Environment Loading Modes

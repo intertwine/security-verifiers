@@ -217,3 +217,120 @@ def test_finding_metric_uses_common_primary_tool_filter():
     }
     answer = {"fixture_type": "k8s", "oracle": [{"id": "kube-linter/x"}, {"id": "opa/y"}]}
     assert e2_score(row, None, answer)["finding_f1_unique_ids"] == 1
+
+
+def test_direct_reward_source_contrast_preserves_pairing(tmp_path):
+    folder = fixture_run(tmp_path)
+    packet = json.loads((folder / "packet.json").read_text())
+    judge = {"role": "judge", "model": "fixture-judge"}
+    packet["environments"]["e1"]["policies"].append(judge)
+    (folder / "packet.json").write_text(json.dumps(packet))
+    fingerprint = hashlib.sha256(json.dumps(packet, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+    judge_folder = folder / "e1-judge"
+    judge_folder.mkdir()
+    judge_results = [json.loads(line) for line in (folder / "e1-base/results.jsonl").read_text().splitlines()]
+    judge_results[0]["completion"] = json.dumps({"label": "Malicious", "confidence": 0.9})
+    (judge_folder / "results.jsonl").write_text("".join(json.dumps(row) + "\n" for row in judge_results))
+    for policy in packet["environments"]["e1"]["policies"]:
+        metadata = {
+            "dataset_sha256": hashlib.sha256((folder / "cases.jsonl").read_bytes()).hexdigest(),
+            "packet_sha256": fingerprint,
+            "policy": policy,
+            "limits": {},
+        }
+        (folder / f"e1-{policy['role']}" / "metadata.json").write_text(json.dumps(metadata))
+    contrast = report(folder, folder, resamples=100)["environments"]["e1"]["comparisons"]["exec_minus_judge"]
+    assert contrast["n_pairs"] == 1
+    assert contrast["excluded_pairs"] == 1
+    assert contrast["delta"] == -1
+    assert contrast["reference_role"] == "judge"
+
+
+def test_reporting_cannot_change_preregistered_loss_weights(tmp_path):
+    folder = fixture_run(tmp_path)
+    packet = json.loads((folder / "packet.json").read_text())
+    packet["environments"]["e1"]["analysis"] = {
+        "loss": {"false_negative": 10, "false_positive": 1, "abstain": 1, "invalid": 10}
+    }
+    (folder / "packet.json").write_text(json.dumps(packet))
+    with pytest.raises(ValueError, match="frozen execution packet"):
+        report(folder, folder, costs={**COSTS, "fn": 1}, resamples=100)
+
+
+def update_packet(folder, packet):
+    (folder / "packet.json").write_text(json.dumps(packet))
+    fingerprint = hashlib.sha256(json.dumps(packet, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+    for policy in packet["environments"]["e1"]["policies"]:
+        path = folder / f"e1-{policy['role']}" / "metadata.json"
+        metadata = json.loads(path.read_text())
+        metadata["packet_sha256"] = fingerprint
+        path.write_text(json.dumps(metadata))
+
+
+@pytest.mark.parametrize("value", [{}, {**COSTS, "fp": True}, {**COSTS, "fn": -1}])
+def test_explicit_invalid_costs_do_not_fall_back_to_defaults(tmp_path, value):
+    folder = fixture_run(tmp_path)
+    with pytest.raises(ValueError, match="loss weights"):
+        report(folder, folder, costs=value, resamples=100)
+
+
+@pytest.mark.parametrize("value", [True, -1, float("nan"), float("inf")])
+def test_frozen_weights_are_validated_before_numeric_equality(tmp_path, value):
+    folder = fixture_run(tmp_path)
+    packet = json.loads((folder / "packet.json").read_text())
+    packet["environments"]["e1"]["analysis"] = {
+        "loss": {"false_negative": 10, "false_positive": value, "abstain": 1, "invalid": 10}
+    }
+    update_packet(folder, packet)
+    with pytest.raises(ValueError, match="Frozen loss weights"):
+        report(folder, folder, resamples=100)
+
+
+def test_custom_frozen_weights_report_actual_declared_cost(tmp_path):
+    folder = fixture_run(tmp_path)
+    packet = json.loads((folder / "packet.json").read_text())
+    packet["environments"]["e1"]["analysis"] = {
+        "loss": {"false_negative": 3, "false_positive": 2, "abstain": 4, "invalid": 6}
+    }
+    update_packet(folder, packet)
+    custom = {"fn": 3, "fp": 2, "abstain": 4, "invalid": 6}
+    summary = report(folder, folder, costs=custom, resamples=100)
+    assert summary["e1_loss_weights"] == custom
+    assert summary["environments"]["e1"]["policies"]["exec"]["metric_mean"] == 3
+
+
+@pytest.mark.parametrize(
+    "scenario,expected_delta,expected_pairs",
+    [("failed", 9, 1), ("invalid", 9, 1), ("abstain", 0, 1), ("missing", None, 0), ("judge_failed", -10, 1)],
+)
+def test_direct_contrast_keeps_failure_losses_and_missing_pair_counts(
+    tmp_path, scenario, expected_delta, expected_pairs
+):
+    folder = fixture_run(tmp_path)
+    packet = json.loads((folder / "packet.json").read_text())
+    judge = {"role": "judge", "model": "fixture-judge"}
+    packet["environments"]["e1"]["policies"].append(judge)
+    judge_folder = folder / "e1-judge"
+    judge_folder.mkdir()
+    metadata = json.loads((folder / "e1-base/metadata.json").read_text())
+    metadata["policy"] = judge
+    (judge_folder / "metadata.json").write_text(json.dumps(metadata))
+    judge_row = json.loads((folder / "e1-exec/results.jsonl").read_text())
+    judge_row["completion"] = json.dumps({"label": "Malicious", "confidence": 0.9})
+    if scenario == "judge_failed":
+        judge_row["status"] = "failed"
+    (judge_folder / "results.jsonl").write_text(json.dumps(judge_row) + "\n")
+    results = folder / "e1-exec/results.jsonl"
+    row = json.loads(results.read_text())
+    if scenario == "failed":
+        row["status"] = "failed"
+    elif scenario == "invalid":
+        row["completion"] = "not JSON"
+    elif scenario == "abstain":
+        row["completion"] = json.dumps({"label": "Abstain", "confidence": 0.9})
+    results.write_text("" if scenario == "missing" else json.dumps(row) + "\n")
+    update_packet(folder, packet)
+    contrast = report(folder, folder, resamples=100)["environments"]["e1"]["comparisons"]["exec_minus_judge"]
+    assert contrast["n_pairs"] == expected_pairs
+    assert contrast["excluded_pairs"] == 2 - expected_pairs
+    assert contrast["delta"] == expected_delta

@@ -7,24 +7,20 @@ from unittest.mock import patch
 import pytest
 import verifiers as vf
 from datasets import Dataset
+from sv_shared.rewards import reward_accuracy, reward_calibration
 
+# Reward constants for asymmetric cost function
 from sv_env_phishing_detection import (
+    HEAVY_PENALTY_FALSE_NEGATIVE,
+    PARTIAL_REWARD_ABSTAIN_ON_LEGITIMATE,
+    PARTIAL_REWARD_ABSTAIN_ON_PHISHING,
+    PENALTY_FALSE_POSITIVE,
+    REWARD_TRUE_POSITIVE,
     PhishingEmailParser,
     load_environment,
     reward_evidence_alignment,
     reward_phishing_asymmetric_cost,
     transform_dataset,
-)
-from sv_shared.rewards import reward_accuracy, reward_calibration
-
-
-# Reward constants for asymmetric cost function
-from sv_env_phishing_detection import (
-    HEAVY_PENALTY_FALSE_NEGATIVE,
-    REWARD_TRUE_POSITIVE,
-    PARTIAL_REWARD_ABSTAIN_ON_PHISHING,
-    PENALTY_FALSE_POSITIVE,
-    PARTIAL_REWARD_ABSTAIN_ON_LEGITIMATE,
 )
 
 
