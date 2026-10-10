@@ -20,6 +20,14 @@ The source of this goal is [the Q1 research roadmap](../plans/ROADMAP-Q1-2026.md
 
 The roadmap's desired training improvement must remain marked unproven if no operational improvement is measured. Honest completion of analysis can establish that a hypothesis was unsupported; it cannot satisfy the original improvement claim by relabeling a pilot.
 
+## Execution checkpoint, October 10
+
+The completion work now has four implemented paths: [candidate-data recovery and freeze](evaluation-data-2026-10.md), [preserved adapter compatibility](adapter-compatibility-2026-10.md), a bounded primary-matrix runner (`scripts/run_preserved_evaluation.py`), and [paired reporting](preserved-evaluation-reporting.md). Independent review covers billing scope, durable reservations, source-bound resume, scanner inputs and failure denominators. `make preserved-eval-check` inspects the packet offline; `make preserved-eval-run` requires every launch prerequisite. The checked-in packet deliberately records unresolved prerequisites rather than claiming launch readiness.
+
+The raw candidate inputs and official model reference snapshots are private checkpoint artifacts. The 200 E1 and 100 E2 candidates are not yet verified independent held-out cases; the compatibility result does not establish historical base identity or successful runtime loading. No live comparisons or research completion evidence have been generated. API authorization, serving identity and prices, a dollar cap, full run-linked training exclusion, and source-group independence must be resolved before the research launch. Recovered adapters remain exploratory if those historical conditions cannot be established; a newly controlled training cohort is then required for the reward-source comparison.
+
+Recovery of the exact May environment packages strengthens that decision: observed executable E1 training uses synthetic fixtures while the judge arm uses IoT inputs. These arms have unmatched data. E2's deployed default establishes two built-in training fixtures; the revised 100-case candidate has zero normalized configuration overlap, with scientific independence still unverified. Preserve these packages alongside the exports and use their source rules to distinguish historical diagnostics from a newly matched experiment.
+
 ## Evidence available after preservation
 
 The October preservation audit found 43 personal training records plus 2 evaluations, and 27 team training records plus 170 evaluations. The six curated May 15 run records have matching shared fields for all 123 samples previously committed; archived E1 sample coverage is larger than the collector's single latest-step page. Ten adapters were downloaded: the six curated runs and four older completed runs. These are private preservation facts, not additional benchmark results.
